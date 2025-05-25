@@ -31,6 +31,16 @@
                   <div v-if="activeSection === 'Overview'" key="overview" class="section overview-section">
                     <h2>{{ currentProject?.title }}</h2>
                     <p>{{ currentProject?.description }}</p>
+
+                    <component
+                        :is="currentProject?.interactiveComponent"
+                        v-if="currentProject?.interactiveComponent"
+                        class="interactive-demo"
+                        />
+                        <div v-else class="demo-placeholder">
+                        <p>Interactive demo coming soon</p>
+                        </div>
+
                     <div class="project-meta">
                       <div class="tech-stack">
                         <h3>Technologies Used</h3>
@@ -58,18 +68,6 @@
                       </div>
                     </div>
                   </div>
-  
-                  <div v-else-if="activeSection === 'Interactive'" key="interactive" class="section interactive-section">
-                    <component 
-                      :is="currentProject?.interactiveComponent" 
-                      v-if="currentProject?.interactiveComponent"
-                      class="interactive-demo"
-                    />
-                    <div v-else class="demo-placeholder">
-                      <p>Interactive demo coming soon</p>
-                    </div>
-                  </div>
-  
                   <div v-else-if="activeSection === 'Details'" key="details" class="section details-section">
                     <div class="project-details" v-html="currentProject?.detailedDescription"></div>
                   </div>
@@ -84,6 +82,7 @@
   
   <script setup>
   import { computed, ref, watch } from 'vue'
+  import PhysicsEngine from '../components/PhysicsEngine.vue'
   
   const props = defineProps({
     activeSection: String,
@@ -109,7 +108,7 @@
       technologies: ['JavaScript', 'Canvas API', 'Matter.js'],
       github: 'https://github.com/yourusername/physics-engine',
       demo: 'https://demo-link.com',
-      interactiveComponent: null,
+      interactiveComponent: PhysicsEngine,
       detailedDescription: `
         <h3>About the Project</h3>
         <p>Detailed description of the physics engine...</p>
@@ -125,7 +124,9 @@
     },
     {
       title: 'Wind Turbine Designer',
-      description: 'Interactive tool for designing wind turbine blades.',
+      description: `
+      'Interactive tool for designing wind turbine blades.'
+      `,
       technologies: ['Vue.js', 'Three.js', 'WebGL'],
       github: 'https://github.com/yourusername/turbine-designer',
       demo: 'https://demo-link.com',
