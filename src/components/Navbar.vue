@@ -1,59 +1,71 @@
 <script setup>
-console.log('Navbar component mounted')
+import { defineEmits, defineProps, nextTick, onMounted, ref, watch } from 'vue'
 
-import { ref, onMounted, nextTick } from 'vue'
-import { animate } from 'animejs'
+const props = defineProps({
+  tabs: {
+    type: Array,
+    required: true,
+    // Expected format: [{ key: 'overview', label: 'Overview', isDivider: false }, ...]
+  },
+  activeTab: {
+    type: String,
+    required: true
+  },
+  indicatorColor: {
+    type: String,
+    default: '#e63946'
+  }
+})
 
-const tabs = ['Projects', 'Papers', 'GitHub', 'Home']
-const activeTab = ref('Home')
+const emit = defineEmits(['update:activeTab'])
+
 const tabRefs = ref([])
+const indicatorRef = ref(null)
+const isTransitioning = ref(false)
 
 const registerTabRef = (el, i) => {
   if (el) tabRefs.value[i] = el
 }
-const indicatorRef = ref(null)
-const indicatorReady = ref(false)
 
-const animateIndicator = (targetEl) => {
-  if (!targetEl || !indicatorRef.value) return
-  const { offsetLeft, offsetWidth } = targetEl
-
-  console.log('Animating to', offsetLeft, offsetWidth)
-
-  try {
-    animate({
-      targets: indicatorRef.value,
-      left: offsetLeft + 'px',
-      width: offsetWidth + 'px',
-      easing: 'easeOutExpo',
-      duration: 500,
-      complete: () => {
-        indicatorReady.value = true
-        console.log('Indicator animated')
-      }
-    })
-  } catch (err) {
-    console.error('Animation failed:', err)
+const updateIndicator = () => {
+  const activeIndex = props.tabs.findIndex(tab => tab.key === props.activeTab)
+  
+  const indicator = indicatorRef.value
+  const activeTabEl = tabRefs.value[activeIndex]
+  
+  if (indicator && activeTabEl && activeIndex !== -1) {
+    indicator.style.left = activeTabEl.offsetLeft + 'px'
+    indicator.style.width = activeTabEl.offsetWidth + 'px'
+    indicator.style.backgroundColor = props.indicatorColor
   }
 }
 
-const setActive = (tab, i) => {
-  console.log('Tab clicked:', tab)
-  activeTab.value = tab
-  nextTick(() => {
-    const el = tabRefs.value[i]
-    animateIndicator(el)
-  })
+const setActive = async (tabKey) => {
+  if (tabKey === props.activeTab) return
+  
+  isTransitioning.value = true
+  emit('update:activeTab', tabKey)
+
+  await nextTick()
+  
+  setTimeout(() => {
+    isTransitioning.value = false
+  }, 300)
 }
+
+watch([
+  () => props.tabs, 
+  () => props.activeTab,
+  () => props.indicatorColor
+], () => {
+  nextTick(() => {
+    updateIndicator()
+  })
+})
 
 onMounted(() => {
   nextTick(() => {
-    console.log('tabRefs:', tabRefs.value)
-    const index = tabs.findIndex(tab => tab === activeTab.value)
-    const target = tabRefs.value[index]
-    if (target) {
-      animateIndicator(target)
-    }
+    updateIndicator()
   })
 })
 </script>
@@ -61,16 +73,27 @@ onMounted(() => {
 <template>
   <nav class="navbar">
     <ul class="nav-links">
-      <div class="indicator" ref="indicatorRef" :class="{ mounted: indicatorReady }"></div>
-      <li v-for="(tab, i) in tabs" :key="tab" :ref="el => registerTabRef(el, i)">
-        <a
-          href="#"
-          :class="{ active: activeTab === tab }"
-          @click.prevent="setActive(tab, i)"
-        >
-          {{ tab }}
-        </a>
-      </li>
+      <TransitionGroup 
+        name="nav-item"
+        @before-enter="isTransitioning = true"
+        @after-enter="isTransitioning = false"
+        @before-leave="isTransitioning = true"
+        @after-leave="isTransitioning = false">
+        <li v-for="(tab, i) in tabs" 
+            :key="tab.key" 
+            :ref="el => registerTabRef(el, i)"
+            :class="{ 
+              'divider': tab.isDivider,
+              'transitioning': isTransitioning
+            }">
+          <a href="#"
+             :class="{ active: activeTab === tab.key }"
+             @click.prevent="setActive(tab.key)">
+            {{ tab.label }}
+          </a>
+        </li>
+      </TransitionGroup>
+      <div class="indicator" ref="indicatorRef"></div>
     </ul>
   </nav>
 </template>
@@ -89,6 +112,9 @@ onMounted(() => {
   list-style: none;
   position: relative;
   padding-bottom: 4px;
+  perspective: 1000px;
+  transform-style: preserve-3d;
+  min-height: 2rem;
 }
 
 .nav-links a {
@@ -99,20 +125,79 @@ onMounted(() => {
   padding: 4px 0;
   display: inline-block;
   position: relative;
+  backface-visibility: hidden;
 }
 
 .nav-links a.active {
   color: white;
 }
 
+.divider {
+  position: relative;
+  margin-left: 1.5rem;
+}
+
+.divider::before {
+  content: '';
+  position: absolute;
+  left: -1.5rem;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background-color: v-bind(indicatorColor);
+  transform-origin: top;
+  height: 100%;
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.3s ease;
+  transform: scaleY(0);
+  will-change: transform;
+}
+
+.divider:not(.transitioning)::before {
+  transform: scaleY(1);
+}
+
+.nav-links li {
+  position: relative;
+  transform-style: preserve-3d;
+}
+
+.nav-item-move,
+.nav-item-enter-active,
+.nav-item-leave-active {
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  transform-origin: top center;
+  position: relative;
+  transform-style: preserve-3d;
+  backface-visibility: hidden;
+  pointer-events: none;
+}
+
+.nav-item-leave-active {
+  position: absolute;
+  width: 100%;
+  transform-origin: top center;
+  left: 0;
+  top: 0;
+}
+
+.nav-item-enter-from,
+.nav-item-leave-to {
+  opacity: 0;
+  transform: rotateX(-90deg);
+}
+
+.nav-item-enter-to,
+.nav-item-leave-from {
+  opacity: 1;
+  transform: rotateX(0);
+}
+
 .indicator {
   position: absolute;
   bottom: 0;
   height: 2px;
-  background-color: #e63946;
-  border-radius: 1px;
-  opacity: 1;
-  left: 0;
-  width: 0;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.3s ease;
+  border-radius: 9999px;
+  transform-origin: center;
 }
 </style>
