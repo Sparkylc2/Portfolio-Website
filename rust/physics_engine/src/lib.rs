@@ -541,4 +541,7 @@ impl ConstraintPhysicsEngine {
     pub fn set_iterations(&mut self, iterations: usize) {
         self.iterations = iterations;
     }
+    pub fn get_body_count(&self) -> usize {
+        self.bodies.len()
+    }
 }
