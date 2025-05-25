@@ -1,0 +1,9 @@
+
+*.tmp
+*.log
+
+
+!*.js
+!*.wasm
+!*.ts
+!package.json
