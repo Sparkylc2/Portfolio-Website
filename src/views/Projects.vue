@@ -1,123 +1,109 @@
 <template>
     <div class="projects-container">
-      <h1 class="page-title">Projects</h1>
-      
-      <div class="content-layout">
-        <div class="projects-grid-wrapper">
-            <div class="projects-grid" :class="{ 'has-active': expandedProject !== null }">
-                <div v-for="(project, index) in projects" 
-                    :key="index" 
-                    class="project-card" 
-                    :class="{ 
+        <h1 class="page-title">Projects</h1>
+        <div class="content-layout">
+            <div class="projects-grid-wrapper">
+                <div class="projects-grid" :class="{ 'has-active': expandedProject !== null }">
+                    <div v-for="(project, index) in projects" :key="index" class="project-card" :class="{
                         'active': expandedProject === index,
                         'inactive': expandedProject !== null && expandedProject !== index
-                    }"
-                    @click="toggleProject(index)">
-                    <div class="project-content">
-                    <h2>{{ project.title }}</h2>
-                    <p>{{ project.description }}</p>
-                        <div class="project-indicator"></div>
+                    }" @click="toggleProject(index)">
+                        <div class="project-content">
+                            <h2>{{ project.title }}</h2>
+                            <p>{{ project.description }}</p>
+                            <div class="project-indicator"></div>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
-  
 
-        <Transition name="slide-fade">
-          <div v-if="expandedProject !== null" class="project-details-section">
-            <div class="project-details-content">
-              <div class="project-sections">
-                <Transition name="fade" mode="out-in">
-                  <div v-if="activeSection === 'Overview'" 
-                       key="overview" 
-                       class="section"
-                       ref="overviewSection">
-                    <h2>{{ currentProject?.title }}</h2>
-                    <p>{{ currentProject?.description }}</p>
 
-                    <component
-                        :is="currentProject?.interactiveComponent"
-                        v-if="currentProject?.interactiveComponent"
-                        class="interactive-demo"
-                        :element-data="elementData"
-                        :project-color="currentProject?.color"
-                        />
-                        <div v-else class="demo-placeholder">
-                        <p>Interactive demo coming soon</p>
-                        </div>
+            <Transition name="slide-fade">
+                <div v-if="expandedProject !== null" class="project-details-section">
+                    <div class="project-details-content">
+                        <div class="project-sections">
+                            <Transition name="fade" mode="out-in">
+                                <div v-if="activeSection === 'Overview'" key="overview" class="section"
+                                    ref="overviewSection">
+                                    <h2>{{ currentProject?.title }}</h2>
+                                    <p>{{ currentProject?.description }}</p>
 
-                    <div class="project-meta">
-                      <div class="tech-stack">
-                        <div>
-                            <h3>Technologies Used</h3>
-                            <div class="tech-tags">
-                            <span v-for="tech in currentProject?.technologies" :key="tech" 
-                                class="tech-tag">{{ tech }}</span>
+                                    <component :is="currentProject?.interactiveComponent"
+                                        v-if="currentProject?.interactiveComponent" class="interactive-demo"
+                                        :element-data="elementData" :project-color="currentProject?.color" />
+                                    <div v-else class="demo-placeholder">
+                                        <p>Interactive demo coming soon</p>
+                                    </div>
+
+                                    <div class="project-meta">
+                                        <div class="tech-stack">
+                                            <div>
+                                                <h3>Tech Stack</h3>
+                                                <div class="tech-tags">
+                                                    <span v-for="tech in currentProject?.technologies" :key="tech"
+                                                        class="tech-tag">{{ tech }}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="project-links">
+                                            <a v-if="currentProject?.github" :href="currentProject.github"
+                                                target="_blank" class="project-link"
+                                                :style="{ backgroundColor: getProjectColor(currentProject.color) }">
+                                                GitHub
+                                            </a>
+                                            <a v-if="currentProject?.demo" :href="currentProject.demo" target="_blank"
+                                                class="project-link"
+                                                :style="{ backgroundColor: getProjectColor(currentProject.color) }">
+                                                Live Demo
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div v-else-if="activeSection === 'Details'" key="details"
+                                    class="section details-section">
+                                    <div class="project-details" v-html="currentProject?.detailedDescription"></div>
+                                </div>
+                            </Transition>
                         </div>
-                        </div>
-                      </div>
-                      <div class="project-links">
-                        <a v-if="currentProject?.github" 
-                           :href="currentProject.github" 
-                           target="_blank" 
-                           class="project-link"
-                           :style="{ backgroundColor: getProjectColor(currentProject.color) }">
-                          GitHub
-                        </a>
-                        <a v-if="currentProject?.demo" 
-                           :href="currentProject.demo" 
-                           target="_blank" 
-                           class="project-link"
-                           :style="{ backgroundColor: getProjectColor(currentProject.color) }">
-                          Live Demo
-                        </a>
-                      </div>
                     </div>
-                  </div>
-                  <div v-else-if="activeSection === 'Details'" key="details" class="section details-section">
-                    <div class="project-details" v-html="currentProject?.detailedDescription"></div>
-                  </div>
-                </Transition>
-              </div>
-            </div>
-          </div>
-        </Transition>
-      </div>
+                </div>
+            </Transition>
+        </div>
     </div>
-  </template>
-  
-  <script setup>
-  import { computed, ref, watch } from 'vue'
+</template>
+
+<script setup>
+import { computed, ref, watch } from 'vue'
 import PhysicsEngine from '../components/PhysicsEngine.vue'
 import { useElementTracker } from '../composables/usePhysicsEngine.js'
-  
-  const props = defineProps({
+
+const props = defineProps({
     activeSection: String,
     selectedProject: Number
-  })
-  
-  const emit = defineEmits(['update:selectedProject'])
-  
-  const expandedProject = ref(null)
+})
+
+const emit = defineEmits(['update:selectedProject'])
+
+const expandedProject = ref(null)
 
 
-  watch(() => props.selectedProject, (newVal) => {
+watch(() => props.selectedProject, (newVal) => {
     expandedProject.value = newVal
-  }, { immediate: true })
-  
-  watch(expandedProject, (newVal) => {
+}, { immediate: true })
+
+watch(expandedProject, (newVal) => {
     emit('update:selectedProject', newVal)
-  })
-  
-  const projects = [
+})
+
+const projects = [
     {
-      title: 'Physics Engine',
-      description: 'A real-time physics engine with interactive demonstrations.',
-      technologies: ['JavaScript', 'Canvas API', 'Matter.js'],
-      github: 'https://github.com/yourusername/physics-engine',
-      demo: null,
-      interactiveComponent: PhysicsEngine,
-      detailedDescription: `
+        title: 'Physics Engine',
+        description: 'A real-time physics engine built with Processing (Java)',
+        technologies: ['Processing', 'Java'],
+        github: 'https://github.com/Sparkylc2/PhysicsEngine',
+        demo: null,
+        interactiveComponent: PhysicsEngine,
+        detailedDescription: `
         <h3>About the Project</h3>
         <p>Detailed description of the physics engine...</p>
         
@@ -128,16 +114,16 @@ import { useElementTracker } from '../composables/usePhysicsEngine.js'
           <li>Collision detection</li>
         </ul>
       `,
-      color: 'red'
+        color: 'red'
     },
     {
-      title: 'Wind Turbine Designer',
-      description: 'Interactive tool for designing wind turbine blades.',
-      technologies: ['Vue.js', 'Three.js', 'WebGL'],
-      github: 'https://github.com/yourusername/turbine-designer',
-      demo: 'https://demo-link.com',
-      interactiveComponent: null, 
-      detailedDescription: `
+        title: 'Wind Turbine BEM',
+        description: 'Blade Element Momentum (BEM) theory implementation for wind turbine analysis.',
+        technologies: ['C++', 'Python'],
+        github: 'https://github.com/yourusername/turbine-designer',
+        demo: 'https://demo-link.com',
+        interactiveComponent: null,
+        detailedDescription: `
         <h3>About the Project</h3>
         <p>Description of the wind turbine designer...</p>
         
@@ -148,16 +134,16 @@ import { useElementTracker } from '../composables/usePhysicsEngine.js'
           <li>Performance analysis</li>
         </ul>
       `,
-      color: 'blue'
+        color: 'blue'
     },
     {
-      title: 'Panel Airfoil Simulator',
-      description: 'Advanced computational fluid dynamics simulator for airfoil analysis using panel methods.',
-      technologies: ['Python', 'NumPy', 'Matplotlib', 'SciPy'],
-      github: 'https://github.com/yourusername/panel-airfoil',
-      demo: 'https://demo-link.com',
-      interactiveComponent: null,
-      detailedDescription: `
+        title: 'Panel Airfoil Simulator',
+        description: 'Advanced computational fluid dynamics simulator for airfoil analysis using panel methods.',
+        technologies: ['Matlab'],
+        github: 'https://github.com/yourusername/panel-airfoil',
+        demo: 'https://demo-link.com',
+        interactiveComponent: null,
+        detailedDescription: `
         <h3>About the Project</h3>
         <p>A sophisticated panel method implementation for analyzing airfoil performance in potential flow conditions.</p>
         
@@ -177,16 +163,16 @@ import { useElementTracker } from '../composables/usePhysicsEngine.js'
           <li>Performance optimization for real-time analysis</li>
         </ul>
       `,
-      color: 'green'
+        color: 'green'
     },
     {
-      title: 'Numerical Methods Library',
-      description: 'Comprehensive implementation of advanced numerical methods for engineering applications.',
-      technologies: ['Python', 'NumPy', 'SymPy', 'Jupyter'],
-      github: 'https://github.com/yourusername/numerical-methods',
-      demo: 'https://demo-link.com',
-      interactiveComponent: null,
-      detailedDescription: `
+        title: 'Numerical Methods Library',
+        description: 'Comprehensive implementation of advanced numerical methods for engineering applications.',
+        technologies: ['Python', 'NumPy', 'SymPy', 'Jupyter'],
+        github: 'https://github.com/yourusername/numerical-methods',
+        demo: 'https://demo-link.com',
+        interactiveComponent: null,
+        detailedDescription: `
         <h3>About the Project</h3>
         <p>A robust collection of numerical methods implementations developed during advanced engineering coursework.</p>
         
@@ -206,71 +192,71 @@ import { useElementTracker } from '../composables/usePhysicsEngine.js'
           <li>Optimization problems</li>
         </ul>
       `,
-      color: 'yellow'
+        color: 'yellow'
     }
-  ]
-  
-  const currentProject = computed(() => 
+]
+
+const currentProject = computed(() =>
     expandedProject.value !== null ? projects[expandedProject.value] : null
-  )
-  
-  const openProject = (index) => {
+)
+
+const openProject = (index) => {
     expandedProject.value = index
-  }
-  
-  const closeProject = () => {
+}
+
+const closeProject = () => {
     expandedProject.value = null
-  }
-  
-  const toggleProject = (index) => {
+}
+
+const toggleProject = (index) => {
     if (expandedProject.value === index) {
-      closeProject()
+        closeProject()
     } else {
-      openProject(index)
+        openProject(index)
     }
-  }
-  
-  const getProjectColor = (color) => {
+}
+
+const getProjectColor = (color) => {
     const colors = {
-      red: 'rgb(204, 140, 140)',
-      blue: 'rgb(140, 172, 204)',
-      green: 'rgb(140, 204, 140)',
-      yellow: 'rgb(204, 172, 140)'
+        red: 'rgb(204, 140, 140)',
+        blue: 'rgb(140, 172, 204)',
+        green: 'rgb(140, 204, 140)',
+        yellow: 'rgb(204, 172, 140)'
     }
     return colors[color] || '#e63946'
-  }
+}
 
 
 
 /* ------------------ Project Specific Composables ------------------ */
 
 /* --------- Physics Engine --------- */
-  const overviewSection = ref(null)
+const overviewSection = ref(null)
 
-  
-  const { elementData } = useElementTracker(overviewSection, {
+
+const { elementData } = useElementTracker(overviewSection, {
     excludeClasses: ['interactive-demo', 'demo-placeholder'],
     includeContainer: true,
     relative: true
-  })
+})
 /* --------------------------------- */
-  
 
 
 
 
 
-  </script>
-  
-  <style scoped>
-  .content-layout {
+
+</script>
+
+<style scoped>
+.content-layout {
     display: flex;
     gap: 2rem;
     padding: 6rem 2rem 2rem;
     min-height: calc(100vh - 8rem);
-  }
+}
 
-  .projects-grid-wrapper {
+.projects-grid-wrapper {
     position: relative;
     width: 400px;
     min-width: 400px;
@@ -279,9 +265,9 @@ import { useElementTracker } from '../composables/usePhysicsEngine.js'
     overflow-x: visible;
     scrollbar-width: none;
     -ms-overflow-style: none;
-  }
+}
 
-  .projects-grid {
+.projects-grid {
     display: flex;
     flex-direction: column;
     gap: 1rem;
@@ -290,23 +276,23 @@ import { useElementTracker } from '../composables/usePhysicsEngine.js'
     padding: 2rem 1rem;
     width: calc(100% + 4rem);
     margin-left: -2rem;
-  }
-  
-  .projects-grid.has-active {
+}
+
+.projects-grid.has-active {
     width: 350px;
     min-width: 350px;
-  }
+}
 
-  .projects-container {
+.projects-container {
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
     overflow: hidden;
-  }
-  
-  .page-title {
+}
+
+.page-title {
     font-size: 3rem;
     font-weight: bold;
     position: fixed;
@@ -314,16 +300,16 @@ import { useElementTracker } from '../composables/usePhysicsEngine.js'
     left: 2rem;
     margin: 0;
     z-index: 5;
-  }
-  
-  .content-layout {
+}
+
+.content-layout {
     display: flex;
     gap: 2rem;
     padding: 6rem 2rem 2rem;
     min-height: calc(100vh - 8rem);
-  }
-  
-  .projects-grid {
+}
+
+.projects-grid {
     display: flex;
     flex-direction: column;
     gap: 1rem;
@@ -338,76 +324,76 @@ import { useElementTracker } from '../composables/usePhysicsEngine.js'
     scrollbar-width: none;
     -ms-overflow-style: none;
     height: calc(100vh - 8rem);
-  }
-  
-  .projects-grid::-webkit-scrollbar {
+}
+
+.projects-grid::-webkit-scrollbar {
     display: none;
-  }
-  
-  .projects-grid.has-active {
+}
+
+.projects-grid.has-active {
     width: 350px;
     min-width: 350px;
-  }
-  
-  .project-card {
+}
+
+.project-card {
     background-color: rgb(36, 36, 36);
     border: 1px solid rgba(255, 255, 255, 0.1);
     padding: 1.5rem;
     border-radius: 0.5rem;
     width: calc(100% - 5rem);
     margin: 0rem 2rem;
-    box-shadow: 0 0 10px rgba(0,0,0,0.5);
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     cursor: pointer;
     position: relative;
     justify-content: center;
     overflow: visible;
     transform-origin: center left;
-  }
-  
-  .project-card:hover .project-indicator {
+}
+
+.project-card:hover .project-indicator {
     width: 100%;
-  }
-  
-  .project-card:hover {
+}
+
+.project-card:hover {
     transform: translateY(-4px);
-    box-shadow: 0 8px 30px rgba(0,0,0,0.6);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
     background-color: #252525;
-  }
-  
-  .project-card:nth-child(4n+1) {
+}
+
+.project-card:nth-child(4n+1) {
     border-color: rgba(204, 140, 140, 0.3);
-  }
-  
-  .project-card:nth-child(4n+2) {
+}
+
+.project-card:nth-child(4n+2) {
     border-color: rgba(140, 172, 204, 0.3);
-  }
-  
-  .project-card:nth-child(4n+3) {
+}
+
+.project-card:nth-child(4n+3) {
     border-color: rgba(140, 204, 140, 0.3);
-  }
-  
-  .project-card:nth-child(4n) {
+}
+
+.project-card:nth-child(4n) {
     border-color: rgba(204, 172, 140, 0.3);
-  }
-  
-  .project-card.inactive {
+}
+
+.project-card.inactive {
     opacity: 0.5;
     transform: scale(0.95);
-  }
-  
-  .project-card.active {
+}
+
+.project-card.active {
     background-color: rgb(36, 36, 36);
     transform: translateX(-5px);
     border: 1px solid #e63946;
-  }
-  
-  .project-content {
+}
+
+.project-content {
     position: relative;
     padding-bottom: 4px;
-  }
-  
-  .project-indicator {
+}
+
+.project-indicator {
     position: absolute;
     bottom: 0;
     left: 0;
@@ -415,93 +401,101 @@ import { useElementTracker } from '../composables/usePhysicsEngine.js'
     width: 0;
     transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     border-radius: 9999px;
-  }
-  
-  .project-card:nth-child(4n+1) .project-indicator {
+}
+
+.project-card:nth-child(4n+1) .project-indicator {
     background-color: rgb(204, 140, 140);
-  }
-  
-  .project-card:nth-child(4n+2) .project-indicator {
+}
+
+.project-card:nth-child(4n+2) .project-indicator {
     background-color: rgb(140, 172, 204);
-  }
-  
-  .project-card:nth-child(4n+3) .project-indicator {
+}
+
+.project-card:nth-child(4n+3) .project-indicator {
     background-color: rgb(140, 204, 140);
-  }
-  
-  .project-card:nth-child(4n) .project-indicator {
+}
+
+.project-card:nth-child(4n) .project-indicator {
     background-color: rgb(204, 172, 140);
-  }
-  
-  .project-card:nth-child(4n+1) .project-links a {
+}
+
+.project-card:nth-child(4n+1) .project-links a {
     background-color: rgb(204, 140, 140);
-  }
-  
-  .project-card:nth-child(4n+2) .project-links a {
+}
+
+.project-card:nth-child(4n+2) .project-links a {
     background-color: rgb(140, 172, 204);
-  }
-  
-  .project-card:nth-child(4n+3) .project-links a {
+}
+
+.project-card:nth-child(4n+3) .project-links a {
     background-color: rgb(140, 204, 140);
-  }
-  
-  .project-card:nth-child(4n) .project-links a {
+}
+
+.project-card:nth-child(4n) .project-links a {
     background-color: rgb(204, 172, 140);
-  }
-  
-  .project-card:nth-child(4n+1) .tech-tag {
+}
+
+.project-card:nth-child(4n+1) .tech-tag {
     background-color: rgba(204, 140, 140, 0.2);
     color: rgb(255, 191, 191);
-  }
-  
-  .project-card:nth-child(4n+2) .tech-tag {
+}
+
+.project-card:nth-child(4n+2) .tech-tag {
     background-color: rgba(140, 172, 204, 0.2);
     color: rgb(191, 223, 255);
-  }
-  
-  .project-card:nth-child(4n+3) .tech-tag {
+}
+
+.project-card:nth-child(4n+3) .tech-tag {
     background-color: rgba(140, 204, 140, 0.2);
     color: rgb(191, 255, 191);
-  }
-  
-  .project-card:nth-child(4n) .tech-tag {
+}
+
+.project-card:nth-child(4n) .tech-tag {
     background-color: rgba(204, 172, 140, 0.2);
     color: rgb(255, 223, 191);
-  }
-  
-  .project-card:nth-child(4n+1) h2 {
-    color: rgb(255, 191, 191); /* Red */
-  }
-  
-  .project-card:nth-child(4n+2) h2 {
-    color: rgb(191, 223, 255); /* Blue */
-  }
-  
-  .project-card:nth-child(4n+3) h2 {
-    color: rgb(191, 255, 191); /* Green */
-  }
-  
-  .project-card:nth-child(4n) h2 {
-    color: rgb(255, 223, 191); /* Yellow */
-  }
-  
-  .project-card:nth-child(4n+1).active {
-    border-color: rgb(204, 140, 140); /* Darker Red */
-  }
-  
-  .project-card:nth-child(4n+2).active {
-    border-color: rgb(140, 172, 204); /* Darker Blue */
-  }
-  
-  .project-card:nth-child(4n+3).active {
-    border-color: rgb(140, 204, 140); /* Darker Green */
-  }
-  
-  .project-card:nth-child(4n).active {
-    border-color: rgb(204, 172, 140); /* Darker Yellow */
-  }
-  
-  .project-details-section {
+}
+
+.project-card:nth-child(4n+1) h2 {
+    color: rgb(255, 191, 191);
+    /* Red */
+}
+
+.project-card:nth-child(4n+2) h2 {
+    color: rgb(191, 223, 255);
+    /* Blue */
+}
+
+.project-card:nth-child(4n+3) h2 {
+    color: rgb(191, 255, 191);
+    /* Green */
+}
+
+.project-card:nth-child(4n) h2 {
+    color: rgb(255, 223, 191);
+    /* Yellow */
+}
+
+.project-card:nth-child(4n+1).active {
+    border-color: rgb(204, 140, 140);
+    /* Darker Red */
+}
+
+.project-card:nth-child(4n+2).active {
+    border-color: rgb(140, 172, 204);
+    /* Darker Blue */
+}
+
+.project-card:nth-child(4n+3).active {
+    border-color: rgb(140, 204, 140);
+    /* Darker Green */
+}
+
+.project-card:nth-child(4n).active {
+    border-color: rgb(204, 172, 140);
+    /* Darker Yellow */
+}
+
+.project-details-section {
     flex: 1;
     background: rgb(36, 36, 36);
     overflow-y: visible;
@@ -511,20 +505,20 @@ import { useElementTracker } from '../composables/usePhysicsEngine.js'
     max-height: calc(100vh - 8rem);
     min-width: 400px;
 
-  }
-  
-  .project-details-section::-webkit-scrollbar {
+}
+
+.project-details-section::-webkit-scrollbar {
     display: none;
-  }
-  
-  .project-details-content {
+}
+
+.project-details-content {
     padding: 1rem;
     padding-top: 2rem;
     min-height: 100%;
-  }
-  
+}
 
-  .section {
+
+.section {
     display: flex;
     flex-direction: column;
     min-height: 500px;
@@ -532,104 +526,104 @@ import { useElementTracker } from '../composables/usePhysicsEngine.js'
     border-radius: 0.5rem;
     outline: 1px solid v-bind('getProjectColor(currentProject?.color)');
     outline-offset: 1px;
-    padding-bottom: 2rem; 
-  }
-  
+    padding-bottom: 2rem;
+}
 
- .tech-stack {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  width: 100%;
-  padding-left: 1rem;
-  position: relative;
-} 
+
+.tech-stack {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    width: 100%;
+    padding-left: 1rem;
+    position: relative;
+}
+
 .tech-stack h3 {
-  margin-bottom: 0.75rem;
-  width: auto;
-  position: relative;
-  left: 50%;
-  transform: translateX(-50%);
+    margin-bottom: 0.75rem;
+    width: auto;
+    position: relative;
+    left: 50%;
+    transform: translateX(-50%);
 }
 
 .project-meta {
-  margin-top: auto;
-  padding: 0 1rem; 
-  display: grid;
-  gap: 1.5rem; 
-  grid-template-columns: 1fr auto;
-  align-items: flex-end; 
-}
-  
-.tech-tags {
-  display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-top: 0.5rem;
-  justify-content: flex-start;
-  width: auto;
-  align-self: flex-start;
-}
-  
-.tech-tag {
-  padding: 0.2rem 0.6rem;
-  border-radius: 1rem;
-  font-size: 0.9rem; 
-  transition: all 0.3s ease;
-}
-  
-.project-links {
-  display: flex;
-  gap: 0.8rem; 
-  align-self: center; 
-  align-items:last baseline;
-  padding-bottom: 0.4rem;
-  height: 100%;
-}
-  
-.project-link {
-  display: inline-block;
-  padding: 0.4rem 0.8rem; 
-  color: white;
-  border-radius: 0.4rem;
-  text-decoration: none;
-  transition: all 0.3s ease;
-  white-space: nowrap;
+    margin-top: auto;
+    padding: 0 1rem;
+    display: grid;
+    gap: 1.5rem;
+    grid-template-columns: 1fr auto;
+    align-items: flex-end;
 }
 
-  
-  .project-link:hover {
+.tech-tags {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+    justify-content: flex-start;
+    width: auto;
+    align-self: flex-start;
+}
+
+.tech-tag {
+    padding: 0.2rem 0.6rem;
+    border-radius: 1rem;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+}
+
+.project-links {
+    display: flex;
+    gap: 0.8rem;
+    align-self: center;
+    align-items: last baseline;
+    padding-bottom: 0.4rem;
+    height: 100%;
+}
+
+.project-link {
+    display: inline-block;
+    padding: 0.4rem 0.8rem;
+    color: white;
+    border-radius: 0.4rem;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+}
+
+
+.project-link:hover {
     transform: translateY(-2px);
     filter: brightness(1.2);
-  }
-  
+}
 
 
-  
-  .slide-fade-enter-active,
-  .slide-fade-leave-active {
+
+
+.slide-fade-enter-active,
+.slide-fade-leave-active {
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-  
-  .slide-fade-enter-from {
+}
+
+.slide-fade-enter-from {
     opacity: 0;
     transform: translateX(20px);
-  }
-  
-  .slide-fade-leave-to {
+}
+
+.slide-fade-leave-to {
     opacity: 0;
     transform: translateX(20px);
-  }
-  
-  .fade-enter-active,
-  .fade-leave-active {
+}
+
+.fade-enter-active,
+.fade-leave-active {
     transition: opacity 0.2s ease;
-  }
-  
-  .fade-enter-from,
-  .fade-leave-to {
+}
+
+.fade-enter-from,
+.fade-leave-to {
     opacity: 0;
-  }
-  
+}
 </style>

@@ -1,203 +1,153 @@
+<template>
+    <nav class="navbar">
+        <ul class="links" ref="navRef" :style="{ '--barColor': indicatorColor }">
+            <li v-for="t in tabs" :key="t.key" :class="[
+                {
+                    divider: t.divider,
+                    collapsed: t.hidden && t.divider,
+                    hidden: t.hidden && !t.divider
+                }
+            ]">
+
+                <template v-if="!t.divider">
+                    <a href="#" :data-key="t.key" :class="{ active: activeTab === t.key }"
+                        @click.prevent="setActive(t.key, $event)">
+                        {{ t.label }}
+                    </a>
+                </template>
+            </li>
+
+
+            <div ref="barRef" class="bar"></div>
+        </ul>
+    </nav>
+</template>
+
 <script setup>
-import { defineEmits, defineProps, nextTick, onMounted, ref, watch } from 'vue'
+import { ref, watch, nextTick, onMounted } from 'vue'
+
 
 const props = defineProps({
-  tabs: {
-    type: Array,
-    required: true,
-    // Expected format: [{ key: 'overview', label: 'Overview', isDivider: false }, ...]
-  },
-  activeTab: {
-    type: String,
-    required: true
-  },
-  indicatorColor: {
-    type: String,
-    default: '#e63946'
-  }
+    tabs: { type: Array, required: true },
+    activeTab: { type: String, required: true },
+    indicatorColor: { type: String, default: '#e63946' }
 })
-
 const emit = defineEmits(['update:activeTab'])
 
-const tabRefs = ref([])
-const indicatorRef = ref(null)
-const isTransitioning = ref(false)
 
-const registerTabRef = (el, i) => {
-  if (el) tabRefs.value[i] = el
+const navRef = ref(null)
+const barRef = ref(null)
+
+
+function moveBarTo(el) {
+    if (!el || !navRef.value || !barRef.value) return
+    const navBox = navRef.value.getBoundingClientRect()
+    const box = el.getBoundingClientRect()
+    barRef.value.style.left = `${box.left - navBox.left}px`
+    barRef.value.style.width = `${box.width}px`
+    barRef.value.style.backgroundColor = props.indicatorColor
+}
+function moveBar() {
+    const active = navRef.value?.querySelector('a.active')
+    moveBarTo(active)
 }
 
-const updateIndicator = () => {
-  const activeIndex = props.tabs.findIndex(tab => tab.key === props.activeTab)
-  
-  const indicator = indicatorRef.value
-  const activeTabEl = tabRefs.value[activeIndex]
-  
-  if (indicator && activeTabEl && activeIndex !== -1) {
-    indicator.style.left = activeTabEl.offsetLeft + 'px'
-    indicator.style.width = activeTabEl.offsetWidth + 'px'
-    indicator.style.backgroundColor = props.indicatorColor
-  }
+
+function clickWouldHitParent(key) {
+    const activeItem = props.tabs.find(t => t.key === props.activeTab)
+    return (
+        activeItem &&
+        activeItem.parent &&
+        key === activeItem.parent
+    )
 }
 
-const setActive = async (tabKey) => {
-  if (tabKey === props.activeTab) return
-  
-  isTransitioning.value = true
-  emit('update:activeTab', tabKey)
+function setActive(key, evt) {
+    if (clickWouldHitParent(key)) return
 
-  await nextTick()
-  
-  setTimeout(() => {
-    isTransitioning.value = false
-  }, 300)
+    if (key === props.activeTab) return
+
+    moveBarTo(evt.currentTarget)
+    requestAnimationFrame(() => emit('update:activeTab', key))
 }
 
-watch([
-  () => props.tabs, 
-  () => props.activeTab,
-  () => props.indicatorColor
-], () => {
-  nextTick(() => {
-    updateIndicator()
-  })
-})
 
 onMounted(() => {
-  nextTick(() => {
-    updateIndicator()
-  })
+    moveBar()
+    window.addEventListener('resize', moveBar)
 })
+watch(
+    () => [props.activeTab, props.tabs.map(t => t.hidden).join(',')],
+    async () => { await nextTick(); moveBar() },
+    { deep: true }
+)
 </script>
-
-<template>
-  <nav class="navbar">
-    <ul class="nav-links">
-      <TransitionGroup 
-        name="nav-item"
-        @before-enter="isTransitioning = true"
-        @after-enter="isTransitioning = false"
-        @before-leave="isTransitioning = true"
-        @after-leave="isTransitioning = false">
-        <li v-for="(tab, i) in tabs" 
-            :key="tab.key" 
-            :ref="el => registerTabRef(el, i)"
-            :class="{ 
-              'divider': tab.isDivider,
-              'transitioning': isTransitioning
-            }">
-          <a href="#"
-             :class="{ active: activeTab === tab.key }"
-             @click.prevent="setActive(tab.key)">
-            {{ tab.label }}
-          </a>
-        </li>
-      </TransitionGroup>
-      <div class="indicator" ref="indicatorRef"></div>
-    </ul>
-  </nav>
-</template>
 
 <style scoped>
 .navbar {
-  position: absolute;
-  top: 1rem;
-  right: 1rem;
-  z-index: 10;
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    z-index: 999
 }
 
-.nav-links {
-  display: flex;
-  gap: 1.5rem;
-  list-style: none;
-  position: relative;
-  padding-bottom: 4px;
-  perspective: 1000px;
-  transform-style: preserve-3d;
-  min-height: 2rem;
+
+.links {
+    display: flex;
+    gap: 1.25rem;
+    list-style: none;
+    position: relative;
+    padding-bottom: 4px
 }
 
-.nav-links a {
-  color: #ccc;
-  text-decoration: none;
-  font-weight: 500;
-  transition: color 0.3s;
-  padding: 4px 0;
-  display: inline-block;
-  position: relative;
-  backface-visibility: hidden;
+.links a {
+    color: #ccc;
+    text-decoration: none;
+    font-weight: 500;
+    padding: 4px 0;
+    transition: color .25s
 }
 
-.nav-links a.active {
-  color: white;
+.links a.active {
+    color: #fff
 }
+
+.bar {
+    position: absolute;
+    bottom: 0;
+    height: 2px;
+    border-radius: 9999px;
+    transition: left .25s ease, width .25s ease, background-color .25s
+}
+
+
+.hidden {
+    display: none
+}
+
 
 .divider {
-  position: relative;
-  margin-left: 1.5rem;
+    position: relative;
+    margin-left: 1rem;
+    margin-right: -1rem;
+    width: 0
 }
 
 .divider::before {
-  content: '';
-  position: absolute;
-  left: -1.5rem;
-  top: 0;
-  bottom: 0;
-  width: 2px;
-  background-color: v-bind(indicatorColor);
-  transform-origin: top;
-  height: 100%;
-  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.3s ease;
-  transform: scaleY(0);
-  will-change: transform;
+    content: '';
+    position: absolute;
+    left: -1rem;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background-color: var(--barColor);
+    transform-origin: top;
+    transform: scaleY(1);
+    transition: transform .35s cubic-bezier(.4, 0, .2, 1),
+        background-color .25s
 }
 
-.divider:not(.transitioning)::before {
-  transform: scaleY(1);
-}
-
-.nav-links li {
-  position: relative;
-  transform-style: preserve-3d;
-}
-
-.nav-item-move,
-.nav-item-enter-active,
-.nav-item-leave-active {
-  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-  transform-origin: top center;
-  position: relative;
-  transform-style: preserve-3d;
-  backface-visibility: hidden;
-  pointer-events: none;
-}
-
-.nav-item-leave-active {
-  position: absolute;
-  width: 100%;
-  transform-origin: top center;
-  left: 0;
-  top: 0;
-}
-
-.nav-item-enter-from,
-.nav-item-leave-to {
-  opacity: 0;
-  transform: rotateX(-90deg);
-}
-
-.nav-item-enter-to,
-.nav-item-leave-from {
-  opacity: 1;
-  transform: rotateX(0);
-}
-
-.indicator {
-  position: absolute;
-  bottom: 0;
-  height: 2px;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.3s ease;
-  border-radius: 9999px;
-  transform-origin: center;
+.divider.collapsed::before {
+    transform: scaleY(0)
 }
 </style>

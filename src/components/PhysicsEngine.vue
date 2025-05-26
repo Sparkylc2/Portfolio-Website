@@ -25,13 +25,12 @@ const dragIndex = ref(-1)
 
 
 
-const boxes = []
 const elementBoxes = []
 const bodyBoxes = []
 let springG = null
 
 
-const BOX_SIZE = 15
+const BOX_SIZE = 16.5
 const NUM_BOXES = 3
 const SPACING = 40
 let START_X = 0
@@ -60,7 +59,6 @@ function onPointerMove(e) {
 }
 
 function onPointerUp() {
-    if (!isDragging.value) return
     engine.value.end_mouse_drag()
     isDragging.value = false
 }
@@ -74,52 +72,51 @@ function syncElementBoxes() {
     elementBoxes.length = 0;
 
 
-    const wallThickness = 50;
-    const halfWallThickness = wallThickness / 2;
-    const halfWidth = container.width / 2;
-    const halfHeight = container.height / 2;
+    // const wallThickness = 50;
+    // const halfWallThickness = wallThickness / 2;
+    // const halfWidth = container.width / 2;
+    // const halfHeight = container.height / 2;
 
 
-    const leftWallID = engine.value.add_fixed_body(
-        -halfWallThickness,
-        halfHeight,
-        halfWallThickness,
-        halfHeight
-    );
+    // const leftWallID = engine.value.add_fixed_body(
+    //     -halfWallThickness,
+    //     halfHeight,
+    //     halfWallThickness,
+    //     halfHeight
+    // );
 
 
-    const rightWallID = engine.value.add_fixed_body(
-        container.width + halfWallThickness,
-        halfHeight,
-        halfWallThickness,
-        halfHeight
-    );
+    // const rightWallID = engine.value.add_fixed_body(
+    //     container.width + halfWallThickness,
+    //     halfHeight,
+    //     halfWallThickness,
+    //     halfHeight
+    // );
 
 
 
-    const topWallID = engine.value.add_fixed_body(
-        halfWidth,
-        -halfWallThickness,
-        halfWidth,
-        halfWallThickness
-    );
+    // const topWallID = engine.value.add_fixed_body(
+    //     halfWidth,
+    //     -halfWallThickness,
+    //     halfWidth,
+    //     halfWallThickness
+    // );
 
 
-    const bottomWallID = engine.value.add_fixed_body(
-        halfWidth,
-        container.height + halfWallThickness,
-        halfWidth,
-        halfWallThickness
-    );
+    // const bottomWallID = engine.value.add_fixed_body(
+    //     halfWidth,
+    //     container.height + halfWallThickness,
+    //     halfWidth,
+    //     halfWallThickness
+    // );
 
 
-    elementBoxes.push({ id: leftWallID, g: null });
-    elementBoxes.push({ id: rightWallID, g: null });
-    elementBoxes.push({ id: topWallID, g: null });
-    elementBoxes.push({ id: bottomWallID, g: null });
+    // elementBoxes.push({ id: leftWallID, g: null });
+    // elementBoxes.push({ id: rightWallID, g: null });
+    // elementBoxes.push({ id: topWallID, g: null });
+    // elementBoxes.push({ id: bottomWallID, g: null });
 
 
-    console.log('syncElementBoxes', elements, container);
     for (const el of elements) {
         if (!el.textWidth || !el.textHeight) continue;
 
@@ -156,7 +153,6 @@ function initPendulumBlocks() {
         g.setStrokeStyle({
             width: 3,
             color: 0x000000
-
         })
         g.stroke()
 
