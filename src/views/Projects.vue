@@ -28,7 +28,10 @@
             <div class="project-details-content">
               <div class="project-sections">
                 <Transition name="fade" mode="out-in">
-                  <div v-if="activeSection === 'Overview'" key="overview" class="section overview-section">
+                  <div v-if="activeSection === 'Overview'" 
+                       key="overview" 
+                       class="section"
+                       ref="overviewSection">
                     <h2>{{ currentProject?.title }}</h2>
                     <p>{{ currentProject?.description }}</p>
 
@@ -36,6 +39,8 @@
                         :is="currentProject?.interactiveComponent"
                         v-if="currentProject?.interactiveComponent"
                         class="interactive-demo"
+                        :element-data="elementData"
+                        :project-color="currentProject?.color"
                         />
                         <div v-else class="demo-placeholder">
                         <p>Interactive demo coming soon</p>
@@ -43,11 +48,12 @@
 
                     <div class="project-meta">
                       <div class="tech-stack">
-                        <h3>Technologies Used</h3>
-                        <div class="tech-tags">
-                          <span v-for="tech in currentProject?.technologies" 
-                                :key="tech" 
+                        <div>
+                            <h3>Technologies Used</h3>
+                            <div class="tech-tags">
+                            <span v-for="tech in currentProject?.technologies" :key="tech" 
                                 class="tech-tag">{{ tech }}</span>
+                        </div>
                         </div>
                       </div>
                       <div class="project-links">
@@ -82,7 +88,8 @@
   
   <script setup>
   import { computed, ref, watch } from 'vue'
-  import PhysicsEngine from '../components/PhysicsEngine.vue'
+import PhysicsEngine from '../components/PhysicsEngine.vue'
+import { useElementTracker } from '../composables/usePhysicsEngine.js'
   
   const props = defineProps({
     activeSection: String,
@@ -92,7 +99,8 @@
   const emit = defineEmits(['update:selectedProject'])
   
   const expandedProject = ref(null)
-  
+
+
   watch(() => props.selectedProject, (newVal) => {
     expandedProject.value = newVal
   }, { immediate: true })
@@ -107,7 +115,7 @@
       description: 'A real-time physics engine with interactive demonstrations.',
       technologies: ['JavaScript', 'Canvas API', 'Matter.js'],
       github: 'https://github.com/yourusername/physics-engine',
-      demo: 'https://demo-link.com',
+      demo: null,
       interactiveComponent: PhysicsEngine,
       detailedDescription: `
         <h3>About the Project</h3>
@@ -124,9 +132,7 @@
     },
     {
       title: 'Wind Turbine Designer',
-      description: `
-      'Interactive tool for designing wind turbine blades.'
-      `,
+      description: 'Interactive tool for designing wind turbine blades.',
       technologies: ['Vue.js', 'Three.js', 'WebGL'],
       github: 'https://github.com/yourusername/turbine-designer',
       demo: 'https://demo-link.com',
@@ -233,6 +239,27 @@
     }
     return colors[color] || '#e63946'
   }
+
+
+
+/* ------------------ Project Specific Composables ------------------ */
+
+/* --------- Physics Engine --------- */
+  const overviewSection = ref(null)
+
+  
+  const { elementData } = useElementTracker(overviewSection, {
+    excludeClasses: ['interactive-demo', 'demo-placeholder'],
+    includeContainer: true,
+    relative: true
+  })
+/* --------------------------------- */
+  
+
+
+
+
+
   </script>
   
   <style scoped>
@@ -479,9 +506,7 @@
     background: rgb(36, 36, 36);
     overflow-y: visible;
     scrollbar-width: none;
-    /* padding-right: 1rem; */
     padding-bottom: 2rem;
-    /* border: 1px solid v-bind('getProjectColor(currentProject?.color)'); */
     border-radius: 0.5rem;
     max-height: calc(100vh - 8rem);
     min-width: 400px;
@@ -500,48 +525,79 @@
   
 
   .section {
-    min-height: 400px;
-    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    min-height: 500px;
     background: rgb(36, 36, 36);
     border-radius: 0.5rem;
-    border: 1px solid v-bind('getProjectColor(currentProject?.color)');
+    outline: 1px solid v-bind('getProjectColor(currentProject?.color)');
+    outline-offset: 1px;
+    padding-bottom: 2rem; 
   }
   
 
-  .project-meta {
-    margin-top: 2rem;
-    display: grid;
-    gap: 2rem;
-    grid-template-columns: 1fr auto;
-  }
+ .tech-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  padding-left: 1rem;
+  position: relative;
+} 
+.tech-stack h3 {
+  margin-bottom: 0.75rem;
+  width: auto;
+  position: relative;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.project-meta {
+  margin-top: auto;
+  padding: 0 1rem; 
+  display: grid;
+  gap: 1.5rem; 
+  grid-template-columns: 1fr auto;
+  align-items: flex-end; 
+}
   
-  .tech-tags {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-    margin-top: 0.5rem;
-  }
+.tech-tags {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  justify-content: flex-start;
+  width: auto;
+  align-self: flex-start;
+}
   
-  .tech-tag {
-    padding: 0.25rem 0.75rem;
-    border-radius: 1rem;
-    font-size: 0.875rem;
-    transition: all 0.3s ease;
-  }
+.tech-tag {
+  padding: 0.2rem 0.6rem;
+  border-radius: 1rem;
+  font-size: 0.9rem; 
+  transition: all 0.3s ease;
+}
   
-  .project-links {
-    display: flex;
-    gap: 1rem;
-  }
+.project-links {
+  display: flex;
+  gap: 0.8rem; 
+  align-self: center; 
+  align-items:last baseline;
+  padding-bottom: 0.4rem;
+  height: 100%;
+}
   
-  .project-link {
-    display: inline-block;
-    padding: 0.5rem 1rem;
-    color: white;
-    border-radius: 0.5rem;
-    text-decoration: none;
-    transition: all 0.3s ease;
-  }
+.project-link {
+  display: inline-block;
+  padding: 0.4rem 0.8rem; 
+  color: white;
+  border-radius: 0.4rem;
+  text-decoration: none;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+}
+
   
   .project-link:hover {
     transform: translateY(-2px);

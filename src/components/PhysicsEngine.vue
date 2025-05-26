@@ -1,298 +1,369 @@
 <template>
-  <canvas 
-    ref="canvas" 
-    width="700"
-    height="400"
-    @mousedown="onMouseDown"
-    @mousemove="onMouseMove"
-    @mouseup="onMouseUp"
-    @mouseleave="onMouseUp"
-  />
+    <div ref="pixiContainer" class="pixi-container" />
 </template>
 
+
 <script setup>
-import { onMounted, ref } from 'vue'
+import { Application, Graphics } from 'pixi.js'
+import { onMounted, onUnmounted, ref, watch } from 'vue'
 import initWasm, { ConstraintPhysicsEngine } from '../../rust/physics_engine/pkg/physics_engine.js'
 
-const canvas = ref(null)
+const props = defineProps({
+    elementData: { type: Object, default: null },
+    projectColor: { type: String, default: 'red' }
+})
+
+
+const pixiContainer = ref(null)
+const app = ref(null)
 const engine = ref(null)
+
 const isDragging = ref(false)
 const mousePos = ref({ x: 0, y: 0 })
-const dragStartPos = ref({ x: 0, y: 0 })
 const dragIndex = ref(-1)
 
-const onMouseDown = (e) => {
-  const rect = canvas.value.getBoundingClientRect()
-  const x = e.clientX - rect.left
-  const y = e.clientY - rect.top
 
-  const index = engine.value.start_mouse_drag(x, y)
-  if (index !== -1) {
+
+
+const boxes = []
+const elementBoxes = []
+const bodyBoxes = []
+let springG = null
+
+
+const BOX_SIZE = 15
+const NUM_BOXES = 3
+const SPACING = 40
+let START_X = 0
+let START_Y = 0
+
+
+function onPointerDown(ev) {
+    const p = ev.global
+    const idx = engine.value.start_mouse_drag(p.x, p.y)
+    if (idx === -1) return;
+    if (!bodyBoxes[idx]) return;
+
     isDragging.value = true
-    dragStartPos.value = { x, y }
+    dragIndex.value = idx
+    mousePos.value = { x: p.x, y: p.y }
+}
+
+function onPointerMove(e) {
+    if (!isDragging.value) return
+    const rect = app.value.canvas.getBoundingClientRect()
+    const x = e.clientX - rect.left
+    const y = e.clientY - rect.top
+
     mousePos.value = { x, y }
-    dragIndex.value = index
-  }
-}
-
-const onMouseMove = (e) => {
-  const rect = canvas.value.getBoundingClientRect()
-  const x = e.clientX - rect.left
-  const y = e.clientY - rect.top
-  
-  mousePos.value = { x, y }
-  
-  if (isDragging.value) {
     engine.value.update_mouse_position(x, y)
-  }
 }
 
-const onMouseUp = () => {
-  if (isDragging.value) {
+function onPointerUp() {
+    if (!isDragging.value) return
     engine.value.end_mouse_drag()
     isDragging.value = false
-  }
 }
 
+function syncElementBoxes() {
+    const container = props.elementData?.container;
+    const elements = props.elementData?.elements || [];
+    if (!container) return;
+
+    elementBoxes.forEach(box => { if (box.g) app.value.stage.removeChild(box.g) });
+    elementBoxes.length = 0;
+
+
+    const wallThickness = 50;
+    const halfWallThickness = wallThickness / 2;
+    const halfWidth = container.width / 2;
+    const halfHeight = container.height / 2;
+
+
+    const leftWallID = engine.value.add_fixed_body(
+        -halfWallThickness,
+        halfHeight,
+        halfWallThickness,
+        halfHeight
+    );
+
+
+    const rightWallID = engine.value.add_fixed_body(
+        container.width + halfWallThickness,
+        halfHeight,
+        halfWallThickness,
+        halfHeight
+    );
+
+
+
+    const topWallID = engine.value.add_fixed_body(
+        halfWidth,
+        -halfWallThickness,
+        halfWidth,
+        halfWallThickness
+    );
+
+
+    const bottomWallID = engine.value.add_fixed_body(
+        halfWidth,
+        container.height + halfWallThickness,
+        halfWidth,
+        halfWallThickness
+    );
+
+
+    elementBoxes.push({ id: leftWallID, g: null });
+    elementBoxes.push({ id: rightWallID, g: null });
+    elementBoxes.push({ id: topWallID, g: null });
+    elementBoxes.push({ id: bottomWallID, g: null });
+
+
+    console.log('syncElementBoxes', elements, container);
+    for (const el of elements) {
+        if (!el.textWidth || !el.textHeight) continue;
+
+        const id = engine.value.add_fixed_body(
+            el.textX + (el.textWidth / 2),
+            el.textY + (el.textHeight / 2),
+            el.textWidth / 2,
+            el.textHeight / 2
+        );
+
+        elementBoxes.push({ id: id, g: null });
+    }
+}
+
+function initPendulumBlocks() {
+    const container = props.elementData?.container;
+
+
+
+    START_X = container.width / 2
+    START_Y = container.height / 3
+
+
+    for (let i = 0; i < NUM_BOXES; i++) {
+        const id = engine.value.add_body(
+            START_X + i * SPACING, START_Y,
+            BOX_SIZE, BOX_SIZE, 1
+        )
+
+        const g = new Graphics()
+        g.zIndex = 2
+        g.rect(-BOX_SIZE, -BOX_SIZE, BOX_SIZE * 2, BOX_SIZE * 2)
+        g.fill(0xffffff)
+        g.setStrokeStyle({
+            width: 3,
+            color: 0x000000
+
+        })
+        g.stroke()
+
+        app.value.stage.addChild(g)
+        bodyBoxes.push({ id, g })
+    }
+
+
+    engine.value.add_fixed_distance_constraint(
+        START_X - SPACING, START_Y,
+        bodyBoxes[0].id, SPACING, 0.9
+    )
+    for (let i = 0; i < bodyBoxes.length - 1; i++) {
+        engine.value.add_distance_constraint(
+            bodyBoxes[i].id, bodyBoxes[i + 1].id, SPACING, 0.9
+        )
+    }
+
+
+    const anchor = new Graphics()
+    anchor.zIndex = 3
+    anchor.circle(START_X - SPACING, START_Y, 10)
+    anchor.fill(0xffffff)
+    anchor.setStrokeStyle({
+        width: 3, color: 0x000000
+    });
+
+    anchor.stroke()
+    app.value.stage.addChild(anchor)
+}
+
+watch(() => props.elementData, (newData) => {
+    if (!engine.value || !newData || !props.elementData.value) return;
+    syncElementBoxes();
+}, { immediate: true });
+
+
+const updateCanvasPosition = () => {
+    if (!pixiContainer.value || !props.elementData?.container) return;
+
+    const { x, y, width, height } = props.elementData.container;
+
+    pixiContainer.value.style.position = 'absolute';
+    pixiContainer.value.style.left = `${x}px`;
+    pixiContainer.value.style.top = `${y}px`;
+    pixiContainer.value.style.width = `${width}px`;
+    pixiContainer.value.style.height = `${height}px`;
+
+    if (app.value && app.value.renderer) {
+        app.value.renderer.resize(width, height);
+    }
+};
+
+watch(() => props.elementData, (newData) => {
+    if (!newData?.container) return;
+    if (!app.value || !engine.value) return;
+    updateCanvasPosition();
+    syncElementBoxes();
+}, { immediate: true });
+
+
+
+function drawSpring(g, a, b, segments = 6, offset = 10) {
+    const dx = b[0] - a[0], dy = b[1] - a[1]
+    const len = Math.hypot(dx, dy); if (!len) return
+    const dir = [dx / len, dy / len]
+    const perp = [-dir[1], dir[0]]
+    const step = len / segments
+    let start = [...a]
+
+
+
+    const zigzag = (thick, color, g) => {
+        g.setStrokeStyle({ width: thick, color: color })
+
+        g.moveTo(a[0], a[1])
+        g.lineTo(b[0], b[1])
+        g.stroke()
+
+        start = [...a]
+        for (let i = 0; i < segments; i++) {
+            const end = [
+                a[0] + dir[0] * step * (i + 1),
+                a[1] + dir[1] * step * (i + 1)
+            ]
+            const mid = [(start[0] + end[0]) / 2, (start[1] + end[1]) / 2]
+            const offsetDir = i % 2 ? -1 : 1
+            const bend = [
+                mid[0] + perp[0] * offset * offsetDir,
+                mid[1] + perp[1] * offset * offsetDir
+            ]
+
+            g.moveTo(start[0], start[1])
+            g.lineTo(bend[0], bend[1])
+            g.lineTo(end[0], end[1])
+            g.stroke()
+            start = end
+        }
+    }
+
+    zigzag(7, 0x000000, g)
+    zigzag(2, 0xffffff, g)
+}
+
+
+
 onMounted(async () => {
-  console.log('Initializing WASM...')
-  await initWasm()
-  console.log('WASM loaded')
-  
-  engine.value = new ConstraintPhysicsEngine()
-  
-  engine.value.set_gravity(0.0, 981) 
-  
-  const box_size = 20
-  const num_boxes = 3
-  const spacing = 60
-  const start_x = 400
-  const start_y = 100
-  
-  const boxes = []
-  
-  
-  for (let i = 0; i < num_boxes; i++) {
-    const box_id = engine.value.add_body(
-      start_x + i * spacing,
-      start_y,
-      box_size,
-      box_size,
-      1.0
-    )
-    boxes.push(box_id)
-  }
-  
-  
-  engine.value.add_fixed_distance_constraint(
-    start_x - spacing,
-    start_y,
-    boxes[0],
-    spacing,
-    0.9
-  )
-  
-  
-  for (let i = 0; i < boxes.length - 1; i++) {
-    engine.value.add_distance_constraint(
-      boxes[i],
-      boxes[i + 1],
-      spacing,
-      0.9
-    )
-  }
+    await initWasm()
+    engine.value = new ConstraintPhysicsEngine()
+    engine.value.set_gravity(0, 981)
 
-  
-  const ctx = canvas.value.getContext('2d')
-  let last_time = performance.now()
-  
-  function draw() {
-    const current_time = performance.now()
-    const dt = Math.min(current_time - last_time, 50) 
-    
-    engine.value.update(dt)
-    
-    ctx.fillStyle = 'rgba(36, 36, 36, 1)'
-    ctx.fillRect(0, 0, canvas.value.width, canvas.value.height)
-    
+    app.value = new Application()
+    await app.value.init({
+        resizeTo: pixiContainer.value,
+        backgroundAlpha: 0,
+        resolution: window.devicePixelRatio || 1,
+        autoDensity: true,
+        antialias: true
+    })
 
-    ctx.fillStyle = 'black'
-    ctx.beginPath()
-    ctx.arc(start_x - spacing, start_y, 10, 0, Math.PI * 2)
-    ctx.fill()
 
-    ctx.fillStyle = 'white'
-    ctx.beginPath()
-    ctx.arc(start_x - spacing, start_y, 7, 0, Math.PI * 2)
-    ctx.fill()
-    
-    ctx.strokeStyle = 'gray'
-    ctx.lineWidth = 2
-    
-    const first_pos = engine.value.body_position(boxes[0])
-    drawSpring(ctx, [start_x - spacing, start_y], first_pos, 10, 5)
-    
 
-    for (let i = 0; i < boxes.length - 1; i++) {
-      const pos_a = engine.value.body_position(boxes[i])
-      const pos_b = engine.value.body_position(boxes[i + 1])
-      drawSpring(ctx, pos_a, pos_b, 10, 5)
-    }
-    
+    pixiContainer.value.appendChild(app.value.canvas)
+    updateCanvasPosition()
 
-    if (isDragging.value) {
-      const pos_b = engine.value.body_position(boxes[dragIndex.value])
-      drawSpring(ctx, pos_b, [mousePos.value.x, mousePos.value.y], 10, 5)
-    
-    }
-    
 
-    const draw_box = (box_id, color) => {
-      const pos = engine.value.body_position(box_id)
-      const angle = engine.value.body_angle(box_id)
-      const velocity = engine.value.body_velocity(box_id)
-      const angular_velocity = engine.value.body_angular_velocity(box_id)
-      
-      ctx.save()
-      ctx.translate(pos[0], pos[1])
-      ctx.rotate(angle)
-      
-      ctx.fillStyle = 'rgb(255, 255, 255)'
-      ctx.fillRect(-box_size, -box_size, box_size * 2, box_size * 2)
-      
-      ctx.strokeStyle = 'black'
-      ctx.lineWidth = 2
-      ctx.strokeRect(-box_size, -box_size, box_size * 2, box_size * 2)
-      ctx.restore()
+    app.value.stage.eventMode = 'static'
+    app.value.stage.on('pointerdown', onPointerDown)
 
-    }
-    
+    window.addEventListener('mousemove', onPointerMove)
+    window.addEventListener('mouseup', onPointerUp)
+    // window.addEventListener('touchmove', onGlobalTouchMove, { passive: false })
+    window.addEventListener('touchend', onPointerUp)
+    window.addEventListener('touchcancel', onPointerUp)
 
-    for (const box_id of boxes) {
-      draw_box(box_id, '#ff4444')
-    }
-    
-    
-    ctx.fillStyle = 'white'
-    
-    last_time = current_time
-    requestAnimationFrame(draw)
-  }
-  
-  draw()
+
+    initPendulumBlocks()
+    syncElementBoxes()
+
+
+    springG = new Graphics()
+    springG.zIndex = 1
+    app.value.stage.addChild(springG)
+
+    let last = performance.now()
+    app.value.ticker.add(() => {
+        const now = performance.now()
+        engine.value.update(Math.min(now - last, 50))
+        last = now
+
+
+        springG.clear()
+        const p0 = engine.value.body_position(bodyBoxes[0].id)
+        drawSpring(springG, [START_X - SPACING, START_Y], p0)
+        for (let i = 0; i < bodyBoxes.length - 1; i++) {
+            const a = engine.value.body_position(bodyBoxes[i].id)
+            const b = engine.value.body_position(bodyBoxes[i + 1].id)
+            drawSpring(springG, a, b)
+        }
+        if (isDragging.value) {
+            const dragged = engine.value.body_position(bodyBoxes[dragIndex.value].id)
+            drawSpring(springG, dragged, [mousePos.value.x, mousePos.value.y])
+        }
+
+
+        for (const { id, g } of bodyBoxes) {
+            const pos = engine.value.body_position(id)
+            const angle = engine.value.body_angle(id)
+            g.position.set(pos[0], pos[1])
+            g.rotation = angle
+        }
+
+        for (const { id, g } of elementBoxes) {
+            if (!g) continue;
+            const pos = engine.value.body_position(id)
+            const angle = engine.value.body_angle(id)
+            g.position.set(pos[0], pos[1])
+            g.rotation = angle
+        }
+    })
 })
 
 
 
-function drawSpring(ctx, a, b, segments = 5, offsetMagnitude = 10) {
-  const dx = b[0] - a[0]
-  const dy = b[1] - a[1]
-  const length = Math.sqrt(dx * dx + dy * dy)
-
-  const direction = [dx / length, dy / length]
-  const segmentLength = length / segments
-
-  const perp = [-direction[1], direction[0]]
-
-  let start = [...a]
-
-  ctx.strokeStyle = 'black'
-  ctx.lineWidth = 6
-
-  for (let i = 0; i < segments; i++) {
-    const t = (i + 1) / segments
-    const end = [
-      a[0] + direction[0] * segmentLength * (i + 1),
-      a[1] + direction[1] * segmentLength * (i + 1),
-    ]
-
-    const mid = [
-      (start[0] + end[0]) / 2,
-      (start[1] + end[1]) / 2,
-    ]
-
-    const offsetDir = i % 2 === 0 ? 1 : -1
-    const offset = [
-      perp[0] * offsetMagnitude * offsetDir,
-      perp[1] * offsetMagnitude * offsetDir,
-    ]
-
-    const midOffset = [
-      mid[0] + offset[0],
-      mid[1] + offset[1],
-    ]
-
-    ctx.beginPath()
-    ctx.moveTo(start[0], start[1])
-    ctx.lineTo(midOffset[0], midOffset[1])
-    ctx.lineTo(end[0], end[1])
-    ctx.stroke()
-
-    start = end
-  }
-
-  start = [...a]
-  ctx.strokeStyle = 'white'
-  ctx.lineWidth = 2
-
-  for (let i = 0; i < segments; i++) {
-    const t = (i + 1) / segments
-    const end = [
-      a[0] + direction[0] * segmentLength * (i + 1),
-      a[1] + direction[1] * segmentLength * (i + 1),
-    ]
-
-    const mid = [
-      (start[0] + end[0]) / 2,
-      (start[1] + end[1]) / 2,
-    ]
-
-    const offsetDir = i % 2 === 0 ? 1 : -1
-    const offset = [
-      perp[0] * offsetMagnitude * offsetDir,
-      perp[1] * offsetMagnitude * offsetDir,
-    ]
-
-    const midOffset = [
-      mid[0] + offset[0],
-      mid[1] + offset[1],
-    ]
-
-    ctx.beginPath()
-    ctx.moveTo(start[0], start[1])
-    ctx.lineTo(midOffset[0], midOffset[1])
-    ctx.lineTo(end[0], end[1])
-    ctx.stroke()
-
-    start = end
-  }
-
-  ctx.strokeStyle = 'black'
-  ctx.lineWidth = 6
-
-  ctx.beginPath()
-  ctx.moveTo(a[0], a[1])
-  ctx.lineTo(b[0], b[1])
-  ctx.stroke();
-  
-
-  ctx.strokeStyle = 'white'
-  ctx.lineWidth = 2
-
-  ctx.beginPath()
-  ctx.moveTo(a[0], a[1])
-  ctx.lineTo(b[0], b[1])
-  ctx.stroke();
-}
+onUnmounted(() => {
+    window.removeEventListener('mousemove', onPointerMove)
+    window.removeEventListener('mouseup', onPointerUp)
+    //   window.removeEventListener('touchmove', )
+    window.removeEventListener('touchend', onPointerUp)
+    window.removeEventListener('touchcancel', onPointerUp)
+})
 
 
 </script>
 
 <style scoped>
-canvas {
-  /* border: 1px solid #ccc;a */
-  display: block;
-  margin: 20px auto;
-  cursor: pointer;
+.pixi-container {
+    display: block;
+    position: absolute;
+    cursor: pointer;
+    background: transparent;
+}
+
+.outer-wrapper {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    overflow: hidden;
 }
 </style>

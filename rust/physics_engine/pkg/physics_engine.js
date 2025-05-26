@@ -54,6 +54,17 @@ export class ConstraintPhysicsEngine {
         return ret >>> 0;
     }
     /**
+     * @param {number} x
+     * @param {number} y
+     * @param {number} half_width
+     * @param {number} half_height
+     * @returns {number}
+     */
+    add_fixed_body(x, y, half_width, half_height) {
+        const ret = wasm.constraintphysicsengine_add_fixed_body(this.__wbg_ptr, x, y, half_width, half_height);
+        return ret >>> 0;
+    }
+    /**
      * @param {number} body_a
      * @param {number} body_b
      * @param {number} rest_length
@@ -112,6 +123,14 @@ export class ConstraintPhysicsEngine {
      * @param {number} index
      * @returns {number}
      */
+    body_mass(index) {
+        const ret = wasm.constraintphysicsengine_body_mass(this.__wbg_ptr, index);
+        return ret;
+    }
+    /**
+     * @param {number} index
+     * @returns {number}
+     */
     body_angle(index) {
         const ret = wasm.constraintphysicsengine_body_angle(this.__wbg_ptr, index);
         return ret;
@@ -144,6 +163,13 @@ export class ConstraintPhysicsEngine {
      */
     set_iterations(iterations) {
         wasm.constraintphysicsengine_set_iterations(this.__wbg_ptr, iterations);
+    }
+    /**
+     * @returns {number}
+     */
+    get_body_count() {
+        const ret = wasm.constraintphysicsengine_get_body_count(this.__wbg_ptr);
+        return ret >>> 0;
     }
 }
 

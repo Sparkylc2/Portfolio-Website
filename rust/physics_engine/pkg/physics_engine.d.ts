@@ -4,6 +4,7 @@ export class ConstraintPhysicsEngine {
   free(): void;
   constructor();
   add_body(x: number, y: number, half_width: number, half_height: number, mass: number): number;
+  add_fixed_body(x: number, y: number, half_width: number, half_height: number): number;
   add_distance_constraint(body_a: number, body_b: number, rest_length: number, stiffness: number): void;
   add_fixed_distance_constraint(fixed_x: number, fixed_y: number, body: number, rest_length: number, stiffness: number): void;
   start_mouse_drag(world_x: number, world_y: number): number;
@@ -12,11 +13,13 @@ export class ConstraintPhysicsEngine {
   add_damping(): void;
   update(dt: number): void;
   body_position(index: number): Array<any>;
+  body_mass(index: number): number;
   body_angle(index: number): number;
   body_velocity(index: number): Array<any>;
   body_angular_velocity(index: number): number;
   set_gravity(x: number, y: number): void;
   set_iterations(iterations: number): void;
+  get_body_count(): number;
 }
 
 export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembly.Module;
@@ -26,6 +29,7 @@ export interface InitOutput {
   readonly __wbg_constraintphysicsengine_free: (a: number, b: number) => void;
   readonly constraintphysicsengine_new: () => number;
   readonly constraintphysicsengine_add_body: (a: number, b: number, c: number, d: number, e: number, f: number) => number;
+  readonly constraintphysicsengine_add_fixed_body: (a: number, b: number, c: number, d: number, e: number) => number;
   readonly constraintphysicsengine_add_distance_constraint: (a: number, b: number, c: number, d: number, e: number) => void;
   readonly constraintphysicsengine_add_fixed_distance_constraint: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
   readonly constraintphysicsengine_start_mouse_drag: (a: number, b: number, c: number) => number;
@@ -34,11 +38,13 @@ export interface InitOutput {
   readonly constraintphysicsengine_add_damping: (a: number) => void;
   readonly constraintphysicsengine_update: (a: number, b: number) => void;
   readonly constraintphysicsengine_body_position: (a: number, b: number) => any;
+  readonly constraintphysicsengine_body_mass: (a: number, b: number) => number;
   readonly constraintphysicsengine_body_angle: (a: number, b: number) => number;
   readonly constraintphysicsengine_body_velocity: (a: number, b: number) => any;
   readonly constraintphysicsengine_body_angular_velocity: (a: number, b: number) => number;
   readonly constraintphysicsengine_set_gravity: (a: number, b: number, c: number) => void;
   readonly constraintphysicsengine_set_iterations: (a: number, b: number) => void;
+  readonly constraintphysicsengine_get_body_count: (a: number) => number;
   readonly __wbindgen_export_0: WebAssembly.Table;
   readonly __wbindgen_start: () => void;
 }

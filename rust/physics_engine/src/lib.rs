@@ -201,6 +201,10 @@ impl ConstraintPhysicsEngine {
         self.bodies.len() - 1
     }
 
+    pub fn add_fixed_body(&mut self, x: f64, y: f64, half_width: f64, half_height: f64) -> usize {
+        self.add_body(x, y, half_width, half_height, f64::INFINITY)
+    }
+
     pub fn add_distance_constraint(&mut self, body_a: usize, body_b: usize, rest_length: f64, stiffness: f64) {
         self.distance_constraints.push(DistanceConstraint {
             anchor_a: Anchor::BodyIndex(body_a),
@@ -442,14 +446,30 @@ impl ConstraintPhysicsEngine {
     }
 
     fn solve_collision_constraint(&mut self, contact: &CollisionContact, dt: f64) {
-        let body_a = &self.bodies[contact.body_a];
-        let body_b = &self.bodies[contact.body_b];
+        let body_a_is_infinite;
+        let body_b_is_infinite;
+        let va; 
+        let vb;
+        let ra;
+        let rb;
         
-        let ra = contact.contact_point.subtract(&body_a.position);
-        let rb = contact.contact_point.subtract(&body_b.position);
-        
-        let va = body_a.velocity.add(&Vec2::new(-ra.y * body_a.angular_velocity, ra.x * body_a.angular_velocity));
-        let vb = body_b.velocity.add(&Vec2::new(-rb.y * body_b.angular_velocity, rb.x * body_b.angular_velocity));
+        {
+            let body_a = &self.bodies[contact.body_a];
+            let body_b = &self.bodies[contact.body_b];
+            
+            body_a_is_infinite = body_a.mass.is_infinite();
+            body_b_is_infinite = body_b.mass.is_infinite();
+            
+            if body_a_is_infinite && body_b_is_infinite {
+                return;
+            }
+            
+            ra = contact.contact_point.subtract(&body_a.position);
+            rb = contact.contact_point.subtract(&body_b.position);
+            
+            va = body_a.velocity.add(&Vec2::new(-ra.y * body_a.angular_velocity, ra.x * body_a.angular_velocity));
+            vb = body_b.velocity.add(&Vec2::new(-rb.y * body_b.angular_velocity, rb.x * body_b.angular_velocity));
+        }
         
         let relative_velocity = vb.subtract(&va);
         let velocity_along_normal = relative_velocity.dot(&contact.normal);
@@ -462,31 +482,51 @@ impl ConstraintPhysicsEngine {
         let ra_cross_n = ra.cross(&contact.normal);
         let rb_cross_n = rb.cross(&contact.normal);
         
-        let inv_mass_sum = 1.0 / body_a.mass + 1.0 / body_b.mass +
-            ra_cross_n * ra_cross_n / body_a.inertia +
-            rb_cross_n * rb_cross_n / body_b.inertia;
+        let inv_mass_sum;
+        {
+            let body_a = &self.bodies[contact.body_a];
+            let body_b = &self.bodies[contact.body_b];
+            
+            inv_mass_sum = 
+                (if body_a.mass.is_infinite() { 0.0 } else { 1.0 / body_a.mass }) +
+                (if body_b.mass.is_infinite() { 0.0 } else { 1.0 / body_b.mass }) +
+                (if body_a.mass.is_infinite() { 0.0 } else { ra_cross_n * ra_cross_n / body_a.inertia }) +
+                (if body_b.mass.is_infinite() { 0.0 } else { rb_cross_n * rb_cross_n / body_b.inertia });
+        }
         
         let j = -(1.0 + e) * velocity_along_normal / inv_mass_sum;
         let impulse = contact.normal.multiply(j);
         
-        let body_a = &mut self.bodies[contact.body_a];
-        body_a.velocity = body_a.velocity.subtract(&impulse.multiply(1.0 / body_a.mass));
-        body_a.angular_velocity -= ra.cross(&impulse) / body_a.inertia;
+        if !body_a_is_infinite {
+            let body_a = &mut self.bodies[contact.body_a];
+            body_a.velocity = body_a.velocity.subtract(&impulse.multiply(1.0 / body_a.mass));
+            body_a.angular_velocity -= ra.cross(&impulse) / body_a.inertia;
+        }
+
+
+        if !body_b_is_infinite {
+            let body_b = &mut self.bodies[contact.body_b];
+            body_b.velocity = body_b.velocity.add(&impulse.multiply(1.0 / body_b.mass));
+            body_b.angular_velocity += rb.cross(&impulse) / body_b.inertia;
+        }
         
-        let body_b = &mut self.bodies[contact.body_b];
-        body_b.velocity = body_b.velocity.add(&impulse.multiply(1.0 / body_b.mass));
-        body_b.angular_velocity += rb.cross(&impulse) / body_b.inertia;
-        
+
         let correction_percent = 0.2;
         let slop = 0.01;
         let correction_magnitude = (contact.penetration - slop).max(0.0) * correction_percent;
         let correction = contact.normal.multiply(correction_magnitude / inv_mass_sum);
         
-        let body_a = &mut self.bodies[contact.body_a];
-        body_a.position = body_a.position.subtract(&correction.multiply(1.0 / body_a.mass));
-        
-        let body_b = &mut self.bodies[contact.body_b];
-        body_b.position = body_b.position.add(&correction.multiply(1.0 / body_b.mass));
+
+        if !body_a_is_infinite {
+            let body_a = &mut self.bodies[contact.body_a];
+            body_a.position = body_a.position.subtract(&correction.multiply(1.0 / body_a.mass));
+        }
+
+
+        if !body_b_is_infinite {
+            let body_b = &mut self.bodies[contact.body_b];
+            body_b.position = body_b.position.add(&correction.multiply(1.0 / body_b.mass));
+        }
     }
 
     pub fn add_damping(&mut self) {
@@ -501,6 +541,7 @@ impl ConstraintPhysicsEngine {
         let dt_seconds = dt / 1000.0; 
         
         for body in &mut self.bodies {
+            if !body.mass.is_finite() { continue; }
             body.velocity.y += self.gravity.y * dt_seconds;
             body.position = body.position.add(&body.velocity.multiply(dt_seconds));
             body.angle += body.angular_velocity * dt_seconds;
@@ -518,6 +559,9 @@ impl ConstraintPhysicsEngine {
         arr
     }
 
+    pub fn body_mass(&self, index: usize) -> f64 {
+        self.bodies[index].mass
+    }
     pub fn body_angle(&self, index: usize) -> f64 {
         self.bodies[index].angle
     }
