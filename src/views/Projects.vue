@@ -1,17 +1,25 @@
 <template>
     <div class="projects-container">
         <h1 class="page-title">Projects</h1>
-        <div class="content-layout">
+        <div class="content-layout" :class="{ 'has-expanded': expandedProject !== null }">
             <div class="projects-grid-wrapper">
                 <div class="projects-grid" :class="{ 'has-active': expandedProject !== null }">
                     <div v-for="(project, index) in projects" :key="index" class="project-card" :class="{
                         'active': expandedProject === index,
                         'inactive': expandedProject !== null && expandedProject !== index
-                    }" @click="toggleProject(index)">
+                    }" @click="toggleProject(index)" :style="{
+                        borderColor: getBorderColor(project.color, expandedProject === index),
+                        '--project-date-hover': getProjectTitleColor(project.color)
+                    }">
                         <div class="project-content">
-                            <h2>{{ project.title }}</h2>
+                            <h2 :style="{ color: getProjectTitleColor(project.color) }">{{ project.title }}</h2>
                             <p>{{ project.description }}</p>
-                            <div class="project-indicator"></div>
+                            <div class="date">
+                                <span :style="{ '--project-date-hover': getProjectTitleColor(project.color) }">{{
+                                    project.dateRange }}</span>
+                            </div>
+                            <div class="project-indicator"
+                                :style="{ backgroundColor: getProjectIndicatorColor(project.color) }"></div>
                         </div>
                     </div>
                 </div>
@@ -22,48 +30,49 @@
                 <div v-if="expandedProject !== null" class="project-details-section">
                     <div class="project-details-content">
                         <div class="project-sections">
-                            <Transition name="fade" mode="out-in">
-                                <div v-if="activeSection === 'Overview'" key="overview" class="section"
-                                    ref="overviewSection">
-                                    <h2>{{ currentProject?.title }}</h2>
-                                    <p>{{ currentProject?.description }}</p>
+                            <div class="section" ref="overviewSection"
+                                :style="{ outlineColor: getBorderColor(currentProject?.color, true) }">
+                                <Transition name="fade" mode="out-in">
+                                    <div v-if="activeSection === 'Overview'" key="overview" class="section-content">
+                                        <h2>{{ currentProject?.title }}</h2>
+                                        <p>{{ currentProject?.description }}</p>
 
-                                    <component :is="currentProject?.interactiveComponent"
-                                        v-if="currentProject?.interactiveComponent" class="interactive-demo"
-                                        :element-data="elementData" :project-color="currentProject?.color" />
-                                    <div v-else class="demo-placeholder">
-                                        <p>Interactive demo coming soon</p>
-                                    </div>
+                                        <component :is="currentProject?.interactiveComponent"
+                                            v-if="currentProject?.interactiveComponent" class="interactive-demo"
+                                            :element-data="elementData" :project-color="currentProject?.color" />
+                                        <div v-else class="demo-placeholder">
+                                            <p>Interactive demo coming soon</p>
+                                        </div>
 
-                                    <div class="project-meta">
-                                        <div class="tech-stack">
-                                            <div>
-                                                <h3>Tech Stack</h3>
-                                                <div class="tech-tags">
-                                                    <span v-for="tech in currentProject?.technologies" :key="tech"
-                                                        class="tech-tag">{{ tech }}</span>
+                                        <div class="project-meta">
+                                            <div class="tech-stack">
+                                                <div>
+                                                    <h3>Tech Stack</h3>
+                                                    <div class="tech-tags">
+                                                        <span v-for="tech in currentProject?.technologies" :key="tech"
+                                                            class="tech-tag">{{ tech }}</span>
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                        <div class="project-links">
-                                            <a v-if="currentProject?.github" :href="currentProject.github"
-                                                target="_blank" class="project-link"
-                                                :style="{ backgroundColor: getProjectColor(currentProject.color) }">
-                                                GitHub
-                                            </a>
-                                            <a v-if="currentProject?.demo" :href="currentProject.demo" target="_blank"
-                                                class="project-link"
-                                                :style="{ backgroundColor: getProjectColor(currentProject.color) }">
-                                                Live Demo
-                                            </a>
+                                            <div class="project-links">
+                                                <a v-if="currentProject?.github" :href="currentProject.github"
+                                                    target="_blank" class="project-link"
+                                                    :style="{ backgroundColor: getProjectColor(currentProject.color) }">
+                                                    GitHub
+                                                </a>
+                                                <a v-if="currentProject?.demo" :href="currentProject.demo"
+                                                    target="_blank" class="project-link"
+                                                    :style="{ backgroundColor: getProjectColor(currentProject.color) }">
+                                                    Live Demo
+                                                </a>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                                <div v-else-if="activeSection === 'Details'" key="details"
-                                    class="section details-section">
-                                    <div class="project-details" v-html="currentProject?.detailedDescription"></div>
-                                </div>
-                            </Transition>
+                                    <div v-else-if="activeSection === 'Details'" key="details" class="section-content">
+                                        <div class="project-details" v-html="currentProject?.detailedDescription"></div>
+                                    </div>
+                                </Transition>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -75,6 +84,7 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
 import PhysicsEngine from '../components/PhysicsEngine.vue'
+import AirfoilSimulator from '../components/AirfoilSimulator.vue'
 import { useElementTracker } from '../composables/usePhysicsEngine.js'
 
 const props = defineProps({
@@ -82,10 +92,10 @@ const props = defineProps({
     selectedProject: Number
 })
 
-const emit = defineEmits(['update:selectedProject'])
+
+const emit = defineEmits(['update:selectedProject', 'update:selectedProjectColor'])
 
 const expandedProject = ref(null)
-
 
 watch(() => props.selectedProject, (newVal) => {
     expandedProject.value = newVal
@@ -93,6 +103,9 @@ watch(() => props.selectedProject, (newVal) => {
 
 watch(expandedProject, (newVal) => {
     emit('update:selectedProject', newVal)
+    if (newVal !== null) {
+        emit('update:selectedProjectColor', projects[newVal]?.color)
+    }
 })
 
 const projects = [
@@ -114,7 +127,8 @@ const projects = [
           <li>Collision detection</li>
         </ul>
       `,
-        color: 'red'
+        color: 'red',
+        dateRange: 'December 2023 - March 2024'
     },
     {
         title: 'Wind Turbine BEM',
@@ -134,7 +148,9 @@ const projects = [
           <li>Performance analysis</li>
         </ul>
       `,
-        color: 'blue'
+        color: 'blue',
+        dateRange: 'May 2025 - June 2025'
+
     },
     {
         title: 'Panel Airfoil Simulator',
@@ -142,7 +158,7 @@ const projects = [
         technologies: ['Matlab'],
         github: 'https://github.com/yourusername/panel-airfoil',
         demo: 'https://demo-link.com',
-        interactiveComponent: null,
+        interactiveComponent: AirfoilSimulator,
         detailedDescription: `
         <h3>About the Project</h3>
         <p>A sophisticated panel method implementation for analyzing airfoil performance in potential flow conditions.</p>
@@ -163,7 +179,8 @@ const projects = [
           <li>Performance optimization for real-time analysis</li>
         </ul>
       `,
-        color: 'green'
+        color: 'blue',
+        dateRange: 'February 2025 - March 2025'
     },
     {
         title: 'Numerical Methods Library',
@@ -226,11 +243,58 @@ const getProjectColor = (color) => {
     return colors[color] || '#e63946'
 }
 
+const getInactiveBorderColor = (color) => {
+    const colors = {
+        red: 'rgba(204, 140, 140, 0.3)',
+        blue: 'rgba(140, 172, 204, 0.3)',
+        green: 'rgba(140, 204, 140, 0.3)',
+        yellow: 'rgba(204, 172, 140, 0.3)',
+    }
+
+    return colors[color] || 'rgba(230, 57, 70, 0.3)'
+}
+
+const getActiveBorderColor = (color) => {
+    const colors = {
+        red: 'rgb(204, 140, 140)',
+        blue: 'rgb(140, 172, 204)',
+        green: 'rgb(140, 204, 140)',
+        yellow: 'rgb(204, 172, 140)',
+    }
+
+    return colors[color] || '#e63946'
+}
+
+const getBorderColor = (color, isActive) => {
+    return isActive ? getActiveBorderColor(color) : getInactiveBorderColor(color)
+}
+
+const getProjectIndicatorColor = (color) => {
+    const colors = {
+        red: 'rgb(204, 140, 140)',
+        blue: 'rgb(140, 172, 204)',
+        green: 'rgb(140, 204, 140)',
+        yellow: 'rgb(204, 172, 140)',
+    }
+
+    return colors[color] || '#e63946'
+}
+
+const getProjectTitleColor = (color) => {
+    const colors = {
+        red: 'rgb(255, 191, 191)',
+        blue: 'rgb(191, 223, 255)',
+        green: 'rgb(191, 255, 191)',
+        yellow: 'rgb(255, 223, 191)',
+    }
+
+    return colors[color] || '#e63946'
+}
 
 
-/* ------------------ Project Specific Composables ------------------ */
 
-/* --------- Physics Engine --------- */
+
+
 const overviewSection = ref(null)
 
 
@@ -239,48 +303,23 @@ const { elementData } = useElementTracker(overviewSection, {
     includeContainer: true,
     relative: true
 })
-/* --------------------------------- */
-
-
-
 
 
 
 </script>
 
 <style scoped>
-.content-layout {
+.date {
+    font-size: 0.9rem;
+    color: rgb(225, 225, 225);
     display: flex;
-    gap: 2rem;
-    padding: 6rem 2rem 2rem;
-    min-height: calc(100vh - 8rem);
+    justify-content: end;
+    padding-bottom: 0.1rem;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.projects-grid-wrapper {
-    position: relative;
-    width: 400px;
-    min-width: 400px;
-    height: calc(100vh - 8rem);
-    overflow-y: auto;
-    overflow-x: visible;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-}
-
-.projects-grid {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-    position: relative;
-    overflow: visible;
-    padding: 2rem 1rem;
-    width: calc(100% + 4rem);
-    margin-left: -2rem;
-}
-
-.projects-grid.has-active {
-    width: 350px;
-    min-width: 350px;
+.project-card:hover .date {
+    color: var(--project-date-hover);
 }
 
 .projects-container {
@@ -289,7 +328,33 @@ const { elementData } = useElementTracker(overviewSection, {
     left: 0;
     right: 0;
     bottom: 0;
-    overflow: hidden;
+    overflow: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.project-sections::-webkit-scrollbar {
+    display: none;
+}
+
+.section::-webkit-scrollbar {
+    display: none;
+}
+
+.projects-container::-webkit-scrollbar {
+    display: none;
+}
+
+.project-details-content::-webkit-scrollbar {
+    display: none;
+}
+
+.project-details-section::-webkit-scrollbar {
+    display: none;
+}
+
+.project-details-section::-webkit-scrollbar {
+    display: none;
 }
 
 .page-title {
@@ -306,28 +371,48 @@ const { elementData } = useElementTracker(overviewSection, {
     display: flex;
     gap: 2rem;
     padding: 6rem 2rem 2rem;
-    min-height: calc(100vh - 8rem);
+    height: 100vh;
+    transition: justify-content 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.content-layout.has-expanded {
+    justify-content: flex-start;
+}
+
+.projects-grid-wrapper {
+    position: relative;
+    width: 400px;
+    min-width: 400px;
+    height: calc(100vh - 8rem);
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.projects-grid-wrapper::-webkit-scrollbar {
+    display: none;
+}
+
+.projects-grid {
+    width: 400px;
+    min-width: 400px;
+    transition: padding 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.projects-grid.has-active {
+    padding-right: 5rem;
 }
 
 .projects-grid {
     display: flex;
     flex-direction: column;
     gap: 1rem;
-    width: 400px;
-    min-width: 400px;
+    position: relative;
+    padding: 2rem 1rem;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    padding-right: 2rem;
-    padding-bottom: 2rem;
-    padding-top: 2rem;
-    overflow-y: visible;
-    overflow-x: hidden;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-    height: calc(100vh - 8rem);
-}
 
-.projects-grid::-webkit-scrollbar {
-    display: none;
 }
 
 .projects-grid.has-active {
@@ -341,14 +426,25 @@ const { elementData } = useElementTracker(overviewSection, {
     padding: 1.5rem;
     border-radius: 0.5rem;
     width: calc(100% - 5rem);
-    margin: 0rem 2rem;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     cursor: pointer;
     position: relative;
     justify-content: center;
     overflow: visible;
-    transform-origin: center left;
+
+    transform: scale(1);
+    opacity: 1;
+    transition: transform 0.3s ease, opacity 0.3s ease, border-color 0.3s ease;
+}
+
+.project-card.active {
+    transform: translateX(-5px);
+    opacity: 1;
+}
+
+.project-card.inactive {
+    transform: scale(0.95);
+    opacity: 0.5;
 }
 
 .project-card:hover .project-indicator {
@@ -358,34 +454,7 @@ const { elementData } = useElementTracker(overviewSection, {
 .project-card:hover {
     transform: translateY(-4px);
     box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
-    background-color: #252525;
-}
-
-.project-card:nth-child(4n+1) {
-    border-color: rgba(204, 140, 140, 0.3);
-}
-
-.project-card:nth-child(4n+2) {
-    border-color: rgba(140, 172, 204, 0.3);
-}
-
-.project-card:nth-child(4n+3) {
-    border-color: rgba(140, 204, 140, 0.3);
-}
-
-.project-card:nth-child(4n) {
-    border-color: rgba(204, 172, 140, 0.3);
-}
-
-.project-card.inactive {
-    opacity: 0.5;
-    transform: scale(0.95);
-}
-
-.project-card.active {
     background-color: rgb(36, 36, 36);
-    transform: translateX(-5px);
-    border: 1px solid #e63946;
 }
 
 .project-content {
@@ -403,108 +472,15 @@ const { elementData } = useElementTracker(overviewSection, {
     border-radius: 9999px;
 }
 
-.project-card:nth-child(4n+1) .project-indicator {
-    background-color: rgb(204, 140, 140);
-}
-
-.project-card:nth-child(4n+2) .project-indicator {
-    background-color: rgb(140, 172, 204);
-}
-
-.project-card:nth-child(4n+3) .project-indicator {
-    background-color: rgb(140, 204, 140);
-}
-
-.project-card:nth-child(4n) .project-indicator {
-    background-color: rgb(204, 172, 140);
-}
-
-.project-card:nth-child(4n+1) .project-links a {
-    background-color: rgb(204, 140, 140);
-}
-
-.project-card:nth-child(4n+2) .project-links a {
-    background-color: rgb(140, 172, 204);
-}
-
-.project-card:nth-child(4n+3) .project-links a {
-    background-color: rgb(140, 204, 140);
-}
-
-.project-card:nth-child(4n) .project-links a {
-    background-color: rgb(204, 172, 140);
-}
-
-.project-card:nth-child(4n+1) .tech-tag {
-    background-color: rgba(204, 140, 140, 0.2);
-    color: rgb(255, 191, 191);
-}
-
-.project-card:nth-child(4n+2) .tech-tag {
-    background-color: rgba(140, 172, 204, 0.2);
-    color: rgb(191, 223, 255);
-}
-
-.project-card:nth-child(4n+3) .tech-tag {
-    background-color: rgba(140, 204, 140, 0.2);
-    color: rgb(191, 255, 191);
-}
-
-.project-card:nth-child(4n) .tech-tag {
-    background-color: rgba(204, 172, 140, 0.2);
-    color: rgb(255, 223, 191);
-}
-
-.project-card:nth-child(4n+1) h2 {
-    color: rgb(255, 191, 191);
-    /* Red */
-}
-
-.project-card:nth-child(4n+2) h2 {
-    color: rgb(191, 223, 255);
-    /* Blue */
-}
-
-.project-card:nth-child(4n+3) h2 {
-    color: rgb(191, 255, 191);
-    /* Green */
-}
-
-.project-card:nth-child(4n) h2 {
-    color: rgb(255, 223, 191);
-    /* Yellow */
-}
-
-.project-card:nth-child(4n+1).active {
-    border-color: rgb(204, 140, 140);
-    /* Darker Red */
-}
-
-.project-card:nth-child(4n+2).active {
-    border-color: rgb(140, 172, 204);
-    /* Darker Blue */
-}
-
-.project-card:nth-child(4n+3).active {
-    border-color: rgb(140, 204, 140);
-    /* Darker Green */
-}
-
-.project-card:nth-child(4n).active {
-    border-color: rgb(204, 172, 140);
-    /* Darker Yellow */
-}
-
 .project-details-section {
     flex: 1;
     background: rgb(36, 36, 36);
-    overflow-y: visible;
+    overflow-y: auto;
     scrollbar-width: none;
     padding-bottom: 2rem;
     border-radius: 0.5rem;
     max-height: calc(100vh - 8rem);
     min-width: 400px;
-
 }
 
 .project-details-section::-webkit-scrollbar {
@@ -517,43 +493,69 @@ const { elementData } = useElementTracker(overviewSection, {
     min-height: 100%;
 }
 
-
 .section {
     display: flex;
     flex-direction: column;
     min-height: 500px;
+    max-height: calc(100vh - 12rem);
     background: rgb(36, 36, 36);
     border-radius: 0.5rem;
-    outline: 1px solid v-bind('getProjectColor(currentProject?.color)');
+    outline: 1px solid transparent;
     outline-offset: 1px;
-    padding-bottom: 2rem;
+    transition: all 0.3s ease;
+    overflow: hidden;
 }
 
+.section-content::-webkit-scrollbar {
+    display: none;
+}
+
+.section-content {
+    padding: 2rem;
+    overflow-y: auto;
+    scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+}
+
+.section-content::-webkit-scrollbar {
+    width: 6px;
+}
+
+.section-content::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.section-content::-webkit-scrollbar-thumb {
+    background-color: rgba(255, 255, 255, 0.2);
+    border-radius: 3px;
+}
+
+.section-content::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(255, 255, 255, 0.3);
+}
 
 .tech-stack {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
     width: 100%;
-    padding-left: 1rem;
-    position: relative;
 }
 
 .tech-stack h3 {
     margin-bottom: 0.75rem;
     width: auto;
-    position: relative;
-    left: 50%;
-    transform: translateX(-50%);
 }
 
 .project-meta {
     margin-top: auto;
-    padding: 0 1rem;
     display: grid;
     gap: 1.5rem;
     grid-template-columns: 1fr auto;
     align-items: flex-end;
+    padding-top: 2rem;
 }
 
 .tech-tags {
@@ -563,8 +565,6 @@ const { elementData } = useElementTracker(overviewSection, {
     gap: 0.5rem;
     margin-top: 0.5rem;
     justify-content: flex-start;
-    width: auto;
-    align-self: flex-start;
 }
 
 .tech-tag {
@@ -572,6 +572,12 @@ const { elementData } = useElementTracker(overviewSection, {
     border-radius: 1rem;
     font-size: 0.9rem;
     transition: all 0.3s ease;
+    background-color: rgba(255, 255, 255, 0.1);
+    color: #fff;
+}
+
+.tech-tag:hover {
+    background-color: rgba(255, 255, 255, 0.2);
 }
 
 .project-links {
@@ -593,14 +599,10 @@ const { elementData } = useElementTracker(overviewSection, {
     white-space: nowrap;
 }
 
-
 .project-link:hover {
     transform: translateY(-2px);
     filter: brightness(1.2);
 }
-
-
-
 
 .slide-fade-enter-active,
 .slide-fade-leave-active {

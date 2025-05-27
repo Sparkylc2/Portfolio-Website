@@ -10,12 +10,11 @@
             </div>
 
             <Projects v-if="currentTab === 'Projects'" :activeSection="projectSection"
-                :selectedProject="selectedProject" @update:selectedProject="handleProjectChange" />
+                :selectedProject="selectedProject" @update:selectedProject="handleProjectChange"
+                @update:selectedProjectColor="handleProjectPaperColorChange" />
 
-            <div v-if="currentTab === 'Papers'" class="papers-content">
-                <h1>Papers</h1>
-                <p>wewodoodowoowow</p>
-            </div>
+            <Papers v-if="currentTab === 'Papers'" :activeSection="paperSection" :selectedPaper="selectedPaper"
+                @update:selectedPaper="handlePaperChange" @update:selectedPaperColor="handleProjectPaperColorChange" />
 
             <div v-if="currentTab === 'GitHub'" class="github-content">
                 <h1>GitHub</h1>
@@ -26,35 +25,59 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import Navbar from '../components/Navbar.vue'
 import Projects from '../views/Projects.vue'
+import Papers from '../views/Papers.vue'
 
 
 const currentTab = ref('Projects')
 const projectSection = ref('Overview')
+const paperSection = ref('Paper')
 const selectedProject = ref(null)
+const selectedPaper = ref(null)
+const activeColor = ref('#e63946')
 
 
-const colourNames = ['red', 'blue', 'green', 'yellow']
-function getProjectColour(idx) {
+function getProjectColour(color) {
     const map = {
         red: 'rgb(204, 140, 140)',
         blue: 'rgb(140, 172, 204)',
         green: 'rgb(140, 204, 140)',
-        yellow: 'rgb(204, 172, 140)'
+        yellow: 'rgb(204, 172, 140)',
     }
-    return map[colourNames[idx % 4]]
-}
-const currentProjectColor = computed(() =>
-    selectedProject.value !== null ? getProjectColour(selectedProject.value)
-        : '#e63946'
-)
 
+    return map[color] || '#e63946'
+}
+
+const handleProjectPaperColorChange = (color) => {
+    activeColor.value = color;
+}
+const currentProjectColor = computed(() => {
+    if (activeColor.value !== null && currentTab.value === 'Projects') {
+        return getProjectColour(activeColor.value)
+    } else if (activeColor.value !== null && currentTab.value === 'Papers') {
+        return getProjectColour(activeColor.value)
+    }
+    return '#e63946'
+})
+
+watch(selectedProject, (newVal) => {
+    if (newVal === null) {
+        activeColor.value = null;
+    }
+})
+watch(selectedPaper, (newVal) => {
+    if (newVal === null) {
+        activeColor.value = null;
+    }
+})
 
 const ALL_TABS = [
     { key: 'Overview', label: 'Overview', parent: 'Projects' },
     { key: 'Details', label: 'Details', parent: 'Projects' },
+    { key: 'Paper', label: 'Paper', parent: 'Papers' },
+    { key: 'Abstract', label: 'Abstract', parent: 'Papers' },
     { key: '_DIVIDER', divider: true },
     { key: 'Projects', label: 'Projects' },
     { key: 'Papers', label: 'Papers' },
@@ -65,18 +88,34 @@ const projectActive = computed(() =>
     currentTab.value === 'Projects' && selectedProject.value !== null
 )
 
-const navbarTabs = computed(() =>
-    ALL_TABS.map(t => {
+const paperActive = computed(() =>
+    currentTab.value === 'Papers' && selectedPaper.value !== null
+)
+const navbarTabs = computed(() => {
+    return ALL_TABS.map(t => {
         let hidden = false
-        if (t.parent === 'Projects') hidden = !projectActive.value
-        if (t.divider) hidden = !projectActive.value
+        if (t.parent === 'Projects') {
+            hidden = !(currentTab.value === 'Projects' && selectedProject.value !== null)
+        } else if (t.parent === 'Papers') {
+            hidden = !(currentTab.value === 'Papers' && selectedPaper.value !== null)
+        }
+
+        if (t.divider) {
+            const showingProjectTabs = currentTab.value === 'Projects' && selectedProject.value !== null
+            const showingPaperTabs = currentTab.value === 'Papers' && selectedPaper.value !== null
+            hidden = !(showingProjectTabs || showingPaperTabs)
+        }
+
+
         return { ...t, hidden }
     })
-)
+})
 
-const activeNavbarTab = computed(() =>
-    projectActive.value ? projectSection.value : currentTab.value
-)
+const activeNavbarTab = computed(() => {
+    if (projectActive.value) return projectSection.value
+    if (paperActive.value) return paperSection.value
+    return currentTab.value
+})
 
 
 function handleTabChange(key) {
@@ -84,54 +123,72 @@ function handleTabChange(key) {
         currentTab.value = key
         if (key !== 'Projects') {
             selectedProject.value = null
-            projectSection.value = 'Overview'
+            projectSection.value = ALL_TABS.find(t => t.parent === 'Projects').key
+        }
+        if (key !== 'Papers') {
+            selectedPaper.value = null
+            paperSection.value = ALL_TABS.find(t => t.parent === 'Papers').key
         }
     } else {
-        projectSection.value = key
+        if (currentTab.value === 'Projects') {
+            projectSection.value = key
+        } else if (currentTab.value === 'Papers') {
+            paperSection.value = key
+        }
     }
 }
+
 function handleProjectChange(idx) {
     selectedProject.value = idx
-    if (idx !== null) projectSection.value = 'Overview'
+    if (idx !== null) projectSection.value = ALL_TABS.find(t => t.parent === 'Projects').key
+}
+
+function handlePaperChange(idx) {
+    selectedPaper.value = idx
+    if (idx !== null) paperSection.value = ALL_TABS.find(t => t.parent === 'Papers').key
 }
 </script>
 
 <style scoped>
 .app-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
     height: 100vh;
-    background: #1a1a1a;
+    background: rgb(36, 36, 36);
     color: #fff;
-    overflow: hidden
+    overflow: hidden;
 }
 
 .content {
+    width: 100%;
     height: 100%;
-    position: relative
+    position: relative;
+    overflow: hidden;
 }
 
 .home-content,
-.papers-content,
 .github-content {
-    padding: 6rem 2rem 2rem;
+    width: 100%;
     height: 100%;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     text-align: center;
+    padding: 2rem;
 }
 
 .home-content h1,
-.papers-content h1,
 .github-content h1 {
     font-size: 3rem;
-    margin-bottom: 1rem
+    margin-bottom: 1rem;
 }
 
 .home-content p,
-.papers-content p,
 .github-content p {
     font-size: 1.2rem;
-    color: #ccc
+    color: #ccc;
 }
 </style>
