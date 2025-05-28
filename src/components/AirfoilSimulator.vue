@@ -106,7 +106,7 @@ async function updatePlot() {
         ).map(seg => ({
             type: 'line',
             data: seg.x.map((xs, k) => [xs, seg.y[k]]),
-            lineStyle: { color: 'red', width: 1 },
+            lineStyle: { color: 'rgb()', width: 1 },
             showSymbol: false
         }))
 

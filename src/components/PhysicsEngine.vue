@@ -21,6 +21,7 @@ const engine = ref(null)
 const isDragging = ref(false)
 const mousePos = ref({ x: 0, y: 0 })
 const dragIndex = ref(-1)
+const tickerFunction = ref(null);
 
 
 
@@ -298,11 +299,10 @@ onMounted(async () => {
     app.value.stage.addChild(springG)
 
     let last = performance.now()
-    app.value.ticker.add(() => {
+    tickerFunction.value = () => {
         const now = performance.now()
         engine.value.update(Math.min(now - last, 50))
         last = now
-
 
         springG.clear()
         const p0 = engine.value.body_position(bodyBoxes[0].id)
@@ -332,18 +332,50 @@ onMounted(async () => {
             g.position.set(pos[0], pos[1])
             g.rotation = angle
         }
-    })
-})
-
+    }
+    
+    app.value.ticker.add(tickerFunction.value);
+});
 
 
 onUnmounted(() => {
     window.removeEventListener('mousemove', onPointerMove)
     window.removeEventListener('mouseup', onPointerUp)
-    //   window.removeEventListener('touchmove', )
     window.removeEventListener('touchend', onPointerUp)
     window.removeEventListener('touchcancel', onPointerUp)
-})
+    
+    if (app.value?.ticker) {
+        app.value.ticker.stop()
+        app.value.ticker.remove(tickerFunction) 
+    }
+    
+    if (app.value) {
+        app.value.destroy(true, { children: true, texture: true, baseTexture: true })
+        app.value = null
+    }
+    
+    if (springG) {
+        springG = null
+    }
+    
+    bodyBoxes.forEach(box => {
+        if (box.g) box.g.destroy()
+    })
+    bodyBoxes.length = 0
+    
+    elementBoxes.forEach(box => {
+        if (box.g) box.g.destroy()
+    })
+    elementBoxes.length = 0
+    
+    if (engine.value) {
+        engine.value = null
+    }
+
+    app.value = null
+    engine.value = null
+    tickerFunction.value = null
+});
 
 
 </script>

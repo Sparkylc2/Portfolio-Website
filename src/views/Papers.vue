@@ -26,18 +26,22 @@
                 </div>
             </div>
 
-            <div v-if="expandedPaper !== null" class="paper-details-section">
+            <div v-if="expandedPaper !== null" class="paper-details-section" id="paperDetailsSection">
                 <div class="paper-details-content">
                     <div class="paper-sections">
                         <div class="section" :style="{ outlineColor: getBorderColor(currentPaper?.color, true) }">
                             <Transition name="fade" mode="out-in">
-                                <div v-if="activeSection === 'Paper'" key="paper" class="section-content">
+                                <div v-if="activeSection === 'Paper'" key="paper" class="section-content"
+                                    ref="parentScroll" id="sectionContent">
                                     <h2>{{ currentPaper?.title }}</h2>
                                     <p class="authors">{{ currentPaper?.authors }}</p>
                                     <p class="venue">{{ currentPaper?.venue }}</p>
                                     <p>{{ currentPaper?.description }}</p>
 
-                                    <div class="paper-meta">
+                                    <div class="pdf-viewer" ref="pdfWrapper">
+                                        <PDFViewer v-if="currentPaper?.pdf" :pdfFileName="currentPaper.pdf" />
+                                    </div>
+                                    <!-- <div class="paper-meta">
                                         <div class="keywords">
                                             <h3>Keywords</h3>
                                             <div class="keyword-tags">
@@ -62,7 +66,7 @@
                                                 DOI
                                             </a>
                                         </div>
-                                    </div>
+                                    </div> -->
                                 </div>
                                 <div v-else-if="activeSection === 'Abstract'" key="abstract" class="section-content">
                                     <div class="paper-details" v-html="currentPaper?.detailedDescription"></div>
@@ -77,7 +81,8 @@
 </template>
 
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
+import PDFViewer from '../components/PDFViewer.vue'
 
 const props = defineProps({
     activeSection: String,
@@ -87,6 +92,9 @@ const props = defineProps({
 const emit = defineEmits(['update:selectedPaper', 'update:selectedPaperColor'])
 
 const expandedPaper = ref(null)
+const pdfWrapper = ref(null)
+const parentScroll = ref(null)
+
 
 watch(() => props.selectedPaper, (newVal) => {
     expandedPaper.value = newVal
@@ -96,17 +104,18 @@ watch(expandedPaper, (newVal) => {
     emit('update:selectedPaper', newVal)
     if (newVal !== null) {
         emit('update:selectedPaperColor', papers[newVal]?.color)
+        updatePDFOutlineColor(papers[newVal]?.color)
     }
 })
 
 const papers = [
     {
-        title: 'Constraint-Based Physics Simulation with Verlet Integration',
-        authors: 'John Doe, Jane Smith, Bob Johnson',
-        venue: 'SIGGRAPH 2024',
+        title: 'Theoretical, Computational, and Experimental Approaches to Pipe Flow꞉ A Comparative Study',
+        authors: 'Lukas Campbell',
+        venue: 'Imperial College London, Department of Aeronautics',
         description: 'A novel approach to real-time physics simulation using constraint-based methods with improved stability.',
         keywords: ['Physics Simulation', 'Verlet Integration', 'Real-time', 'Constraints'],
-        pdf: 'https://example.com/paper1.pdf',
+        pdf: 'PipeFlowLabReport.pdf',
         arxiv: 'https://arxiv.org/abs/2024.12345',
         doi: 'https://doi.org/10.1145/1234567',
         detailedDescription: `
@@ -127,12 +136,12 @@ const papers = [
         dateRange: '2024-01-15 to 2024-02-15'
     },
     {
-        title: 'Optimizing Wind Turbine Performance Using Machine Learning',
-        authors: 'Alice Chen, David Lee, Emily Wang',
-        venue: 'Renewable Energy Journal 2024',
-        description: 'Machine learning approaches for optimizing wind turbine blade design and control strategies.',
+        title: 'Theoretical, Computational, and Experimental Approaches to Indeterminate Beams꞉ A Comparative Study',
+        authors: 'Lukas Campbell',
+        venue: 'Imperial College London, Department of Aeronautics',
+        description: 'A comprehensive study on the analysis of indeterminate beams using theoretical, computational, and experimental methods.',
         keywords: ['Wind Energy', 'Machine Learning', 'Optimization', 'BEM Theory'],
-        pdf: 'https://example.com/paper2.pdf',
+        pdf: 'SimpleBeamsLabReport.pdf',
         arxiv: 'https://arxiv.org/abs/2024.23456',
         doi: 'https://doi.org/10.1016/j.renene.2024.01.123',
         detailedDescription: `
@@ -210,9 +219,7 @@ const closePaper = () => {
 }
 
 const togglePaper = (index) => {
-    if (expandedPaper.value === index) {
-        closePaper()
-    } else {
+    if (expandedPaper.value !== index) {
         openPaper(index)
     }
 }
@@ -275,12 +282,209 @@ const getPaperTitleColor = (color) => {
     return colors[color] || '#e63946'
 }
 
+const updatePDFOutlineColor = async (color) => {
+    const { parent, wrapper } = await waitForElements();
+    const iframe = wrapper.querySelector('iframe')
+    if (iframe && iframe.contentWindow) {
+        const colorMap = {
+            red: 'rgb(204, 140, 140)',
+            blue: 'rgb(140, 172, 204)',
+            green: 'rgb(140, 204, 140)',
+            yellow: 'rgb(204, 172, 140)'
+        }
+
+        const outlineColor = colorMap[color] || 'rgb(140, 172, 204)'
+
+        try {
+            iframe.contentWindow.document.documentElement.style.setProperty('--paper-color', outlineColor)
+        } catch (e) {
+            console.log('Could not access iframe content:', e)
+        }
+    }
+}
+
+const waitForElements = () => {
+        return new Promise((resolve) => {
+            const checkElements = () => {
+                const parent = parentScroll.value
+                const wrapper = pdfWrapper.value
+
+                if (!parent || !wrapper) {
+                    setTimeout(checkElements, 100)
+                    return
+                }
+
+                resolve({ parent, wrapper })
+            }
+
+            checkElements()
+        })
+    }
+
+
+onMounted(async () => {
+    await nextTick()
+
+
+    const { parent, wrapper } = await waitForElements()
+
+    if (!parent || !wrapper) return
+
+
+    const iframe = wrapper.querySelector('iframe')
+    if (!iframe) return
+
+
+    // iframe.addEventListener('load', () => {
+    //     const win = iframe.contentWindow
+    //     if (!win) return
+    //     if (currentPaper.value?.color) {
+    //         updatePDFOutlineColor(currentPaper.value.color)
+    //     }
+    // })
+
+    let isScrollingPDF = false
+
+
+    const isParentAtBottom = () => {
+        const tolerance = 0
+        return parent.scrollTop + parent.clientHeight >= parent.scrollHeight - tolerance
+    }
+
+
+    const canPDFScroll = (direction) => {
+        const win = iframe.contentWindow
+        if (!win) return false
+
+        const pdfContainer = win.document.querySelector('#viewerContainer')
+        if (!pdfContainer) return false
+
+        if (direction > 0) {
+            return pdfContainer.scrollTop + pdfContainer.clientHeight < pdfContainer.scrollHeight
+        } else {
+            return pdfContainer.scrollTop > 0
+        }
+    }
+
+
+    parent.addEventListener('wheel', (e) => {
+        const win = iframe.contentWindow
+        if (!win) return
+
+        const pdfContainer = win.document.querySelector('#viewerContainer')
+        if (!pdfContainer) return
+
+        const deltaY = e.deltaY
+        const scrollingDown = deltaY > 0
+
+
+        if (isParentAtBottom() && scrollingDown && canPDFScroll(deltaY)) {
+            e.preventDefault()
+            pdfContainer.scrollTop += deltaY
+            isScrollingPDF = true
+        }
+
+        else if (!scrollingDown && isScrollingPDF) {
+            if (pdfContainer.scrollTop > 0) {
+                e.preventDefault()
+                pdfContainer.scrollTop += deltaY
+            } else {
+                isScrollingPDF = false
+            }
+        }
+
+    }, { passive: false })
+
+    iframe.addEventListener('load', () => {
+        const win = iframe.contentWindow
+        if (!win) return
+
+        win.document.addEventListener('wheel', (e) => {
+            const pdfContainer = win.document.querySelector('#viewerContainer')
+            if (!pdfContainer) return
+
+            const deltaY = e.deltaY
+            const scrollingDown = deltaY > 0
+
+            if (!isParentAtBottom() && scrollingDown) {
+                e.preventDefault()
+                parent.scrollTop += deltaY
+                isScrollingPDF = false
+            }
+            else if (!scrollingDown && pdfContainer.scrollTop <= 0) {
+                e.preventDefault()
+                parent.scrollTop += deltaY
+                isScrollingPDF = false
+            }
+            else {
+                isScrollingPDF = true
+            }
+        }, { passive: false })
+
+        win.document.addEventListener('keydown', (e) => {
+            const keys = ['ArrowDown', 'ArrowUp', 'PageDown', 'PageUp', 'Home', 'End', ' ']
+            if (keys.includes(e.key)) {
+                const pdfContainer = win.document.querySelector('#viewerContainer')
+                if (!pdfContainer) return
+
+                if (!isParentAtBottom() && ['ArrowDown', 'PageDown', ' '].includes(e.key)) {
+                    e.preventDefault()
+                    parent.scrollTop += e.key === 'PageDown' ? parent.clientHeight : 40
+                } else if (pdfContainer.scrollTop <= 0 && ['ArrowUp', 'PageUp'].includes(e.key)) {
+                    e.preventDefault()
+                    parent.scrollTop -= e.key === 'PageUp' ? parent.clientHeight : 40
+                }
+            }
+        })
+    })
+
+    parent.addEventListener('scroll', () => {
+        if (!isParentAtBottom()) {
+            isScrollingPDF = false
+        }
+    })
+})
+
+
+
+
+
+
+
+
+
+
 
 
 
 </script>
 
 <style scoped>
+.papers-container,
+.papers-grid-wrapper,
+.paper-details-section,
+.section-content {
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+}
+
+.papers-container::-webkit-scrollbar,
+.papers-grid-wrapper::-webkit-scrollbar,
+.paper-details-section::-webkit-scrollbar,
+.section-content::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+}
+
+.pdf-viewer {
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    display: block;
+    position: relative;
+}
+
 .date {
     font-size: 0.9rem;
     color: rgb(225, 225, 225);
@@ -320,6 +524,7 @@ const getPaperTitleColor = (color) => {
     height: 100vh;
     justify-content: center;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
 }
 
 .content-layout.has-expanded {
@@ -336,6 +541,7 @@ const getPaperTitleColor = (color) => {
     scrollbar-width: none;
     -ms-overflow-style: none;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    overscroll-behavior: contain;
 }
 
 .papers-grid-wrapper::-webkit-scrollbar {
@@ -434,6 +640,7 @@ const getPaperTitleColor = (color) => {
     opacity: 0;
     transform: scale(0.8);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
 }
 
 .content-layout.has-expanded .paper-details-section {
@@ -445,10 +652,12 @@ const getPaperTitleColor = (color) => {
     display: none;
 }
 
+
 .paper-details-content {
     padding: 1rem;
     padding-top: 2rem;
     min-height: 100%;
+    background: transparent;
 }
 
 .section {
