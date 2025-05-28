@@ -535,6 +535,9 @@ const { elementData } = useElementTracker(overviewSection, {
     display: flex;
     flex-direction: column;
     min-height: 100%;
+    justify-content: flex-start;
+    flex: 1;
+    gap: 1rem;
 }
 
 .section-content::-webkit-scrollbar {
@@ -572,7 +575,8 @@ const { elementData } = useElementTracker(overviewSection, {
     gap: 1.5rem;
     grid-template-columns: 1fr auto;
     align-items: flex-end;
-    padding-top: 2rem;
+    padding-top: 1rem;
+    width: 100%;
 }
 
 .tech-tags {

@@ -39,22 +39,27 @@ let START_Y = 0
 
 
 function onPointerDown(ev) {
-    const p = ev.global
-    const idx = engine.value.start_mouse_drag(p.x, p.y)
+    const rect = app.value.canvas.getBoundingClientRect();
+    const x = ev.clientX - rect.left;
+    const y = ev.clientY - rect.top;
+    
+    const idx = engine.value.start_mouse_drag(x, y);
+
     if (idx === -1) return;
     if (!bodyBoxes[idx]) return;
+    
 
-    isDragging.value = true
+    isDragging.value = true;
     dragIndex.value = idx
-    mousePos.value = { x: p.x, y: p.y }
+    mousePos.value = { x: x, y: y }
 }
+
 
 function onPointerMove(e) {
     if (!isDragging.value) return
     const rect = app.value.canvas.getBoundingClientRect()
     const x = e.clientX - rect.left
     const y = e.clientY - rect.top
-
     mousePos.value = { x, y }
     engine.value.update_mouse_position(x, y)
 }
@@ -62,6 +67,7 @@ function onPointerMove(e) {
 function onPointerUp() {
     engine.value.end_mouse_drag()
     isDragging.value = false
+    dragIndex.value = -1
 }
 
 function syncElementBoxes() {
@@ -73,53 +79,56 @@ function syncElementBoxes() {
     elementBoxes.length = 0;
 
 
-    // const wallThickness = 50;
-    // const halfWallThickness = wallThickness / 2;
-    // const halfWidth = container.width / 2;
-    // const halfHeight = container.height / 2;
+    const wallThickness = 50;
+    const halfWallThickness = wallThickness / 2;
+    const halfWidth = container.width / 2;
+    const halfHeight = container.height / 2;
 
 
-    // const leftWallID = engine.value.add_fixed_body(
-    //     -halfWallThickness,
-    //     halfHeight,
-    //     halfWallThickness,
-    //     halfHeight
-    // );
+    const leftWallID = engine.value.add_fixed_body(
+        -halfWallThickness,
+        halfHeight,
+        halfWallThickness,
+        halfHeight
+    );
 
 
-    // const rightWallID = engine.value.add_fixed_body(
-    //     container.width + halfWallThickness,
-    //     halfHeight,
-    //     halfWallThickness,
-    //     halfHeight
-    // );
+    const rightWallID = engine.value.add_fixed_body(
+        container.width + halfWallThickness,
+        halfHeight,
+        halfWallThickness,
+        halfHeight
+    );
 
 
 
-    // const topWallID = engine.value.add_fixed_body(
-    //     halfWidth,
-    //     -halfWallThickness,
-    //     halfWidth,
-    //     halfWallThickness
-    // );
+    const topWallID = engine.value.add_fixed_body(
+        halfWidth,
+        -halfWallThickness,
+        halfWidth,
+        halfWallThickness
+    );
 
 
-    // const bottomWallID = engine.value.add_fixed_body(
-    //     halfWidth,
-    //     container.height + halfWallThickness,
-    //     halfWidth,
-    //     halfWallThickness
-    // );
+    const bottomWallID = engine.value.add_fixed_body(
+        halfWidth,
+        container.height + halfWallThickness,
+        halfWidth,
+        halfWallThickness
+    );
 
 
-    // elementBoxes.push({ id: leftWallID, g: null });
-    // elementBoxes.push({ id: rightWallID, g: null });
-    // elementBoxes.push({ id: topWallID, g: null });
-    // elementBoxes.push({ id: bottomWallID, g: null });
+    elementBoxes.push({ id: leftWallID, g: null });
+    elementBoxes.push({ id: rightWallID, g: null });
+    elementBoxes.push({ id: topWallID, g: null });
+    elementBoxes.push({ id: bottomWallID, g: null });
 
 
     for (const el of elements) {
         if (!el.textWidth || !el.textHeight) continue;
+        if (el.element.nodeName === "DIV") continue;
+
+        // console.log(el);
 
         const id = engine.value.add_fixed_body(
             el.textX + (el.textWidth / 2),
