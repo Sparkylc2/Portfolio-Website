@@ -1,25 +1,62 @@
 <template>
     <div class="pdf-wrapper" ref="pdfWrapper">
-        <iframe ref="pdfIframe" :src="pdfViewerUrl" frameborder="0" ></iframe>
+        <iframe ref="pdfIframe" :src="pdfViewerUrl" frameborder="0" @load="applyAccentColor"></iframe>
     </div>
 </template>
 
 <script setup>
-import { defineProps, nextTick, onMounted, onUnmounted, ref } from 'vue';
+import { computed, defineProps, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 
 const props = defineProps({
     pdfFileName: {
         type: String,
         default: 'PipeFlowLabReport.pdf'
     },
+    accentColor: {
+        type: String,
+        default: 'rgb(140, 172, 204)'
+    }
 });
 
-const baseUrl = '/pdfjs/web/viewer.html?file=/docs/';
-const pdfViewerUrl = baseUrl + props.pdfFileName + '#zoom=page-fit';
 
+
+
+const pdfViewerUrl = computed(() => {
+    const baseUrl = '/pdfjs/web/viewer.html?file=/docs/';
+    return `${baseUrl}${props.pdfFileName}#zoom=page-fit`;
+});
+
+const reloadKey = ref(0);
 const pdfWrapper = ref(null);
 const pdfIframe = ref(null);
 let paperDetailsSection = null;
+
+watch(() => props.pdfFileName, (newFileName) => {
+    if (pdfIframe.value) {
+        pdfIframe.value.src = pdfViewerUrl.value;
+    }
+});
+
+
+const applyAccentColor = () => {
+    if (!pdfIframe.value) return;
+
+    try {
+        const iframe = pdfIframe.value;
+        const iframeWindow = iframe.contentWindow;
+
+        if (!iframeWindow || !iframeWindow.document) {
+            setTimeout(() => applyAccentColor(), 200);
+            return;
+        }
+        iframeWindow.document.documentElement.style.setProperty('--paper-color', props.accentColor);
+
+        if (iframeWindow.document.body) {
+            iframeWindow.document.body.style.setProperty('--paper-color', props.accentColor);
+        }
+    } catch (e) {
+    }
+};
 
 const syncIframeSize = () => {
     if (!pdfWrapper.value || !pdfIframe.value) return;
@@ -37,10 +74,10 @@ const syncIframeSize = () => {
 
         pdfIframe.value.style.width = `${contentWidth}px`;
         pdfIframe.value.style.height = `${contentHeight}px`;
-        
+
         pdfWrapper.value.style.width = `${contentWidth}px`;
         pdfWrapper.value.style.height = `${contentHeight}px`;
-        
+
 
         pdfWrapper.value.style.marginBottom = '0';
         pdfIframe.value.style.marginBottom = '0';
@@ -77,28 +114,30 @@ onUnmounted(() => {
     }
     window.removeEventListener('resize', syncIframeSize);
 });
+
+
 </script>
 
 <style scoped>
 .pdf-wrapper {
     width: 100%;
     height: 100%;
-    margin: 0;        
-    padding: 0;       
-    overflow: hidden; 
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
     display: flex;
-    align-items: flex-start; 
-    justify-content: center; 
-    box-sizing: border-box;  
+    align-items: flex-start;
+    justify-content: center;
+    box-sizing: border-box;
 }
 
 iframe {
     border: none;
     overflow: hidden;
-    margin: 0;        
-    padding: 0;       
-    flex: 1 1 auto;   
-    max-height: 100%; 
+    margin: 0;
+    padding: 0;
+    flex: 1 1 auto;
+    max-height: 100%;
 }
 
 .pdf-viewer iframe {
@@ -111,6 +150,4 @@ iframe {
     width: 0 !important;
     height: 0 !important;
 }
-
-
 </style>

@@ -39,34 +39,13 @@
                                     <p>{{ currentPaper?.description }}</p>
 
                                     <div class="pdf-viewer" ref="pdfWrapper">
-                                        <PDFViewer v-if="currentPaper?.pdf" :pdfFileName="currentPaper.pdf" />
+                                        <PDFViewer 
+                                            v-if="currentPaper?.pdf" 
+                                            :pdfFileName="currentPaper.pdf" 
+                                            :accentColor="getPaperColor(currentPaper?.color)"
+                                            :key="currentPaper?.pdf + currentPaper?.color"
+                                        />
                                     </div>
-                                    <!-- <div class="paper-meta">
-                                        <div class="keywords">
-                                            <h3>Keywords</h3>
-                                            <div class="keyword-tags">
-                                                <span v-for="keyword in currentPaper?.keywords" :key="keyword"
-                                                    class="keyword-tag">{{ keyword }}</span>
-                                            </div>
-                                        </div>
-                                        <div class="paper-links">
-                                            <a v-if="currentPaper?.pdf" :href="currentPaper.pdf" target="_blank"
-                                                class="paper-link"
-                                                :style="{ backgroundColor: getPaperColor(currentPaper.color) }">
-                                                PDF
-                                            </a>
-                                            <a v-if="currentPaper?.arxiv" :href="currentPaper.arxiv" target="_blank"
-                                                class="paper-link"
-                                                :style="{ backgroundColor: getPaperColor(currentPaper.color) }">
-                                                arXiv
-                                            </a>
-                                            <a v-if="currentPaper?.doi" :href="currentPaper.doi" target="_blank"
-                                                class="paper-link"
-                                                :style="{ backgroundColor: getPaperColor(currentPaper.color) }">
-                                                DOI
-                                            </a>
-                                        </div>
-                                    </div> -->
                                 </div>
                                 <div v-else-if="activeSection === 'Abstract'" key="abstract" class="section-content">
                                     <div class="paper-details" v-html="currentPaper?.detailedDescription"></div>
@@ -95,7 +74,6 @@ const expandedPaper = ref(null)
 const pdfWrapper = ref(null)
 const parentScroll = ref(null)
 
-
 watch(() => props.selectedPaper, (newVal) => {
     expandedPaper.value = newVal
 }, { immediate: true })
@@ -104,7 +82,6 @@ watch(expandedPaper, (newVal) => {
     emit('update:selectedPaper', newVal)
     if (newVal !== null) {
         emit('update:selectedPaperColor', papers[newVal]?.color)
-        updatePDFOutlineColor(papers[newVal]?.color)
     }
 })
 
@@ -282,75 +259,42 @@ const getPaperTitleColor = (color) => {
     return colors[color] || '#e63946'
 }
 
-const updatePDFOutlineColor = async (color) => {
-    const { parent, wrapper } = await waitForElements();
-    const iframe = wrapper.querySelector('iframe')
-    if (iframe && iframe.contentWindow) {
-        const colorMap = {
-            red: 'rgb(204, 140, 140)',
-            blue: 'rgb(140, 172, 204)',
-            green: 'rgb(140, 204, 140)',
-            yellow: 'rgb(204, 172, 140)'
-        }
-
-        const outlineColor = colorMap[color] || 'rgb(140, 172, 204)'
-
-        try {
-            iframe.contentWindow.document.documentElement.style.setProperty('--paper-color', outlineColor)
-        } catch (e) {
-            console.log('Could not access iframe content:', e)
-        }
-    }
-}
-
 const waitForElements = () => {
-        return new Promise((resolve) => {
-            const checkElements = () => {
-                const parent = parentScroll.value
-                const wrapper = pdfWrapper.value
+    return new Promise((resolve) => {
+        const checkElements = () => {
+            const parent = parentScroll.value
+            const wrapper = pdfWrapper.value
 
-                if (!parent || !wrapper) {
-                    setTimeout(checkElements, 100)
-                    return
-                }
-
-                resolve({ parent, wrapper })
+            if (!parent || !wrapper) {
+                setTimeout(checkElements, 100)
+                return
             }
 
-            checkElements()
-        })
-    }
+            resolve({ parent, wrapper })
+        }
 
+        checkElements()
+    })
+}
 
 onMounted(async () => {
     await nextTick()
 
+    openPaper(0);
 
     const { parent, wrapper } = await waitForElements()
 
     if (!parent || !wrapper) return
 
-
     const iframe = wrapper.querySelector('iframe')
     if (!iframe) return
 
-
-    // iframe.addEventListener('load', () => {
-    //     const win = iframe.contentWindow
-    //     if (!win) return
-    //     if (currentPaper.value?.color) {
-    //         updatePDFOutlineColor(currentPaper.value.color)
-    //     }
-    // })
-
     let isScrollingPDF = false
-
 
     const isParentAtBottom = () => {
         const tolerance = 0
         return parent.scrollTop + parent.clientHeight >= parent.scrollHeight - tolerance
     }
-
 
     const canPDFScroll = (direction) => {
         const win = iframe.contentWindow
@@ -366,7 +310,6 @@ onMounted(async () => {
         }
     }
 
-
     parent.addEventListener('wheel', (e) => {
         const win = iframe.contentWindow
         if (!win) return
@@ -377,13 +320,11 @@ onMounted(async () => {
         const deltaY = e.deltaY
         const scrollingDown = deltaY > 0
 
-
         if (isParentAtBottom() && scrollingDown && canPDFScroll(deltaY)) {
             e.preventDefault()
             pdfContainer.scrollTop += deltaY
             isScrollingPDF = true
         }
-
         else if (!scrollingDown && isScrollingPDF) {
             if (pdfContainer.scrollTop > 0) {
                 e.preventDefault()
@@ -444,19 +385,6 @@ onMounted(async () => {
         }
     })
 })
-
-
-
-
-
-
-
-
-
-
-
-
-
 </script>
 
 <style scoped>
@@ -651,7 +579,6 @@ onMounted(async () => {
 .paper-details-section::-webkit-scrollbar {
     display: none;
 }
-
 
 .paper-details-content {
     padding: 1rem;

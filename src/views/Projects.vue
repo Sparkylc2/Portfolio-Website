@@ -309,6 +309,23 @@ const { elementData } = useElementTracker(overviewSection, {
 </script>
 
 <style scoped>
+.projects-container,
+.projects-grid-wrapper,
+.project-details-section,
+.section-content {
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+}
+
+.projects-container::-webkit-scrollbar,
+.projects-grid-wrapper::-webkit-scrollbar,
+.project-details-section::-webkit-scrollbar,
+.section-content::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+}
+
 .date {
     font-size: 0.9rem;
     color: rgb(225, 225, 225);
@@ -328,7 +345,7 @@ const { elementData } = useElementTracker(overviewSection, {
     left: 0;
     right: 0;
     bottom: 0;
-    overflow: auto;
+    overflow: hidden;
     scrollbar-width: none;
     -ms-overflow-style: none;
 }
@@ -475,7 +492,7 @@ const { elementData } = useElementTracker(overviewSection, {
 .project-details-section {
     flex: 1;
     background: rgb(36, 36, 36);
-    overflow-y: auto;
+    overflow-y: hidden;
     scrollbar-width: none;
     padding-bottom: 2rem;
     border-radius: 0.5rem;

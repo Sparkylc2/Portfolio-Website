@@ -4,11 +4,6 @@
             @update:activeTab="handleTabChange" />
 
         <div class="content">
-            <div v-if="currentTab === 'Home'" class="home-content">
-                <h1>Welcome Home</h1>
-                <p>This is the home page content</p>
-            </div>
-
             <Projects v-if="currentTab === 'Projects'" :activeSection="projectSection"
                 :selectedProject="selectedProject" @update:selectedProject="handleProjectChange"
                 @update:selectedProjectColor="handleProjectPaperColorChange" />
