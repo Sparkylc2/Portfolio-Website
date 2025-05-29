@@ -21,7 +21,7 @@
 
             <label>
                 U (m/s):
-                <input v-model.number="Ufs" type="number" step="0.5" min="1" placeholder="15" />
+                <input v-model.number="uFs" type="number" step="0.5" min="1" placeholder="15" />
                 <span class="underline"></span>
             </label>
 
@@ -37,31 +37,74 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, watch } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import * as echarts from 'echarts'
-import * as afoil from '../composables/useAirfoilSimulator.js'
+import init from '../../public/wasm/airfoil_simulator.js'
 
-
-const props = defineProps({
+defineProps({
     projectColor: {
         type: String,
         default: '#007bff'
     }
 })
 
+const error = ref(false)
 const naca = ref('2412')
 const aoaDeg = ref(10)
 const nPanels = ref(200)
-const Ufs = ref(15)
+const uFs = ref(15)
 const CL = ref(0)
+
+const wasm = ref(null)
 
 const streamlinePlot = ref(null)
 let streamlineChart = null
 
+function resizeCharts() {
+    streamlineChart?.resize()
+}
+
+function matToJs(mat, wasm) {
+  const r = wasm.matrix_rows(mat), c = wasm.matrix_cols(mat)
+  const arr = Array.from({ length: r }, (_, i) =>
+      Array.from({ length: c }, (_, j) => wasm.matrix_coeff(mat, i, j)))
+  mat.delete()                     
+  return arr
+}
+
+function disposeStreamData(res) {
+  if (!res) return
+  
+  res.mu?.delete()
+  
+  res.stream_field?.u?.delete()
+  res.stream_field?.v?.delete()
+  
+  res.stream_grid?.x?.delete()
+  res.stream_grid?.z?.delete()
+  
+  if (res.streamlines) {
+    const n = res.streamlines.size()
+    for (let i = 0; i < n; i++) {
+      res.streamlines.get(i)?.delete()
+    }
+    res.streamlines.delete()
+  }
+  
+  res.delete?.()
+}
+
 onMounted(() => {
     streamlineChart = echarts.init(streamlinePlot.value, null, { renderer: 'canvas' })
     window.addEventListener('resize', resizeCharts)
-    updatePlot()
+
+    init().then(mod => {
+        wasm.value = mod
+        updatePlot()
+    }).catch(err => {
+        console.error('[AirfoilSimulator] Failed to load WASM module:', err)
+        error.value = true
+    })
 })
 
 onUnmounted(() => {
@@ -69,48 +112,46 @@ onUnmounted(() => {
     streamlineChart?.dispose()
 })
 
-function resizeCharts() {
-    streamlineChart?.resize()
-}
-
-
-
+// function toArray2D(mat) {
+//     const r = wasm.value.matrix_rows(mat), c = wasm.value.matrix_cols(mat);
+//     const out = new Array(r)
+//     for (let i = 0; i < r; i++) {
+//         const row = new Array(c)
+//         for (let j = 0; j < c; j++) row[j] = wasm.value.matrix_coeff(mat, i, j)
+//         out[i] = row
+//     }
+//     return out
+// }
 
 async function updatePlot() {
+    if (!wasm.value) return
+
     try {
-
-        const { x, z } = afoil.panelGen(naca.value, nPanels.value, aoaDeg.value)
-        const panelCoords = x.map((xi, i) => [xi, z[i]])
-        const mu = afoil.solveSystem(panelCoords, Ufs.value, aoaDeg.value)
-        CL.value = afoil.liftCoefficient(mu, Ufs.value)
-
-
-        const [X, Z] = afoil.meshgrid(
-            afoil.linspace(-0.2, 1.2, 200),
-            afoil.linspace(-0.7, 0.7, 200)
+        
+        const res = wasm.value.analyze_airfoil(
+            naca.value,
+            uFs.value,
+            aoaDeg.value,
+            nPanels.value,
+            40
         )
 
+        CL.value = res.cl
 
-        const streamVel = afoil.velocityField(X, Z, mu, panelCoords, Ufs.value, aoaDeg.value)
+        const foil = matToJs(res.airfoil_coords, wasm.value).slice(0, -1) 
 
-        const airfoilLine = {
+        const streamSeries = []
+        const nLines = res.streamlines.size()
+        for (let k = 0; k < nLines; k++) {
+            streamSeries.push({
             type: 'line',
-            data: x.slice(0, -1).map((xi, i) => [xi, z[i]]),
-            lineStyle: { color: '#fff', width: 2 },
-            showSymbol: false
-        }
-
-
-        const streamSeries = generateStreamlines(
-            streamVel.u, streamVel.v, X, Z, panelCoords.slice(0, -1)
-        ).map(seg => ({
-            type: 'line',
-            data: seg.x.map((xs, k) => [xs, seg.y[k]]),
+            data: matToJs(res.streamlines.get(k), wasm.value),
             lineStyle: { color: 'rgb(140, 172, 204)', width: 1 },
             showSymbol: false
-        }))
+            })
+        }
 
-
+        disposeStreamData(res)
 
         streamlineChart.setOption({
             tooltip: { show: false },
@@ -119,12 +160,9 @@ async function updatePlot() {
                 max: 1.2,
                 name: 'x/c',
                 splitLine: { show: false },
-                axisLine: {
-                    onZero: false,
-                    lineStyle: { color: 'rgba(0, 0, 0, 0)' }
-                },
+                axisLine: { onZero: false, lineStyle: { color: 'rgba(0,0,0,0)' } },
                 axisTick: { show: false },
-                axisLabel: { show: false, color: '#fff' }
+                axisLabel: { show: false }
             },
             yAxis: {
                 min: -0.7,
@@ -132,96 +170,34 @@ async function updatePlot() {
                 scale: true,
                 name: 'z/c',
                 splitLine: { show: false },
-                axisLine: { lineStyle: { color: 'rgba(0, 0, 0, 0)' } },
-                axisLabel: { show: false, color: '#fff' }
+                axisLine: { lineStyle: { color: 'rgba(0,0,0,0)' } },
+                axisLabel: { show: false }
             },
-            grid: {show: false,},
+            grid: { show: false },
             animation: false,
             aria: { enabled: true },
-            series: [airfoilLine, ...streamSeries]
-        }, true);
-
+            series: [
+                {
+                    type: 'line',
+                    data: foil,
+                    lineStyle: { color: '#fff', width: 2 },
+                    showSymbol: false
+                },
+                ...streamSeries
+            ]
+        }, true)
     } catch (err) {
         console.error('[AirfoilSimulator] update failed:', err)
     }
 }
-
-
-function generateStreamlines(u, v, X, Z, foilVerts) {
-    const streamlines = []
-    const nStream = 20
-    const domain = { xMin: -0.2, xMax: 1.2, zMin: -0.7, zMax: 0.7 }
-
-    const starts = []
-    for (let i = 0; i < nStream; i++) {
-        const z = domain.zMin + (domain.zMax - domain.zMin) * i / (nStream - 1)
-        starts.push([domain.xMin, z])
-    }
-    for (let i = 1; i < nStream / 2; i++) {
-        const x = domain.xMin + (domain.xMax - domain.xMin) * i / (nStream / 2)
-        starts.push([x, domain.zMax])
-        starts.push([x, domain.zMin])
-    }
-
-    for (const s of starts) {
-        const line = integrateStreamline(s, u, v, X, Z, foilVerts)
-        if (line.x.length > 5) streamlines.push(line)
-    }
-    return streamlines
-}
-
-function integrateStreamline(start, u, v, X, Z, foilVerts, maxSteps = 600) {
-    const dx = X[0][1] - X[0][0]
-    const dz = Z[1][0] - Z[0][0]
-    const dt = 0.01
-
-    const xs = [start[0]]
-    const zs = [start[1]]
-
-    let [x, z] = start
-
-    for (let step = 0; step < maxSteps; step++) {
-        const i = Math.floor((x - X[0][0]) / dx)
-        const j = Math.floor((z - Z[0][0]) / dz)
-        if (i < 0 || i >= X[0].length - 1 || j < 0 || j >= Z.length - 1) break
-
-        const fx = (x - X[0][i]) / dx
-        const fz = (z - Z[j][0]) / dz
-
-        const uInterp = bilerp(u, i, j, fx, fz)
-        const vInterp = bilerp(v, i, j, fx, fz)
-        if (Number.isNaN(uInterp)) break
-
-        x += uInterp * dt
-        z += vInterp * dt
-        if (afoil.isInsidePolygon([x, z], foilVerts)) break
-
-        xs.push(x); zs.push(z)
-        if (Math.hypot(uInterp, vInterp) < 0.05) break
-    }
-
-    return { x: xs, y: zs }
-}
-
-function bilerp(field, i, j, fx, fz) {
-    const f00 = field[j][i]
-    const f10 = field[j][i + 1]
-    const f01 = field[j + 1][i]
-    const f11 = field[j + 1][i + 1]
-    if ([f00, f10, f01, f11].some(Number.isNaN)) return NaN
-    return (1 - fx) * (1 - fz) * f00 +
-        fx * (1 - fz) * f10 +
-        (1 - fx) * fz * f01 +
-        fx * fz * f11
-}
 </script>
+
 <style scoped>
 .airfoil-simulator {
     width: 100%;
     max-width: 1200px;
     margin: 0 auto;
 }
-
 
 .controls {
     display: flex;
@@ -291,7 +267,6 @@ function bilerp(field, i, j, fx, fz) {
     width: 100%;
 }
 
-
 button {
     padding: 0.4rem 0.8rem;
     color: white;
@@ -317,35 +292,35 @@ button:hover {
 }
 
 .plot-wrapper {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  max-width: 600px;
-  width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    max-width: 600px;
+    width: 100%;
 }
 
 .plot-title {
-  color: #fff;
-  font-size: 18px;
-  font-weight: normal;
-  text-align: center;
-  margin-bottom: 0.2rem;
-  white-space: nowrap;
+    color: #fff;
+    font-size: 18px;
+    font-weight: normal;
+    text-align: center;
+    margin-bottom: 0.2rem;
+    white-space: nowrap;
 }
 
 .plot {
-  aspect-ratio: 1 / 1;
-  max-width: 600px;
-  max-height: 600px;
-  width: 100%;
-  height: auto;
-  border-radius: 4px;
-  background: rgb(36, 36, 36);
-  mask-image: linear-gradient(to top, transparent 0%, black 35%, black 65%, transparent 100%),
-               linear-gradient(to left, transparent 0%, black 35%, black 65%, transparent 100%);
-  mask-composite: intersect;
-  -webkit-mask-image: linear-gradient(to top, transparent 0%, black 35%, black 65%, transparent 100%),
-                      linear-gradient(to left, transparent 0%, black 35%, black 65%, transparent 100%);
-  -webkit-mask-composite: source-in;
+    aspect-ratio: 1 / 1;
+    max-width: 600px;
+    max-height: 600px;
+    width: 100%;
+    height: auto;
+    border-radius: 4px;
+    background: rgb(36, 36, 36);
+    mask-image: linear-gradient(to top, transparent 0%, black 35%, black 65%, transparent 100%),
+                 linear-gradient(to left, transparent 0%, black 35%, black 65%, transparent 100%);
+    mask-composite: intersect;
+    -webkit-mask-image: linear-gradient(to top, transparent 0%, black 35%, black 65%, transparent 100%),
+                        linear-gradient(to left, transparent 0%, black 35%, black 65%, transparent 100%);
+    -webkit-mask-composite: source-in;
 }
 </style>

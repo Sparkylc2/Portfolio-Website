@@ -6,7 +6,7 @@
 <script setup>
 import { Application, Graphics } from 'pixi.js'
 import { onMounted, onUnmounted, ref, watch } from 'vue'
-import initWasm, { ConstraintPhysicsEngine } from '../../rust/physics_engine/pkg/physics_engine.js'
+import initWasm, { ConstraintPhysicsEngine } from '../../public/wasm/physics_engine.js'
 
 const props = defineProps({
     elementData: { type: Object, default: null },

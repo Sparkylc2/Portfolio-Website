@@ -39,12 +39,9 @@
                                     <p>{{ currentPaper?.description }}</p>
 
                                     <div class="pdf-viewer" ref="pdfWrapper">
-                                        <PDFViewer 
-                                            v-if="currentPaper?.pdf" 
-                                            :pdfFileName="currentPaper.pdf" 
+                                        <PDFViewer v-if="currentPaper?.pdf" :pdfFileName="currentPaper.pdf"
                                             :accentColor="getPaperColor(currentPaper?.color)"
-                                            :key="currentPaper?.pdf + currentPaper?.color"
-                                        />
+                                            :key="currentPaper?.pdf + currentPaper?.color" />
                                     </div>
                                 </div>
                                 <div v-else-if="activeSection === 'Abstract'" key="abstract" class="section-content">
@@ -191,10 +188,6 @@ const openPaper = (index) => {
     expandedPaper.value = index
 }
 
-const closePaper = () => {
-    expandedPaper.value = null
-}
-
 const togglePaper = (index) => {
     if (expandedPaper.value !== index) {
         openPaper(index)
@@ -324,8 +317,7 @@ onMounted(async () => {
             e.preventDefault()
             pdfContainer.scrollTop += deltaY
             isScrollingPDF = true
-        }
-        else if (!scrollingDown && isScrollingPDF) {
+        } else if (!scrollingDown && isScrollingPDF) {
             if (pdfContainer.scrollTop > 0) {
                 e.preventDefault()
                 pdfContainer.scrollTop += deltaY
@@ -647,6 +639,7 @@ onMounted(async () => {
     grid-template-columns: 1fr auto;
     align-items: flex-end;
     padding-top: 2rem;
+
 }
 
 .keywords {

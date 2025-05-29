@@ -22,3 +22,43 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Node + Vite (Vue frontend)
+node_modules/
+dist/
+.vite/
+.vscode/
+*.log
+
+# Rust
+lib/rust/target/
+lib/rust/cargo/
+lib/rust/rustup/
+**/Cargo.lock
+**/*.d.ts
+
+# C++
+*.o
+*.obj
+*.out
+*.a
+*.so
+*.dll
+*.exe
+*.log
+*.dSYM/
+
+# WASM output (public)
+lib/
+public/wasm/*.wasm
+public/wasm/*.js
+public/wasm/*.ts
+public/wasm/*.d.ts
+public/wasm/package.json
+
+# Editor/OS clutter
+.DS_Store
+*.swp
+*.tmp
+*.bak
+Thumbs.db
