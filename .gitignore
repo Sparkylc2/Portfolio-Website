@@ -50,11 +50,7 @@ lib/rust/rustup/
 
 # WASM output (public)
 lib/
-public/wasm/*.wasm
-public/wasm/*.js
-public/wasm/*.ts
-public/wasm/*.d.ts
-public/wasm/package.json
+
 
 # Editor/OS clutter
 .DS_Store
