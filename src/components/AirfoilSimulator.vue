@@ -40,9 +40,9 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
 import * as echarts from 'echarts'
-import init from '../../public/wasm/airfoil_simulator.js'
+import { onMounted, onUnmounted, ref } from 'vue'
+import init from '../wasm/airfoil_simulator.js'
 
 defineProps({
     projectColor: {

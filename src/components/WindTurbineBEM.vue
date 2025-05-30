@@ -87,7 +87,7 @@
 <script setup>
 import * as echarts from 'echarts'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
-import init from '../../public/wasm/wind_turbine.js'
+import init from '../wasm/wind_turbine.js'
 
 defineProps({
     projectColor: {
@@ -139,8 +139,7 @@ onMounted(() => {
 
     init().then(mod => {
         wasm.value = mod
-        wasm.value.loadPolarData("");
-        wasm.value.setDebugMode(true)
+        // wasm.value.setDebugMode(true)
         runBEM()
     }).catch(err => {
         console.error('[BEMSimulator] Failed to load WASM module:', err)

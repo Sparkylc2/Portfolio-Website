@@ -5,8 +5,8 @@
 
 <script setup>
 import { Application, Graphics } from 'pixi.js'
-import { onMounted, onUnmounted, ref, watch, shallowRef } from 'vue'
-import initWasm, { ConstraintPhysicsEngine } from '../../public/wasm/physics_engine.js'
+import { onMounted, onUnmounted, ref, shallowRef, watch } from 'vue'
+import initWasm, { ConstraintPhysicsEngine } from '../wasm/physics_engine.js'
 
 const props = defineProps({
     elementData: { type: Object, default: null },

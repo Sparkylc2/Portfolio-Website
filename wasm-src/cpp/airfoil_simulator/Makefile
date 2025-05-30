@@ -1,6 +1,6 @@
 EMCC = emcc
 SRC = airfoil_simulator.cpp
-OUT = ../../../public/wasm/airfoil_simulator.js
+OUT = ../../../src/wasm/airfoil_simulator.js
 EIGEN = ../../../lib/cpp
 
 all:
@@ -9,5 +9,5 @@ all:
 		-o $(OUT)
 
 clean:
-	rm -f ../../../public/wasm/airfoil_simulator.*
-	rm -f ../../../public/wasm/*.d.ts
+	rm -f ../../../src/wasm/airfoil_simulator.*
+	rm -f ../../../src/wasm/*.d.ts

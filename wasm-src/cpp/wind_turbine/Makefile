@@ -1,6 +1,6 @@
 EMCC = emcc
 SRC = wind_turbine.cpp
-OUT = ../../../public/wasm/wind_turbine.js
+OUT = ../../../src/wasm/wind_turbine.js
 EIGEN = ../../../lib/cpp
 
 all:
@@ -9,6 +9,6 @@ all:
 		-o $(OUT)
 
 clean:
-	rm -f ../../../public/wasm/wind_turbine.*
-	rm -f ../../../public/wasm/*.d.ts
+	rm -f ../../../src/wasm/wind_turbine.*
+	rm -f ../../../src/wasm/*.d.ts
 
