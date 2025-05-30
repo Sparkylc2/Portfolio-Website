@@ -5,7 +5,7 @@
 
 <script setup>
 import { Application, Graphics } from 'pixi.js'
-import { onMounted, onUnmounted, ref, watch } from 'vue'
+import { onMounted, onUnmounted, ref, watch, shallowRef } from 'vue'
 import initWasm, { ConstraintPhysicsEngine } from '../../public/wasm/physics_engine.js'
 
 const props = defineProps({
@@ -23,6 +23,7 @@ const mousePos = ref({ x: 0, y: 0 })
 const dragIndex = ref(-1)
 const tickerFunction = ref(null);
 
+const resizeObserver = shallowRef(null)
 
 
 
@@ -38,25 +39,63 @@ let START_X = 0
 let START_Y = 0
 
 
+
+function setupResizeObserver() {
+    if (!props.elementData?.container || !app.value || !engine.value) return
+
+    if (resizeObserver.value) resizeObserver.value.disconnect()
+
+    resizeObserver.value = new ResizeObserver(() => {
+
+        canvasOnResize()
+        syncElementBoxes()
+    });
+
+    if (props.elementData.container.element) {
+        resizeObserver.value.observe(props.elementData.container.element)
+    }
+}
+
+watch(() => props.elementData?.container, (newContainer, oldContainer) => {
+    if (!newContainer) return
+    if (!app.value || !engine.value) return
+
+    if (!oldContainer ||
+        newContainer.x !== oldContainer.x ||
+        newContainer.y !== oldContainer.y) {
+        canvasOnResize()
+    }
+
+    setupResizeObserver()
+}, { immediate: true })
+
+
+
+
+
 function onPointerDown(ev) {
+    if (!app.value) return;
     const rect = app.value.canvas.getBoundingClientRect();
     const x = ev.clientX - rect.left;
     const y = ev.clientY - rect.top;
-    
+
     const idx = engine.value.start_mouse_drag(x, y);
 
     if (idx === -1) return;
     if (!bodyBoxes[idx]) return;
-    
+
 
     isDragging.value = true;
     dragIndex.value = idx
     mousePos.value = { x: x, y: y }
+
 }
 
 
 function onPointerMove(e) {
+    if (!app.value) return;
     if (!isDragging.value) return
+
     const rect = app.value.canvas.getBoundingClientRect()
     const x = e.clientX - rect.left
     const y = e.clientY - rect.top
@@ -65,6 +104,8 @@ function onPointerMove(e) {
 }
 
 function onPointerUp() {
+    if (!app.value) return;
+
     engine.value.end_mouse_drag()
     isDragging.value = false
     dragIndex.value = -1
@@ -78,57 +119,9 @@ function syncElementBoxes() {
     elementBoxes.forEach(box => { if (box.g) app.value.stage.removeChild(box.g) });
     elementBoxes.length = 0;
 
-
-    const wallThickness = 50;
-    const halfWallThickness = wallThickness / 2;
-    const halfWidth = container.width / 2;
-    const halfHeight = container.height / 2;
-
-
-    const leftWallID = engine.value.add_fixed_body(
-        -halfWallThickness,
-        halfHeight,
-        halfWallThickness,
-        halfHeight
-    );
-
-
-    const rightWallID = engine.value.add_fixed_body(
-        container.width + halfWallThickness,
-        halfHeight,
-        halfWallThickness,
-        halfHeight
-    );
-
-
-
-    const topWallID = engine.value.add_fixed_body(
-        halfWidth,
-        -halfWallThickness,
-        halfWidth,
-        halfWallThickness
-    );
-
-
-    const bottomWallID = engine.value.add_fixed_body(
-        halfWidth,
-        container.height + halfWallThickness,
-        halfWidth,
-        halfWallThickness
-    );
-
-
-    elementBoxes.push({ id: leftWallID, g: null });
-    elementBoxes.push({ id: rightWallID, g: null });
-    elementBoxes.push({ id: topWallID, g: null });
-    elementBoxes.push({ id: bottomWallID, g: null });
-
-
     for (const el of elements) {
         if (!el.textWidth || !el.textHeight) continue;
         if (el.element.nodeName === "DIV") continue;
-
-        // console.log(el);
 
         const id = engine.value.add_fixed_body(
             el.textX + (el.textWidth / 2),
@@ -182,6 +175,27 @@ function initPendulumBlocks() {
     }
 
 
+    // free bodies
+    for (let i = 0; i < 3; i++) {
+        const id = engine.value.add_body(
+            START_X/2 * (i + 1), START_Y,
+            BOX_SIZE, BOX_SIZE, 1
+        );
+
+        const g = new Graphics()
+        g.zIndex = 2
+        g.rect(-BOX_SIZE, -BOX_SIZE, BOX_SIZE * 2, BOX_SIZE * 2)
+        g.fill(0xffffff)
+        g.setStrokeStyle({
+            width: 3,
+            color: 0x000000
+        })
+        g.stroke()
+        app.value.stage.addChild(g)
+        bodyBoxes.push({ id, g })
+        
+    }
+
     const anchor = new Graphics()
     anchor.zIndex = 3
     anchor.circle(START_X - SPACING, START_Y, 10)
@@ -194,13 +208,7 @@ function initPendulumBlocks() {
     app.value.stage.addChild(anchor)
 }
 
-watch(() => props.elementData, (newData) => {
-    if (!engine.value || !newData || !props.elementData.value) return;
-    syncElementBoxes();
-}, { immediate: true });
-
-
-const updateCanvasPosition = () => {
+const canvasOnResize = () => {
     if (!pixiContainer.value || !props.elementData?.container) return;
 
     const { x, y, width, height } = props.elementData.container;
@@ -214,14 +222,12 @@ const updateCanvasPosition = () => {
     if (app.value && app.value.renderer) {
         app.value.renderer.resize(width, height);
     }
+
+    if (engine.value) {
+        engine.value.set_bounds(width, height);  
+    }
 };
 
-watch(() => props.elementData, (newData) => {
-    if (!newData?.container) return;
-    if (!app.value || !engine.value) return;
-    updateCanvasPosition();
-    syncElementBoxes();
-}, { immediate: true });
 
 
 
@@ -283,15 +289,12 @@ onMounted(async () => {
         antialias: true
     })
 
-
-
     pixiContainer.value.appendChild(app.value.canvas)
-    updateCanvasPosition()
+    canvasOnResize()
 
 
     app.value.stage.eventMode = 'static'
-    app.value.stage.on('pointerdown', onPointerDown)
-
+    window.addEventListener('mousedown', onPointerDown)
     window.addEventListener('mousemove', onPointerMove)
     window.addEventListener('mouseup', onPointerUp)
     // window.addEventListener('touchmove', onGlobalTouchMove, { passive: false })
@@ -316,7 +319,7 @@ onMounted(async () => {
         springG.clear()
         const p0 = engine.value.body_position(bodyBoxes[0].id)
         drawSpring(springG, [START_X - SPACING, START_Y], p0)
-        for (let i = 0; i < bodyBoxes.length - 1; i++) {
+        for (let i = 0; i < 2; i++) {
             const a = engine.value.body_position(bodyBoxes[i].id)
             const b = engine.value.body_position(bodyBoxes[i + 1].id)
             drawSpring(springG, a, b)
@@ -342,7 +345,7 @@ onMounted(async () => {
             g.rotation = angle
         }
     }
-    
+
     app.value.ticker.add(tickerFunction.value);
 });
 
@@ -352,38 +355,62 @@ onUnmounted(() => {
     window.removeEventListener('mouseup', onPointerUp)
     window.removeEventListener('touchend', onPointerUp)
     window.removeEventListener('touchcancel', onPointerUp)
+
     
+    if (resizeObserver.value) {
+        resizeObserver.value.disconnect()
+        resizeObserver.value = null
+    }
     if (app.value?.ticker) {
         app.value.ticker.stop()
-        app.value.ticker.remove(tickerFunction) 
+        app.value.ticker.remove(tickerFunction)
     }
-    
-    if (app.value) {
-        app.value.destroy(true, { children: true, texture: true, baseTexture: true })
-        app.value = null
-    }
-    
+
     if (springG) {
-        springG = null
+        app.value?.stage?.removeChild(springG);
+        springG.destroy(true);
+        springG = null;
     }
-    
+
     bodyBoxes.forEach(box => {
-        if (box.g) box.g.destroy()
+        if (box.g) {
+            app.value?.stage?.removeChild(box.g)
+            box.g.destroy(true)
+        }
     })
-    bodyBoxes.length = 0
-    
+
+    bodyBoxes.length = 0;
+
+
     elementBoxes.forEach(box => {
-        if (box.g) box.g.destroy()
+        if (box.g) {
+            app.value?.stage?.removeChild(box.g)
+            box.g.destroy(true)
+        }
     })
-    elementBoxes.length = 0
-    
+
+    elementBoxes.length = 0;
+
+    if (app.value) {
+        if (pixiContainer.value && pixiContainer.value.contains(app.value.canvas)) {
+            pixiContainer.value.removeChild(app.value.canvas)
+        }
+
+        app.value.destroy(true, {
+            children: true,
+            texture: true,
+            baseTexture: true
+        })
+    }
+
     if (engine.value) {
-        engine.value = null
+        engine.value.destroy();
     }
 
     app.value = null
-    engine.value = null
-    tickerFunction.value = null
+    engine.value = null;
+    tickerFunction.value = null;
+    pixiContainer.value = null;
 });
 
 

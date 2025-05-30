@@ -85,6 +85,7 @@
 import { computed, ref, watch } from 'vue'
 import PhysicsEngine from '../components/PhysicsEngine.vue'
 import AirfoilSimulator from '../components/AirfoilSimulator.vue'
+import WindTurbineBEM from '../components/WindTurbineBEM.vue'
 import { useElementTracker } from '../composables/usePhysicsEngine.js'
 
 const props = defineProps({
@@ -136,7 +137,7 @@ const projects = [
         technologies: ['C++', 'Python'],
         github: 'https://github.com/yourusername/turbine-designer',
         demo: 'https://demo-link.com',
-        interactiveComponent: null,
+        interactiveComponent: WindTurbineBEM,
         detailedDescription: `
         <h3>About the Project</h3>
         <p>Description of the wind turbine designer...</p>

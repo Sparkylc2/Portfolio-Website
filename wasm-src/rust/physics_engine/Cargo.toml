@@ -10,3 +10,6 @@ crate-type = ["cdylib"]
 js-sys = "0.3.77"
 nalgebra = "0.33.2"
 wasm-bindgen = "0.2"
+
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = false

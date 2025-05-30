@@ -1,5 +1,5 @@
 RUST_DIR = wasm-src/rust/physics_engine
-CPP_DIR = wasm-src/cpp/airfoil_simulator
+CPP_DIR = wasm-src/cpp/wind_turbine
 
 .PHONY: all clean rust cpp
 

@@ -441,8 +441,8 @@ PanelAnalysis analyze_airfoil(
         VectorXd mu = solve_system(airfoil_coords, u_fs, n_panels, aoa);
         
         double cl = -2.0 * mu(n_panels) / u_fs;
-        
-        double domain[4] = {-0.2, 1.2, -0.7, 0.7};
+        double coeff = 2; 
+        double domain[4] = {-0.2 * coeff, 1.2 * coeff, -0.7 * coeff, 0.7 * coeff};
         MeshGrid stream_grid = create_mesh(domain[0], domain[1], domain[2], domain[3], 200, 200);
         
         VelocityField stream_field = calculate_velocity(

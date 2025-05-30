@@ -30,7 +30,10 @@
         <div class="plot-container">
             <div class="plot-wrapper">
                 <div class="plot-title">Streamlines around NACA {{ naca }} | Cₗ = {{ CL.toFixed(3) }}</div>
-                <div class="plot" ref="streamlinePlot"></div>
+                <div v-if="!error" class="plot" ref="streamlinePlot"></div>
+                <div v-else class="plot-error-wrapper" ref="streamlinePlot">
+                    <h2> An error occured </h2>
+                </div>
             </div>
         </div>
     </div>
@@ -95,8 +98,14 @@ function disposeStreamData(res) {
 }
 
 onMounted(() => {
-    streamlineChart = echarts.init(streamlinePlot.value, null, { renderer: 'canvas' })
-    window.addEventListener('resize', resizeCharts)
+    try {
+        streamlineChart = echarts.init(streamlinePlot.value, null, { renderer: 'canvas' })
+        window.addEventListener('resize', resizeCharts)
+    } catch (err) {
+        console.error('[AirfoilSimulator] Failed to initialize ECharts:', err)
+        error.value = true
+        return
+    }
 
     init().then(mod => {
         wasm.value = mod
@@ -112,22 +121,9 @@ onUnmounted(() => {
     streamlineChart?.dispose()
 })
 
-// function toArray2D(mat) {
-//     const r = wasm.value.matrix_rows(mat), c = wasm.value.matrix_cols(mat);
-//     const out = new Array(r)
-//     for (let i = 0; i < r; i++) {
-//         const row = new Array(c)
-//         for (let j = 0; j < c; j++) row[j] = wasm.value.matrix_coeff(mat, i, j)
-//         out[i] = row
-//     }
-//     return out
-// }
-
 async function updatePlot() {
     if (!wasm.value) return
-
     try {
-        
         const res = wasm.value.analyze_airfoil(
             naca.value,
             uFs.value,
@@ -187,6 +183,7 @@ async function updatePlot() {
             ]
         }, true)
     } catch (err) {
+        error.value = true
         console.error('[AirfoilSimulator] update failed:', err)
     }
 }
@@ -263,6 +260,10 @@ async function updatePlot() {
     border-radius: 9999px;
 }
 
+.controls input:hover ~ .underline {
+    width: 100%;
+}
+
 .controls input:focus ~ .underline {
     width: 100%;
 }
@@ -292,6 +293,14 @@ button:hover {
 }
 
 .plot-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    max-width: 600px;
+    width: 100%;
+}
+
+.plot-error-wrapper {
     display: flex;
     flex-direction: column;
     align-items: center;

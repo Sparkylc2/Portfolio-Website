@@ -42,6 +42,13 @@ export class ConstraintPhysicsEngine {
         return this;
     }
     /**
+     * @param {number} width
+     * @param {number} height
+     */
+    set_bounds(width, height) {
+        wasm.constraintphysicsengine_set_bounds(this.__wbg_ptr, width, height);
+    }
+    /**
      * @param {number} x
      * @param {number} y
      * @param {number} half_width
@@ -170,6 +177,9 @@ export class ConstraintPhysicsEngine {
     get_body_count() {
         const ret = wasm.constraintphysicsengine_get_body_count(this.__wbg_ptr);
         return ret >>> 0;
+    }
+    destroy() {
+        wasm.constraintphysicsengine_destroy(this.__wbg_ptr);
     }
 }
 
