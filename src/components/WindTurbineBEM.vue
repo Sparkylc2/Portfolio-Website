@@ -245,8 +245,8 @@ function plotBladeDistribution() {
                 type: 'line',
                 data: r.map((x, i) => [x, a[i]]),
                 smooth: true,
-                lineStyle: { color: 'rgb(140, 172, 204)', width: 2 },
-                itemStyle: { color: 'rgb(140, 172, 204)' }
+                lineStyle: { color: 'rgb(191, 223, 255)', width: 2 },
+                itemStyle: { color: 'rgb(191, 223, 255)' }
             },
             {
                 name: 'Tangential Induction (a\')',
@@ -254,8 +254,8 @@ function plotBladeDistribution() {
                 yAxisIndex: 1,
                 data: r.map((x, i) => [x, aPrime[i]]),
                 smooth: true,
-                lineStyle: { color: '#ff7875', width: 2 },
-                itemStyle: { color: '#ff7875' }
+                lineStyle: { color: 'rgb(255, 191, 191)', width: 2 },
+                itemStyle: { color: 'rgb(255, 191, 191)' }
             }
         ]
     }, true)
@@ -311,8 +311,8 @@ function plotBladeDistribution() {
                     type: 'line',
                     data: r.map((x, i) => [x, alpha[i]]),
                     smooth: true,
-                    lineStyle: { color: '#95de64', width: 2 },
-                    itemStyle: { color: '#95de64' }
+                    lineStyle: { color: 'rgb(191, 255, 191)', width: 2 },
+                    itemStyle: { color: 'rgb(191, 255, 191)' }
                 },
                 {
                     name: 'Lift Coefficient',
@@ -320,13 +320,14 @@ function plotBladeDistribution() {
                     yAxisIndex: 1,
                     data: r.map((x, i) => [x, cl[i]]),
                     smooth: true,
-                    lineStyle: { color: '#ffd666', width: 2 },
-                    itemStyle: { color: '#ffd666' }
+                    lineStyle: { color: 'rgb(255, 223, 191)', width: 2 },
+                    itemStyle: { color: 'rgb(255, 223, 191)' }
                 }
             ]
         }, true)
     }
 }
+
 
 async function runTSRSweep() {
     if (!wasm.value) return
