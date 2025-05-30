@@ -176,7 +176,7 @@ function initPendulumBlocks() {
 
 
     // free bodies
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < 3; i+=2) {
         const id = engine.value.add_body(
             START_X/2 * (i + 1), START_Y,
             BOX_SIZE, BOX_SIZE, 1

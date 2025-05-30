@@ -139,7 +139,6 @@ onMounted(() => {
 
     init().then(mod => {
         wasm.value = mod
-        // wasm.value.setDebugMode(true)
         runBEM()
     }).catch(err => {
         console.error('[BEMSimulator] Failed to load WASM module:', err)
@@ -160,6 +159,7 @@ async function runBEM() {
         plotMode.value = 'blade'
         showSecondPlot.value = true
         
+        wasm.value.load
         wasm.value.initializeRotor(radius.value, hubRadius.value, numBlades.value, windSpeed.value, tsr.value)
         wasm.value.clearBladeSections()
         

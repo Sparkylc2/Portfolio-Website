@@ -277,6 +277,7 @@ public:
         tsr = tip_sr;
         angular_velocity = tsr * wind_speed / radius;
         sections.clear();
+        
     }
 
     void add_section(double r, double chord, double twist_deg, AirfoilPolar *polar)
@@ -482,6 +483,7 @@ void loadPolarData()
 void initializeRotor(double radius, double hub_radius, int num_blades,
                      double wind_speed, double tsr)
 {
+    loadPolarData();
     g_rotor.initialize(radius, hub_radius, num_blades, wind_speed, tsr);
 }
 
@@ -505,7 +507,6 @@ val runBEM()
 {
     try
     {
-        loadPolarData();
         g_rotor.run_bem();
 
         val result = val::object();
