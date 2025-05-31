@@ -10,13 +10,33 @@
 #include <emscripten/emscripten.h>
 #include <emscripten/bind.h>
 #include <emscripten/val.h>
+#include <exprtk/exprtk.hpp>
+
 using namespace emscripten;
+static std::string normalize_expr(std::string expr)
+{
+    auto rep = [&](const std::string &a, const std::string &b)
+    {
+        for (size_t p = 0; (p = expr.find(a, p)) != std::string::npos;)
+            expr.replace(p, a.size(), b), p += b.size();
+    };
+    rep(u8"∗", "*");
+    rep(u8"×", "*");
+    rep(u8"÷", "/");
+    rep(u8"−", "-");
+    return expr;
+}
 
 struct PolarPoint
 {
     double alpha;
     double cl;
     double cd;
+};
+
+struct Point
+{
+    double x, y, z;
 };
 
 struct AirfoilPolar
@@ -266,6 +286,9 @@ public:
     double power;
     double cp;
 
+    std::string chord_expr;
+    std::string twist_expr;
+
     Rotor() : density(1.225), thrust(0), torque(0), power(0), cp(0) {}
 
     void initialize(double r, double r_hub, int n_blades, double v_wind, double tip_sr)
@@ -277,7 +300,6 @@ public:
         tsr = tip_sr;
         angular_velocity = tsr * wind_speed / radius;
         sections.clear();
-        
     }
 
     void add_section(double r, double chord, double twist_deg, AirfoilPolar *polar)
@@ -396,7 +418,24 @@ private:
     }
 };
 
+std::vector<Point> parseAirfoilData(const std::string &data)
+{
+    std::vector<Point> coords;
+    std::istringstream stream(data);
+    std::string line;
+    while (std::getline(stream, line))
+    {
+        std::istringstream line_stream(line);
+        Point pt;
+        line_stream >> pt.x >> pt.y;
+        pt.z = 0.0;
+        coords.push_back(pt);
+    }
+    return coords;
+}
+
 std::map<std::string, AirfoilPolar> g_polars;
+std::map<std::string, std::vector<Point>> g_airfoil_coords;
 Rotor g_rotor;
 
 void loadPolarData()
@@ -478,6 +517,95 @@ void loadPolarData()
         {7.5, 0.8682, 0.01157},
         {8, 0.9099, 0.01217}};
     g_polars["NACA0012"] = naca0012;
+
+    const char *naca2412_data = R"(1.0000     0.0013
+0.9500     0.0114
+0.9000     0.0208
+0.8000     0.0375
+0.7000     0.0518
+0.6000     0.0636
+0.5000     0.0724
+0.4000     0.0780
+0.3000     0.0788
+0.2500     0.0767
+0.2000     0.0726
+0.1500     0.0661
+0.1000     0.0563
+0.0750     0.0496
+0.0500     0.0413
+0.0250     0.0299
+0.0125     0.0215
+0.0000     0.0000
+0.0125     -0.0165
+0.0250     -0.0227
+0.0500     -0.0301
+0.0750     -0.0346
+0.1000     -0.0375
+0.1500     -0.0410
+0.2000     -0.0423
+0.2500     -0.0422
+0.3000     -0.0412
+0.4000     -0.0380
+0.5000     -0.0334
+0.6000     -0.0276
+0.7000     -0.0214
+0.8000     -0.0150
+0.9000     -0.0082
+0.9500     -0.0048
+1.0000     -0.0013)";
+
+    const char *naca0012_data = R"(1.00000  0.00126
+0.99572  0.00192
+0.98296  0.00377
+0.96194  0.00670
+0.93301  0.01057
+0.89668  0.01518
+0.85355  0.02030
+0.80438  0.02568
+0.75000  0.03106
+0.69134  0.03618
+0.62941  0.04077
+0.56526  0.04458
+0.50000  0.04737
+0.43474  0.04894
+0.37059  0.04910
+0.30866  0.04771
+0.25000  0.04468
+0.19562  0.03998
+0.14645  0.03365
+0.10332  0.02582
+0.06699  0.01869
+0.03806  0.01260
+0.01704  0.00791
+0.00428  0.00386
+0.00000  0.00000
+0.00428  -0.00386
+0.01704  -0.00791
+0.03806  -0.01260
+0.06699  -0.01869
+0.10332  -0.02582
+0.14645  -0.03365
+0.19562  -0.03998
+0.25000  -0.04468
+0.30866  -0.04771
+0.37059  -0.04910
+0.43474  -0.04894
+0.50000  -0.04737
+0.56526  -0.04458
+0.62941  -0.04077
+0.69134  -0.03618
+0.75000  -0.03106
+0.80438  -0.02568
+0.85355  -0.02030
+0.89668  -0.01518
+0.93301  -0.01057
+0.96194  -0.00670
+0.98296  -0.00377
+0.99572  -0.00192
+1.00000  -0.00126)";
+
+    g_airfoil_coords["NACA2412"] = parseAirfoilData(naca2412_data);
+    g_airfoil_coords["NACA0012"] = parseAirfoilData(naca0012_data);
 }
 
 void initializeRotor(double radius, double hub_radius, int num_blades,
@@ -485,6 +613,12 @@ void initializeRotor(double radius, double hub_radius, int num_blades,
 {
     loadPolarData();
     g_rotor.initialize(radius, hub_radius, num_blades, wind_speed, tsr);
+}
+
+void setExpressions(const std::string &chord_expr, const std::string &twist_expr)
+{
+    g_rotor.chord_expr = chord_expr;
+    g_rotor.twist_expr = twist_expr;
 }
 
 void addBladeSection(double r, double chord, double twist_deg, std::string airfoil)
@@ -501,6 +635,47 @@ void addBladeSection(double r, double chord, double twist_deg, std::string airfo
 void clearBladeSections()
 {
     g_rotor.sections.clear();
+}
+
+void buildBladeSectionsWithExpressions(int num_sections, const std::string &chord_expr, const std::string &twist_expr, const std::string &airfoil)
+{
+    typedef exprtk::symbol_table<double> symbol_table_t;
+    typedef exprtk::expression<double> expression_t;
+    typedef exprtk::parser<double> parser_t;
+
+    double r;
+    double radius = g_rotor.radius;
+
+    symbol_table_t symbol_table;
+    symbol_table.add_variable("r", r);
+    symbol_table.add_variable("radius", radius);
+    symbol_table.add_constants();
+
+    expression_t chord_expression;
+    expression_t twist_expression;
+    chord_expression.register_symbol_table(symbol_table);
+    twist_expression.register_symbol_table(symbol_table);
+
+    parser_t parser;
+    if (!parser.compile(normalize_expr(chord_expr), chord_expression))
+    {
+        std::cout << "Failed to parse chord expression: " << parser.error() << std::endl;
+        return;
+    }
+    if (!parser.compile(normalize_expr(twist_expr), twist_expression))
+    {
+        std::cout << "Failed to parse twist expression: " << parser.error() << std::endl;
+        return;
+    }
+
+    for (int i = 0; i < num_sections; i++)
+    {
+        r = g_rotor.hub_radius + (i + 0.5) * (g_rotor.radius - g_rotor.hub_radius) / num_sections;
+        double chord = chord_expression.value();
+        double twist = twist_expression.value() * 180.0 / M_PI;
+
+        addBladeSection(r, chord, twist, airfoil);
+    }
 }
 
 val runBEM()
@@ -559,12 +734,179 @@ void setDebugMode(bool debug)
     DEBUG_POLARS = debug;
 }
 
+val evaluateExpressionAtPositions(const std::string &expr_str, val positions)
+{
+    typedef exprtk::symbol_table<double> symbol_table_t;
+    typedef exprtk::expression<double> expression_t;
+    typedef exprtk::parser<double> parser_t;
+
+    double r;
+    double radius = g_rotor.radius;
+
+    symbol_table_t symbol_table;
+    symbol_table.add_variable("r", r);
+    symbol_table.add_variable("radius", radius);
+    symbol_table.add_variable("R", radius);
+    symbol_table.add_variable("R_h", g_rotor.hub_radius);
+
+    symbol_table.add_constants();
+
+    expression_t expression;
+    expression.register_symbol_table(symbol_table);
+
+    parser_t parser;
+    if (!parser.compile(normalize_expr(expr_str), expression))
+    {
+        return val::null();
+    }
+
+    int n = positions["length"].as<int>();
+    val results = val::array();
+
+    for (int i = 0; i < n; ++i)
+    {
+        r = positions[i].as<double>();
+        results.set(i, expression.value());
+    }
+
+    return results;
+}
+
+val generateBladeSurface(val sectionsArray, const std::string &airfoil_name, const std::string &chord_expr, const std::string &twist_expr)
+{
+    typedef exprtk::symbol_table<double> symbol_table_t;
+    typedef exprtk::expression<double> expression_t;
+    typedef exprtk::parser<double> parser_t;
+
+    double r;
+    double radius = g_rotor.radius;
+    double R_h = g_rotor.hub_radius;
+    double B = static_cast<double>(g_rotor.num_blades);
+    double tsr = g_rotor.tsr;
+
+    symbol_table_t symbol_table;
+    symbol_table.add_variable("r", r);
+    symbol_table.add_variable("radius", radius);
+    symbol_table.add_variable("R", radius);
+    symbol_table.add_variable("R_h", R_h);
+    symbol_table.add_variable("TSR", tsr);
+    symbol_table.add_variable("B", B);
+    symbol_table.add_constants();
+
+    expression_t chord_expression;
+    expression_t twist_expression;
+    chord_expression.register_symbol_table(symbol_table);
+    twist_expression.register_symbol_table(symbol_table);
+
+    parser_t parser;
+    if (!parser.compile(normalize_expr(chord_expr), chord_expression))
+    {
+        return val::null();
+    }
+    if (!parser.compile(normalize_expr(twist_expr), twist_expression))
+    {
+        return val::null();
+    }
+
+    int M = sectionsArray["length"].as<int>();
+    if (M == 0)
+    {
+        return val::undefined();
+    }
+
+    const auto &base_coords = g_airfoil_coords[airfoil_name];
+    int N = base_coords.size();
+
+    std::vector<std::vector<double>> all_vertices;
+    std::vector<std::vector<int>> indices;
+
+    for (int blade_idx = 0; blade_idx < g_rotor.num_blades; ++blade_idx)
+    {
+        double blade_angle = blade_idx * 2.0 * M_PI / g_rotor.num_blades;
+
+        for (int i = 0; i < M; ++i)
+        {
+            val section = sectionsArray[i];
+            r = section.as<double>();
+
+            double chord = chord_expression.value();
+            double twist = twist_expression.value();
+
+            const double cos_tw = cos(twist);
+            const double sin_tw = sin(twist);
+            const double cos_b = cos(blade_angle);
+            const double sin_b = sin(blade_angle);
+
+            for (const auto &pt : base_coords)
+            {
+                const double xc = pt.x * chord;
+                const double yc = pt.y * chord;
+
+                const double y_loc = xc * cos_tw - yc * sin_tw;
+                const double z_loc = xc * sin_tw + yc * cos_tw;
+
+                const double x_loc = r;
+
+                const double X = x_loc * cos_b - y_loc * sin_b;
+                const double Y = x_loc * sin_b + y_loc * cos_b;
+                const double Z = z_loc;
+
+                all_vertices.push_back({X, Y, Z});
+            }
+        }
+
+        int blade_offset = blade_idx * M * N;
+        for (int i = 0; i < M - 1; ++i)
+        {
+            for (int j = 0; j < N - 1; ++j)
+            {
+                int idx0 = blade_offset + i * N + j;
+                int idx1 = blade_offset + i * N + (j + 1);
+                int idx2 = blade_offset + (i + 1) * N + j;
+                int idx3 = blade_offset + (i + 1) * N + (j + 1);
+
+                indices.push_back({idx0, idx1, idx2});
+                indices.push_back({idx1, idx3, idx2});
+            }
+        }
+    }
+
+    val result = val::object();
+    val jsVertices = val::array();
+    for (size_t i = 0; i < all_vertices.size(); ++i)
+    {
+        val point = val::array();
+        point.set(0, all_vertices[i][0]);
+        point.set(1, all_vertices[i][1]);
+        point.set(2, all_vertices[i][2]);
+        jsVertices.set(i, point);
+    }
+
+    val jsIndices = val::array();
+    for (size_t i = 0; i < indices.size(); ++i)
+    {
+        val tri = val::array();
+        tri.set(0, indices[i][0]);
+        tri.set(1, indices[i][1]);
+        tri.set(2, indices[i][2]);
+        jsIndices.set(i, tri);
+    }
+
+    result.set("vertices", jsVertices);
+    result.set("indices", jsIndices);
+    return result;
+}
+
 EMSCRIPTEN_BINDINGS(bem_module)
 {
     function("loadPolarData", &loadPolarData);
     function("initializeRotor", &initializeRotor);
     function("addBladeSection", &addBladeSection);
     function("clearBladeSections", &clearBladeSections);
+    function("buildBladeSectionsWithExpressions", &buildBladeSectionsWithExpressions);
     function("runBEM", &runBEM);
     function("setDebugMode", &setDebugMode);
+    function("setExpressions", &setExpressions);
+    function("evaluateExpressionAtPositions", &evaluateExpressionAtPositions);
+    function("generateBladeSurface", &generateBladeSurface);
 }

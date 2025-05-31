@@ -112,14 +112,20 @@ watch(expandedProject, (newVal) => {
 const projects = [
     {
         title: 'Physics Engine',
-        description: 'A real-time physics engine built with Processing (Java)',
+        description: 'A real-time physics engine built in Processing (Java)',
         technologies: ['Processing', 'Java'],
         github: 'https://github.com/Sparkylc2/PhysicsEngine',
         demo: null,
         interactiveComponent: PhysicsEngine,
         detailedDescription: `
         <h3>About the Project</h3>
-        <p>Detailed description of the physics engine...</p>
+        <p>My first major project, written over the course of a number of months.</p>
+        <p> It features: </p>
+        <ul>
+          <li>, Rod Constraints, and Motor Constraints</li>
+          <li>Interactive pendulum demonstration</li>
+          <li>Collision detection</li>
+        </ul>
         
         <h3>Features</h3>
         <ul>
