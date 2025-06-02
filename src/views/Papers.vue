@@ -433,6 +433,7 @@ onMounted(async () => {
     bottom: 0;
     overflow: hidden;
 }
+
 .paper-sections {
     flex-grow: 1;
 }
@@ -633,6 +634,7 @@ onMounted(async () => {
 .paper-details {
     margin: 2rem;
 }
+
 .section {
     display: flex;
     flex-direction: column;
@@ -689,6 +691,7 @@ onMounted(async () => {
     display: block;
     position: relative;
 }
+
 :deep(.pdf-viewer > *) {
     flex: 1;
     height: 100%;
@@ -857,11 +860,14 @@ onMounted(async () => {
     .papers-grid {
         padding: 1rem 0;
         gap: 0.75rem;
+        width: 100%;
     }
 
     .paper-card {
         padding: 1.25rem;
-        margin: 0 0.5rem;
+        margin: 0;
+        width: 100%;
+        box-sizing: border-box;
     }
 
     .paper-details-section.mobile-fullscreen {
@@ -887,201 +893,201 @@ onMounted(async () => {
         height: 100vh;
         overflow-y: auto;
     }
+}
 
-    @media (max-width: 768px) {
-        .page-title {
-            font-size: 2rem;
-            top: 1rem;
-            left: 1rem;
-            z-index: 6;
+@media (max-width: 768px) {
+    .page-title {
+        font-size: 2rem;
+        top: 1rem;
+        left: 1rem;
+        z-index: 6;
+    }
+
+    .content-layout {
+        flex-direction: column;
+        padding: 4rem 1rem 1rem;
+        gap: 0;
+        height: 100vh;
+    }
+
+    .mobile-back-button-wrapper {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+        position: fixed;
+        top: 1rem;
+        left: 1rem;
+        background: rgb(36, 36, 36);
+        font-size: 1rem;
+        padding: 0 0.9rem;
+        min-height: 44px;
+        z-index: 100;
+    }
+
+    .papers-grid-wrapper {
+        width: 100%;
+        max-width: 100%;
+        height: auto;
+        max-height: calc(100vh - 5rem);
+        padding: 0;
+    }
+
+    .papers-grid {
+        padding: 1rem 0;
+        width: 100%;
+        min-width: 0;
+    }
+
+    .paper-card {
+        padding: 1.25rem;
+        width: 100%;
+    }
+
+    .paper-card.active,
+    .paper-card.inactive {
+        display: none;
+    }
+
+    .paper-details-section {
+        position: fixed;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        max-height: 100vh;
+        min-width: 0;
+        border-radius: 0;
+        z-index: 99;
+        overflow-y: auto;
+        padding-bottom: 0;
+        background: rgb(36, 36, 36);
+        animation: slideUp .25s ease;
+    }
+
+    @keyframes slideUp {
+        from {
+            transform: translateY(100%);
         }
 
-        .content-layout {
-            flex-direction: column;
-            padding: 4rem 1rem 1rem;
-            gap: 0;
-            height: 100vh;
-        }
-
-        .mobile-back-button-wrapper {
-            display: flex;
-            align-items: center;
-            gap: 0.25rem;
-            position: fixed;
-            top: 1rem;
-            left: 1rem;
-            background: rgb(36, 36, 36);
-            font-size: 1rem;
-            padding: 0 0.9rem;
-            min-height: 44px;
-            z-index: 100;
-        }
-
-        .papers-grid-wrapper {
-            width: 100%;
-            max-width: 100%;
-            height: auto;
-            max-height: calc(100vh - 5rem);
-            padding: 0;
-        }
-
-        .papers-grid {
-            padding: 1rem 0;
-            width: 100%;
-            min-width: 0;
-        }
-
-        .paper-card {
-            padding: 1.25rem;
-            width: 100%;
-        }
-
-        .paper-card.active,
-        .paper-card.inactive {
-            display: none;
-        }
-
-        .paper-details-section {
-            position: fixed;
-            inset: 0;
-            width: 100%;
-            height: 100%;
-            max-height: 100vh;
-            min-width: 0;
-            border-radius: 0;
-            z-index: 99;
-            overflow-y: auto;
-            padding-bottom: 0;
-            background: rgb(36, 36, 36);
-            animation: slideUp .25s ease;
-        }
-
-        @keyframes slideUp {
-            from {
-                transform: translateY(100%);
-            }
-
-            to {
-                transform: translateY(0);
-            }
-        }
-
-        .section {
-            max-height: none;
-            min-height: 100vh;
-            outline: none;
-        }
-
-        .section-content {
-            padding: 1.5rem;
-        }
-
-        .paper-meta {
-            grid-template-columns: 1fr;
-            gap: 1.25rem;
-        }
-
-        .paper-links {
-            align-self: flex-start;
-            padding-bottom: 0;
-        }
-
-        .keyword-tags {
-            gap: 0.4rem;
-        }
-
-        .keyword-tag {
-            font-size: 0.85rem;
-        }
-
-        .fade-enter-from,
-        .fade-leave-to {
-            opacity: 0;
-            transform: translateY(10px);
+        to {
+            transform: translateY(0);
         }
     }
 
-    @media (min-width: 769px) and (max-width: 1024px) {
-        .page-title {
-            font-size: 2.5rem;
-            top: 1.5rem;
-            left: 1.5rem;
-        }
-
-        .content-layout {
-            padding: 5rem 1.5rem 1.5rem;
-            gap: 1.5rem;
-        }
-
-        .papers-grid-wrapper,
-        .papers-grid {
-            width: 350px;
-            min-width: 350px;
-        }
-
-        .papers-grid.has-active {
-            width: 300px;
-            min-width: 300px;
-        }
-
-        .paper-details-section {
-            min-width: 350px;
-        }
+    .section {
+        max-height: none;
+        min-height: 100vh;
+        outline: none;
     }
 
-    @media (min-width: 1920px) {
-        .page-title {
-            font-size: 3.5rem;
-        }
-
-        .content-layout {
-            gap: 2.5rem;
-            padding: 7rem 3rem 3rem;
-        }
-
-        .papers-grid-wrapper,
-        .papers-grid {
-            width: 500px;
-            min-width: 500px;
-        }
-
-        .papers-grid.has-active {
-            width: 450px;
-            min-width: 450px;
-        }
-
-        .paper-card {
-            padding: 2rem;
-        }
-
-        .paper-card h2 {
-            font-size: 1.5rem;
-        }
-
-        .paper-details-section {
-            min-width: 500px;
-        }
+    .section-content {
+        padding: 1.5rem;
     }
 
-    @media (min-width: 2560px) {
-        .page-title {
-            font-size: 4rem;
-        }
+    .paper-meta {
+        grid-template-columns: 1fr;
+        gap: 1.25rem;
+    }
 
-        .papers-grid-wrapper,
-        .papers-grid {
-            width: 600px;
-            min-width: 600px;
-        }
+    .paper-links {
+        align-self: flex-start;
+        padding-bottom: 0;
+    }
 
-        .papers-grid.has-active {
-            width: 550px;
-            min-width: 550px;
-        }
+    .keyword-tags {
+        gap: 0.4rem;
+    }
 
-        .paper-details-section {
-            min-width: 600px;
-        }
+    .keyword-tag {
+        font-size: 0.85rem;
+    }
+
+    .fade-enter-from,
+    .fade-leave-to {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+    .page-title {
+        font-size: 2.5rem;
+        top: 1.5rem;
+        left: 1.5rem;
+    }
+
+    .content-layout {
+        padding: 5rem 1.5rem 1.5rem;
+        gap: 1.5rem;
+    }
+
+    .papers-grid-wrapper,
+    .papers-grid {
+        width: 350px;
+        min-width: 350px;
+    }
+
+    .papers-grid.has-active {
+        width: 300px;
+        min-width: 300px;
+    }
+
+    .paper-details-section {
+        min-width: 350px;
+    }
+}
+
+@media (min-width: 1920px) {
+    .page-title {
+        font-size: 3.5rem;
+    }
+
+    .content-layout {
+        gap: 2.5rem;
+        padding: 7rem 3rem 3rem;
+    }
+
+    .papers-grid-wrapper,
+    .papers-grid {
+        width: 500px;
+        min-width: 500px;
+    }
+
+    .papers-grid.has-active {
+        width: 450px;
+        min-width: 450px;
+    }
+
+    .paper-card {
+        padding: 2rem;
+    }
+
+    .paper-card h2 {
+        font-size: 1.5rem;
+    }
+
+    .paper-details-section {
+        min-width: 500px;
+    }
+}
+
+@media (min-width: 2560px) {
+    .page-title {
+        font-size: 4rem;
+    }
+
+    .papers-grid-wrapper,
+    .papers-grid {
+        width: 600px;
+        min-width: 600px;
+    }
+
+    .papers-grid.has-active {
+        width: 550px;
+        min-width: 550px;
+    }
+
+    .paper-details-section {
+        min-width: 600px;
     }
 }
 </style>

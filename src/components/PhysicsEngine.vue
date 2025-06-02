@@ -228,8 +228,6 @@ const canvasOnResize = () => {
 };
 
 
-
-
 function drawSpring(g, a, b, segments = 6, offset = 10) {
     const dx = b[0] - a[0], dy = b[1] - a[1]
     const len = Math.hypot(dx, dy); if (!len) return
@@ -296,7 +294,6 @@ onMounted(async () => {
     window.addEventListener('mousedown', onPointerDown)
     window.addEventListener('mousemove', onPointerMove)
     window.addEventListener('mouseup', onPointerUp)
-    // window.addEventListener('touchmove', onGlobalTouchMove, { passive: false })
     window.addEventListener('touchend', onPointerUp)
     window.addEventListener('touchcancel', onPointerUp)
 

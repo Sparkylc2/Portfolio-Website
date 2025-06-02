@@ -59,6 +59,7 @@ body::-webkit-scrollbar {
 #sidebarContainer * {
 	border: none !important;
 	outline: none !important;
+    display: none;
 }
 
 #sidebarContainer::-webkit-scrollbar {
@@ -256,12 +257,24 @@ body::-webkit-scrollbar {
 	border: none !important;
 	outline: none !important;
 }
-
-@media (max-width: 1200px) {
+@media (max-width: 768px) {
     #sidebarContainer {
-        display: none !important; 
+        width: 200px;
     }
-    
+
+    #mainContainer {
+        left: 220px;
+    }
+
+    #thumbnailsRight {
+        width: 150px;
+    }
+
+    #mainContainer {
+        right: 170px;
+    }
+}
+@media (max-width: 1200px) {
 	#sidebarContainer {
 		width: 200px;
 	}
@@ -277,4 +290,66 @@ body::-webkit-scrollbar {
 	#mainContainer {
 		right: 170px;
 	}
+}
+
+@media (max-width: 1600px) {
+    
+    #sidebarContainer {
+        width: 200px;
+    }
+
+    #mainContainer {
+        left: 220px;
+    }
+
+    #thumbnailsRight {
+        width: 150px;
+    }
+
+    #mainContainer {
+        right: 170px;
+    }
+}
+
+@media (max-width: 1920px) {
+    #sidebarContainer {
+        display: flex; 
+    }
+    
+    #sidebarContainer {
+        width: 200px;
+    }
+
+    #mainContainer {
+        left: 220px;
+    }
+
+    #thumbnailsRight {
+        width: 150px;
+    }
+
+    #mainContainer {
+        right: 170px;
+    }
+}
+@media (max-width: 2560px) {
+    #sidebarContainer {
+        display: block; 
+    }
+    
+    #sidebarContainer {
+        width: 200px;
+    }
+
+    #mainContainer {
+        left: 220px;
+    }
+
+    #thumbnailsRight {
+        width: 150px;
+    }
+
+    #mainContainer {
+        right: 170px;
+    }
 }
