@@ -25,14 +25,12 @@ import Navbar from '../components/Navbar.vue'
 import Projects from '../views/Projects.vue'
 import Papers from '../views/Papers.vue'
 
-
 const currentTab = ref('Projects')
 const projectSection = ref('Overview')
 const paperSection = ref('Paper')
 const selectedProject = ref(null)
 const selectedPaper = ref(null)
 const activeColor = ref('#e63946')
-
 
 function getProjectColour(color) {
     const map = {
@@ -41,13 +39,13 @@ function getProjectColour(color) {
         green: 'rgb(140, 204, 140)',
         yellow: 'rgb(204, 172, 140)',
     }
-
     return map[color] || '#e63946'
 }
 
 const handleProjectPaperColorChange = (color) => {
     activeColor.value = color;
 }
+
 const currentProjectColor = computed(() => {
     if (activeColor.value !== null && currentTab.value === 'Projects') {
         return getProjectColour(activeColor.value)
@@ -62,6 +60,7 @@ watch(selectedProject, (newVal) => {
         activeColor.value = null;
     }
 })
+
 watch(selectedPaper, (newVal) => {
     if (newVal === null) {
         activeColor.value = null;
@@ -86,6 +85,7 @@ const projectActive = computed(() =>
 const paperActive = computed(() =>
     currentTab.value === 'Papers' && selectedPaper.value !== null
 )
+
 const navbarTabs = computed(() => {
     return ALL_TABS.map(t => {
         let hidden = false
@@ -101,7 +101,6 @@ const navbarTabs = computed(() => {
             hidden = !(showingProjectTabs || showingPaperTabs)
         }
 
-
         return { ...t, hidden }
     })
 })
@@ -111,7 +110,6 @@ const activeNavbarTab = computed(() => {
     if (paperActive.value) return paperSection.value
     return currentTab.value
 })
-
 
 function handleTabChange(key) {
     if (['Projects', 'Papers', 'GitHub'].includes(key)) {
@@ -173,6 +171,7 @@ function handlePaperChange(idx) {
     justify-content: center;
     text-align: center;
     padding: 2rem;
+    box-sizing: border-box;
 }
 
 .home-content h1,
@@ -185,5 +184,63 @@ function handlePaperChange(idx) {
 .github-content p {
     font-size: 1.2rem;
     color: #ccc;
+}
+
+
+@media (max-width: 768px) {
+    .home-content,
+    .github-content {
+        padding: 1rem;
+        padding-top: 4rem; 
+    }
+    
+    .home-content h1,
+    .github-content h1 {
+        font-size: 2rem;
+    }
+    
+    .home-content p,
+    .github-content p {
+        font-size: 1rem;
+    }
+}
+
+
+@media (min-width: 769px) and (max-width: 1024px) {
+    .home-content h1,
+    .github-content h1 {
+        font-size: 2.5rem;
+    }
+    
+    .home-content p,
+    .github-content p {
+        font-size: 1.1rem;
+    }
+}
+
+
+@media (min-width: 1920px) {
+    .home-content h1,
+    .github-content h1 {
+        font-size: 3.5rem;
+    }
+    
+    .home-content p,
+    .github-content p {
+        font-size: 1.3rem;
+    }
+}
+
+
+@media (min-width: 2560px) {
+    .home-content h1,
+    .github-content h1 {
+        font-size: 4rem;
+    }
+    
+    .home-content p,
+    .github-content p {
+        font-size: 1.5rem;
+    }
 }
 </style>

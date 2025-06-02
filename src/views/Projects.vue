@@ -25,9 +25,11 @@
                 </div>
             </div>
 
-
             <Transition name="slide-fade">
                 <div v-if="expandedProject !== null" class="project-details-section">
+                    <button class="close-details-mobile" @click="closeProject" v-if="isMobile">
+                        <span>&times;</span>
+                    </button>
                     <div class="project-details-content">
                         <div class="project-sections">
                             <div class="section" ref="overviewSection"
@@ -38,8 +40,13 @@
                                         <p>{{ currentProject?.description }}</p>
 
                                         <component :is="currentProject?.interactiveComponent"
-                                            v-if="currentProject?.interactiveComponent" class="interactive-demo"
-                                            :element-data="elementData" :project-color="currentProject?.color" />
+                                            v-if="currentProject?.interactiveComponent && !isMobile"
+                                            class="interactive-demo" :element-data="elementData"
+                                            :project-color="currentProject?.color" />
+                                        <div v-else-if="currentProject?.interactiveComponent && isMobile"
+                                            class="demo-placeholder mobile-notice">
+                                            <p>Interactive demo available on desktop</p>
+                                        </div>
                                         <div v-else class="demo-placeholder">
                                             <p>Interactive demo coming soon</p>
                                         </div>
@@ -82,7 +89,7 @@
 </template>
 
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, ref, watch, onMounted, onUnmounted } from 'vue'
 import PhysicsEngine from '../components/PhysicsEngine.vue'
 import AirfoilSimulator from '../components/AirfoilSimulator.vue'
 import WindTurbineBEM from '../components/WindTurbineBEM.vue'
@@ -93,10 +100,23 @@ const props = defineProps({
     selectedProject: Number
 })
 
-
 const emit = defineEmits(['update:selectedProject', 'update:selectedProjectColor'])
 
 const expandedProject = ref(null)
+const isMobile = ref(false)
+
+function checkMobile() {
+    isMobile.value = window.innerWidth <= 768
+}
+
+onMounted(() => {
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+})
+
+onUnmounted(() => {
+    window.removeEventListener('resize', checkMobile)
+})
 
 watch(() => props.selectedProject, (newVal) => {
     expandedProject.value = newVal
@@ -157,7 +177,6 @@ const projects = [
       `,
         color: 'blue',
         dateRange: 'May 2025 - June 2025'
-
     },
     {
         title: 'Panel Airfoil Simulator',
@@ -257,7 +276,6 @@ const getInactiveBorderColor = (color) => {
         green: 'rgba(140, 204, 140, 0.3)',
         yellow: 'rgba(204, 172, 140, 0.3)',
     }
-
     return colors[color] || 'rgba(230, 57, 70, 0.3)'
 }
 
@@ -268,7 +286,6 @@ const getActiveBorderColor = (color) => {
         green: 'rgb(140, 204, 140)',
         yellow: 'rgb(204, 172, 140)',
     }
-
     return colors[color] || '#e63946'
 }
 
@@ -283,7 +300,6 @@ const getProjectIndicatorColor = (color) => {
         green: 'rgb(140, 204, 140)',
         yellow: 'rgb(204, 172, 140)',
     }
-
     return colors[color] || '#e63946'
 }
 
@@ -294,28 +310,19 @@ const getProjectTitleColor = (color) => {
         green: 'rgb(191, 255, 191)',
         yellow: 'rgb(255, 223, 191)',
     }
-
     return colors[color] || '#e63946'
 }
 
-
-
-
-
 const overviewSection = ref(null)
-
-
 const { elementData } = useElementTracker(overviewSection, {
     excludeClasses: ['interactive-demo', 'demo-placeholder'],
     includeContainer: true,
     relative: true
 })
-
-
-
 </script>
 
 <style scoped>
+/* Scrollbar styles */
 .projects-container,
 .projects-grid-wrapper,
 .project-details-section,
@@ -333,6 +340,7 @@ const { elementData } = useElementTracker(overviewSection, {
     height: 0 !important;
 }
 
+/* Base styles */
 .date {
     font-size: 0.9rem;
     color: rgb(225, 225, 225);
@@ -353,32 +361,6 @@ const { elementData } = useElementTracker(overviewSection, {
     right: 0;
     bottom: 0;
     overflow: hidden;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-}
-
-.project-sections::-webkit-scrollbar {
-    display: none;
-}
-
-.section::-webkit-scrollbar {
-    display: none;
-}
-
-.projects-container::-webkit-scrollbar {
-    display: none;
-}
-
-.project-details-content::-webkit-scrollbar {
-    display: none;
-}
-
-.project-details-section::-webkit-scrollbar {
-    display: none;
-}
-
-.project-details-section::-webkit-scrollbar {
-    display: none;
 }
 
 .page-title {
@@ -410,33 +392,18 @@ const { elementData } = useElementTracker(overviewSection, {
     height: calc(100vh - 8rem);
     overflow-y: auto;
     overflow-x: hidden;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.projects-grid-wrapper::-webkit-scrollbar {
-    display: none;
 }
 
 .projects-grid {
     width: 400px;
     min-width: 400px;
-    transition: padding 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.projects-grid.has-active {
-    padding-right: 5rem;
-}
-
-.projects-grid {
     display: flex;
     flex-direction: column;
     gap: 1rem;
     position: relative;
     padding: 2rem 1rem;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-
 }
 
 .projects-grid.has-active {
@@ -455,7 +422,6 @@ const { elementData } = useElementTracker(overviewSection, {
     position: relative;
     justify-content: center;
     overflow: visible;
-
     transform: scale(1);
     opacity: 1;
     transition: transform 0.3s ease, opacity 0.3s ease, border-color 0.3s ease;
@@ -497,17 +463,17 @@ const { elementData } = useElementTracker(overviewSection, {
 }
 
 .project-details-section {
+    position: relative;
     flex: 1;
     background: rgb(36, 36, 36);
     overflow-y: hidden;
-    scrollbar-width: none;
     padding-bottom: 2rem;
     border-radius: 0.5rem;
     max-height: calc(100vh - 8rem);
     min-width: 400px;
 }
 
-.project-details-section::-webkit-scrollbar {
+.close-details-mobile {
     display: none;
 }
 
@@ -530,14 +496,9 @@ const { elementData } = useElementTracker(overviewSection, {
     overflow: hidden;
 }
 
-.section-content::-webkit-scrollbar {
-    display: none;
-}
-
 .section-content {
     padding: 2rem;
     overflow-y: auto;
-    scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
     height: 100%;
     display: flex;
     flex-direction: column;
@@ -547,21 +508,18 @@ const { elementData } = useElementTracker(overviewSection, {
     gap: 1rem;
 }
 
-.section-content::-webkit-scrollbar {
-    width: 6px;
+.demo-placeholder {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px dashed rgba(255, 255, 255, 0.2);
+    border-radius: 0.5rem;
+    padding: 3rem;
+    text-align: center;
+    color: #999;
 }
 
-.section-content::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-.section-content::-webkit-scrollbar-thumb {
-    background-color: rgba(255, 255, 255, 0.2);
-    border-radius: 3px;
-}
-
-.section-content::-webkit-scrollbar-thumb:hover {
-    background-color: rgba(255, 255, 255, 0.3);
+.demo-placeholder.mobile-notice {
+    background: rgba(140, 172, 204, 0.1);
+    border-color: rgba(140, 172, 204, 0.3);
 }
 
 .tech-stack {
@@ -608,7 +566,6 @@ const { elementData } = useElementTracker(overviewSection, {
     background-color: rgba(255, 255, 255, 0.2);
 }
 
-
 .project-links {
     display: flex;
     gap: 0.8rem;
@@ -627,7 +584,6 @@ const { elementData } = useElementTracker(overviewSection, {
     transition: all 0.3s ease;
     white-space: nowrap;
     background-color: transparent;
-    border-radius: 0.4rem;
     border: 0.15rem solid;
 }
 
@@ -636,6 +592,7 @@ const { elementData } = useElementTracker(overviewSection, {
     filter: brightness(1.2);
 }
 
+/* Animations */
 .slide-fade-enter-active,
 .slide-fade-leave-active {
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -659,5 +616,247 @@ const { elementData } = useElementTracker(overviewSection, {
 .fade-enter-from,
 .fade-leave-to {
     opacity: 0;
+}
+
+/* Mobile styles */
+@media (max-width: 768px) {
+    .page-title {
+        font-size: 2rem;
+        top: 1rem;
+        left: 1rem;
+    }
+
+    .content-layout {
+        padding: 4rem 1rem 1rem;
+        flex-direction: column;
+        gap: 0;
+    }
+
+    .content-layout.has-expanded {
+        overflow: hidden;
+    }
+
+    .projects-grid-wrapper {
+        width: 100%;
+        max-width: 100%;
+        min-width: unset;
+        height: auto;
+        max-height: calc(100vh - 5rem);
+    }
+
+    .projects-grid {
+        width: 100%;
+        min-width: unset;
+        padding: 1rem 0;
+    }
+
+    .projects-grid.has-active {
+        width: 100%;
+        min-width: unset;
+    }
+
+    .project-card {
+        width: 100%;
+        padding: 1.25rem;
+    }
+
+    .project-card h2 {
+        font-size: 1.25rem;
+    }
+
+    .project-card p {
+        font-size: 0.9rem;
+    }
+
+    .project-card.active {
+        transform: none;
+        display: none;
+    }
+
+    .project-card.inactive {
+        display: none;
+    }
+
+    .project-details-section {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        width: 100%;
+        height: 100%;
+        max-height: 100vh;
+        min-width: unset;
+        border-radius: 0;
+        z-index: 100;
+        overflow-y: auto;
+        padding-bottom: 0;
+    }
+
+    .close-details-mobile {
+        display: block;
+        position: fixed;
+        top: 1rem;
+        right: 1rem;
+        width: 48px;
+        height: 48px;
+        background: rgba(0, 0, 0, 0.5);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 50%;
+        cursor: pointer;
+        z-index: 101;
+        font-size: 2rem;
+        color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s ease;
+    }
+
+    .close-details-mobile:hover {
+        background: rgba(0, 0, 0, 0.8);
+    }
+
+    .project-details-content {
+        padding: 1rem;
+        padding-top: 5rem;
+        height: 100vh;
+        overflow-y: auto;
+    }
+
+    .section {
+        max-height: none;
+        min-height: 100vh;
+        outline: none;
+    }
+
+    .section-content {
+        padding: 1.5rem;
+    }
+
+    .project-meta {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+
+    .project-links {
+        align-self: flex-start;
+        padding-bottom: 0;
+    }
+
+    .tech-tags {
+        gap: 0.4rem;
+    }
+
+    .tech-tag {
+        font-size: 0.85rem;
+    }
+
+    .slide-fade-enter-from,
+    .slide-fade-leave-to {
+        transform: translateY(100%);
+    }
+}
+
+/* Tablet styles */
+@media (min-width: 769px) and (max-width: 1024px) {
+    .page-title {
+        font-size: 2.5rem;
+        top: 1.5rem;
+        left: 1.5rem;
+    }
+
+    .content-layout {
+        padding: 5rem 1.5rem 1.5rem;
+        gap: 1.5rem;
+    }
+
+    .projects-grid-wrapper {
+        width: 350px;
+        min-width: 350px;
+    }
+
+    .projects-grid {
+        width: 350px;
+        min-width: 350px;
+    }
+
+    .projects-grid.has-active {
+        width: 300px;
+        min-width: 300px;
+    }
+
+    .project-card {
+        width: calc(100% - 3rem);
+    }
+
+    .project-details-section {
+        min-width: 350px;
+    }
+}
+
+/* Large screen optimizations */
+@media (min-width: 1920px) {
+    .page-title {
+        font-size: 3.5rem;
+    }
+
+    .content-layout {
+        gap: 2.5rem;
+        padding: 7rem 3rem 3rem;
+    }
+
+    .projects-grid-wrapper {
+        width: 500px;
+        min-width: 500px;
+    }
+
+    .projects-grid {
+        width: 500px;
+        min-width: 500px;
+    }
+
+    .projects-grid.has-active {
+        width: 450px;
+        min-width: 450px;
+    }
+
+    .project-card {
+        padding: 2rem;
+    }
+
+    .project-card h2 {
+        font-size: 1.5rem;
+    }
+
+    .project-details-section {
+        min-width: 500px;
+    }
+}
+
+/* Ultra-wide screen optimizations */
+@media (min-width: 2560px) {
+    .page-title {
+        font-size: 4rem;
+    }
+
+    .projects-grid-wrapper {
+        width: 600px;
+        min-width: 600px;
+    }
+
+    .projects-grid {
+        width: 600px;
+        min-width: 600px;
+    }
+
+    .projects-grid.has-active {
+        width: 550px;
+        min-width: 550px;
+    }
+
+    .project-details-section {
+        min-width: 600px;
+    }
 }
 </style>
