@@ -5,7 +5,7 @@
 
 <script setup>
 import { Application, Graphics } from 'pixi.js'
-import { onMounted, onUnmounted, ref, shallowRef, watch } from 'vue'
+import { nextTick, onMounted, onUnmounted, ref, shallowRef, watch } from 'vue'
 import initWasm, { ConstraintPhysicsEngine } from '../wasm/physics_engine.js'
 
 const props = defineProps({
@@ -207,17 +207,18 @@ function initPendulumBlocks() {
     app.value.stage.addChild(anchor)
 }
 
-const canvasOnResize = () => {
+const canvasOnResize = async () => {
     if (!pixiContainer.value || !props.elementData?.container) return;
 
+    await nextTick();
     const { x, y, width, height } = props.elementData.container;
-
     pixiContainer.value.style.position = 'absolute';
-    pixiContainer.value.style.left = `${x}px`;
-    pixiContainer.value.style.top = `${y}px`;
+
+    pixiContainer.value.style.left = `${props.elementData.container.ref.offsetLeft}px`;
+    pixiContainer.value.style.top = `${props.elementData.container.ref.offsetTop}px`;
     pixiContainer.value.style.width = `${width}px`;
     pixiContainer.value.style.height = `${height}px`;
-
+    
     if (app.value && app.value.renderer) {
         app.value.renderer.resize(width, height);
     }
