@@ -89,9 +89,9 @@
 </template>
 
 <script setup>
-import { computed, ref, watch, onMounted, onUnmounted } from 'vue'
-import PhysicsEngine from '../components/PhysicsEngine.vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import AirfoilSimulator from '../components/AirfoilSimulator.vue'
+import PhysicsEngine from '../components/PhysicsEngine.vue'
 import WindTurbineBEM from '../components/WindTurbineBEM.vue'
 import { useElementTracker } from '../composables/usePhysicsEngine.js'
 
@@ -397,8 +397,8 @@ const { elementData } = useElementTracker(overviewSection, {
 }
 
 .projects-grid {
-    width: 400px;
-    min-width: 400px;
+    width: 425px;
+    min-width: 425px;
     display: flex;
     flex-direction: column;
     gap: 1rem;
@@ -415,9 +415,9 @@ const { elementData } = useElementTracker(overviewSection, {
 .project-card {
     background-color: rgb(36, 36, 36);
     border: 1px solid rgba(255, 255, 255, 0.1);
-    padding: 1.5rem;
+    padding: 1.25rem;
     border-radius: 0.5rem;
-    width: calc(100% - 5rem);
+    width: calc(100% - 2rem);
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
     cursor: pointer;
     position: relative;
@@ -426,7 +426,6 @@ const { elementData } = useElementTracker(overviewSection, {
     transform: scale(1);
     opacity: 1;
     transition: transform 0.3s ease, opacity 0.3s ease, border-color 0.3s ease;
-    box-sizing: content-box;
 }
 
 .project-card.active {
