@@ -277,11 +277,13 @@ button {
     border: none;
     font-weight: 600;
     cursor: pointer;
-    background-color: rgb(140, 172, 204);
     transition: all 0.3s ease;
+    background-color: transparent;
+    border-radius: 0.4rem;
+    border: 0.15rem solid rgb(140, 172, 204);
 }
-
 button:hover {
+    border-color: rgb(140, 172, 204);
     transform: translateY(-2px);
     filter: brightness(1.2);
 }

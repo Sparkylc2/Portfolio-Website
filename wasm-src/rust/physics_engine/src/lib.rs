@@ -4,6 +4,7 @@ use wasm_bindgen::prelude::*;
 
 const RESTITUTION: f64 = 0.7;
 const REST_EPS_VEL: f64 = 5.0;
+const FRICTION_ENABLED_DEFAULT: bool = true;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 struct Vec2 {
@@ -182,6 +183,7 @@ pub struct ConstraintPhysicsEngine {
     mouse_constraint_index: Option<usize>,
     width: f64,
     height: f64,
+    friction_enabled: bool,
 }
 
 #[wasm_bindgen]
@@ -196,6 +198,7 @@ impl ConstraintPhysicsEngine {
             mouse_constraint_index: None,
             width: 800.0,
             height: 600.0,
+            friction_enabled: FRICTION_ENABLED_DEFAULT,
         }
     }
 
@@ -424,26 +427,26 @@ impl ConstraintPhysicsEngine {
                 let penetration = hw - body.position.x;
                 let normal = Vec2::new(1.0, 0.0);
                 let contact_point = Vec2::new(-hw, 0.0).rotate(body.angle).add(&body.position);
-                resolve_wall_collision(body, &normal, contact_point, penetration, restitution);
+                resolve_wall_collision(body, &normal, contact_point, penetration, restitution, self.friction_enabled);
             }
             if body.position.x + hw > self.width {
                 let penetration = body.position.x + hw - self.width;
                 let normal = Vec2::new(-1.0, 0.0);
                 let contact_point = Vec2::new(hw, 0.0).rotate(body.angle).add(&body.position);
-                resolve_wall_collision(body, &normal, contact_point, penetration, restitution);
+                resolve_wall_collision(body, &normal, contact_point, penetration, restitution, self.friction_enabled);
             }
             if body.position.y - hh < 0.0 {
                 let penetration = hh - body.position.y;
                 let normal = Vec2::new(0.0, 1.0);
                 let contact_point = Vec2::new(0.0, -hh).rotate(body.angle).add(&body.position);
-                resolve_wall_collision(body, &normal, contact_point, penetration, restitution);
+                resolve_wall_collision(body, &normal, contact_point, penetration, restitution, self.friction_enabled);
             }
 
             if body.position.y + hh > self.height {
                 let penetration = body.position.y + hh - self.height;
                 let normal = Vec2::new(0.0, -1.0);
                 let contact_point = Vec2::new(0.0, hh).rotate(body.angle).add(&body.position);
-                resolve_wall_collision(body, &normal, contact_point, penetration, restitution);
+                resolve_wall_collision(body, &normal, contact_point, penetration, restitution, self.friction_enabled);
             }
         }
     }
@@ -538,10 +541,12 @@ impl ConstraintPhysicsEngine {
     fn solve_collision_constraint(&mut self, contact: &CollisionContact, dt: f64) {
         let body_a_is_infinite;
         let body_b_is_infinite;
-        let va;
-        let vb;
+        let mut va;
+        let mut vb;
         let ra;
         let rb;
+        let mut angular_velocity_a;
+        let mut angular_velocity_b;
 
         {
             let body_a = &self.bodies[contact.body_a];
@@ -565,6 +570,9 @@ impl ConstraintPhysicsEngine {
                 -rb.y * body_b.angular_velocity,
                 rb.x * body_b.angular_velocity,
             ));
+            
+            angular_velocity_a = body_a.angular_velocity;
+            angular_velocity_b = body_b.angular_velocity;
         }
 
         let relative_velocity = vb.subtract(&va);
@@ -574,7 +582,12 @@ impl ConstraintPhysicsEngine {
             return;
         }
 
-        let e = 0.8;
+        let e = {
+            let body_a = &self.bodies[contact.body_a];
+            let body_b = &self.bodies[contact.body_b];
+            RESTITUTION.min(1.0)
+        };
+        
         let ra_cross_n = ra.cross(&contact.normal);
         let rb_cross_n = rb.cross(&contact.normal);
 
@@ -607,19 +620,83 @@ impl ConstraintPhysicsEngine {
 
         if !body_a_is_infinite {
             let body_a = &mut self.bodies[contact.body_a];
-            body_a.velocity = body_a
-                .velocity
-                .subtract(&impulse.multiply(1.0 / body_a.mass));
-            body_a.angular_velocity -= ra.cross(&impulse) / body_a.inertia;
+            va = va.subtract(&impulse.multiply(1.0 / body_a.mass));
+            angular_velocity_a -= ra.cross(&impulse) / body_a.inertia;
+            body_a.velocity = va;
+            body_a.angular_velocity = angular_velocity_a;
         }
 
         if !body_b_is_infinite {
             let body_b = &mut self.bodies[contact.body_b];
-            body_b.velocity = body_b.velocity.add(&impulse.multiply(1.0 / body_b.mass));
-            body_b.angular_velocity += rb.cross(&impulse) / body_b.inertia;
+            vb = vb.add(&impulse.multiply(1.0 / body_b.mass));
+            angular_velocity_b += rb.cross(&impulse) / body_b.inertia;
+            body_b.velocity = vb;
+            body_b.angular_velocity = angular_velocity_b;
         }
 
-        let correction_percent = 0.2;
+        if self.friction_enabled {
+            let va_new = if body_a_is_infinite {
+                va
+            } else {
+                let body_a = &self.bodies[contact.body_a];
+                body_a.velocity.add(&Vec2::new(
+                    -ra.y * body_a.angular_velocity,
+                    ra.x * body_a.angular_velocity,
+                ))
+            };
+            
+            let vb_new = if body_b_is_infinite {
+                vb
+            } else {
+                let body_b = &self.bodies[contact.body_b];
+                body_b.velocity.add(&Vec2::new(
+                    -rb.y * body_b.angular_velocity,
+                    rb.x * body_b.angular_velocity,
+                ))
+            };
+
+            let relative_velocity = vb_new.subtract(&va_new);
+            let mut tangent = relative_velocity.subtract(&contact.normal.multiply(relative_velocity.dot(&contact.normal)));
+            
+            if tangent.length() > 0.0001 {
+                tangent = tangent.normalize();
+                
+                let ra_cross_t = ra.cross(&tangent);
+                let rb_cross_t = rb.cross(&tangent);
+                
+                let inv_mass_sum_tangent = {
+                    let body_a = &self.bodies[contact.body_a];
+                    let body_b = &self.bodies[contact.body_b];
+                    
+                    (if body_a.mass.is_infinite() { 0.0 } else { 1.0 / body_a.mass })
+                    + (if body_b.mass.is_infinite() { 0.0 } else { 1.0 / body_b.mass })
+                    + (if body_a.mass.is_infinite() { 0.0 } else { ra_cross_t * ra_cross_t / body_a.inertia })
+                    + (if body_b.mass.is_infinite() { 0.0 } else { rb_cross_t * rb_cross_t / body_b.inertia })
+                };
+                
+                let jt = -relative_velocity.dot(&tangent) / inv_mass_sum_tangent;
+                
+                let friction_impulse = if jt.abs() <= j * 0.5 {
+                    tangent.multiply(jt)
+                } else {
+                    tangent.multiply(-j * 0.3 * jt.signum())
+                };
+                
+                if !body_a_is_infinite {
+                    let body_a = &mut self.bodies[contact.body_a];
+                    body_a.velocity = body_a.velocity.subtract(&friction_impulse.multiply(1.0 / body_a.mass));
+                    body_a.angular_velocity -= ra.cross(&friction_impulse) / body_a.inertia;
+                }
+                
+                if !body_b_is_infinite {
+                    let body_b = &mut self.bodies[contact.body_b];
+                    body_b.velocity = body_b.velocity.add(&friction_impulse.multiply(1.0 / body_b.mass));
+                    body_b.angular_velocity += rb.cross(&friction_impulse) / body_b.inertia;
+                }
+            }
+        }
+
+        let correction_percent = 0.8;
         let slop = 0.01;
         let correction_magnitude = (contact.penetration - slop).max(0.0) * correction_percent;
         let correction = contact.normal.multiply(correction_magnitude / inv_mass_sum);
@@ -628,20 +705,31 @@ impl ConstraintPhysicsEngine {
             let body_a = &mut self.bodies[contact.body_a];
             body_a.position = body_a
                 .position
-                .subtract(&correction.multiply(1.0 / body_a.mass));
+                .subtract(&correction.multiply(1.0 / body_a.mass * inv_mass_sum));
         }
 
         if !body_b_is_infinite {
             let body_b = &mut self.bodies[contact.body_b];
-            body_b.position = body_b.position.add(&correction.multiply(1.0 / body_b.mass));
+            body_b.position = body_b.position.add(&correction.multiply(1.0 / body_b.mass * inv_mass_sum));
         }
     }
 
     pub fn add_damping(&mut self) {
-        let damping_factor = 0.99;
+        let damping_factor = 0.995; 
+        let angular_damping_factor = 0.99;
+        
         for body in &mut self.bodies {
-            body.velocity = body.velocity.multiply(damping_factor);
-            body.angular_velocity *= damping_factor;
+            if !body.mass.is_infinite() {
+                body.velocity = body.velocity.multiply(damping_factor);
+                body.angular_velocity *= angular_damping_factor;
+                
+                if body.velocity.length() < 0.01 {
+                    body.velocity = body.velocity.multiply(0.9);
+                }
+                if body.angular_velocity.abs() < 0.01 {
+                    body.angular_velocity *= 0.9;
+                }
+            }
         }
     }
 
@@ -658,7 +746,10 @@ impl ConstraintPhysicsEngine {
         }
 
         self.add_damping();
+        
         self.solve_constraints(dt_seconds);
+        
+        self.add_damping();
     }
 
     pub fn body_position(&self, index: usize) -> Array {
@@ -695,8 +786,67 @@ impl ConstraintPhysicsEngine {
     pub fn set_iterations(&mut self, iterations: usize) {
         self.iterations = iterations;
     }
+
+    pub fn set_body_angular_velocity(&mut self, index: usize, angular_velocity: f64) {
+        if index < self.bodies.len() {
+            self.bodies[index].angular_velocity = angular_velocity;
+        }
+    }
+
     pub fn get_body_count(&self) -> usize {
         self.bodies.len()
+    }
+
+    pub fn set_friction_enabled(&mut self, enabled: bool) {
+        self.friction_enabled = enabled;
+    }
+
+    pub fn get_friction_enabled(&self) -> bool {
+        self.friction_enabled
+    }
+
+    pub fn get_total_energy(&self) -> f64 {
+        let mut kinetic_energy = 0.0;
+        let mut potential_energy = 0.0;
+
+        for body in &self.bodies {
+            if !body.mass.is_infinite() {
+                let v_squared = body.velocity.x * body.velocity.x + body.velocity.y * body.velocity.y;
+                kinetic_energy += 0.5 * body.mass * v_squared;
+                kinetic_energy += 0.5 * body.inertia * body.angular_velocity * body.angular_velocity;
+
+                potential_energy += body.mass * self.gravity.y * (-body.position.y);
+            }
+        }
+
+        kinetic_energy + potential_energy
+    }
+
+    pub fn get_kinetic_energy(&self) -> f64 {
+        let mut kinetic_energy = 0.0;
+
+        for body in &self.bodies {
+            if !body.mass.is_infinite() {
+                let v_squared = body.velocity.x * body.velocity.x + body.velocity.y * body.velocity.y;
+                kinetic_energy += 0.5 * body.mass * v_squared;
+                
+                kinetic_energy += 0.5 * body.inertia * body.angular_velocity * body.angular_velocity;
+            }
+        }
+
+        kinetic_energy
+    }
+
+    pub fn get_potential_energy(&self) -> f64 {
+        let mut potential_energy = 0.0;
+
+        for body in &self.bodies {
+            if !body.mass.is_infinite() {
+                potential_energy += body.mass * self.gravity.y * (-body.position.y);
+            }
+        }
+
+        potential_energy
     }
 
     pub fn destroy(&mut self) {
@@ -712,6 +862,7 @@ fn resolve_wall_collision(
     contact_point: Vec2,
     penetration: f64,
     restitution: f64,
+    friction_enabled: bool,
 ) {
     let r = contact_point.subtract(&body.position);
     let relative_velocity = body.velocity.add(&Vec2::new(
@@ -733,8 +884,35 @@ fn resolve_wall_collision(
     body.velocity = body.velocity.add(&impulse.multiply(1.0 / body.mass));
     body.angular_velocity += r.cross(&impulse) / body.inertia;
 
-    let percent = 0.2;
-    let slop = 0.0;
+    if friction_enabled {
+        let relative_velocity_new = body.velocity.add(&Vec2::new(
+            -r.y * body.angular_velocity,
+            r.x * body.angular_velocity,
+        ));
+        
+        let mut tangent = relative_velocity_new.subtract(&normal.multiply(relative_velocity_new.dot(normal)));
+        
+        if tangent.length() > 0.0001 {
+            tangent = tangent.normalize();
+            
+            let r_cross_t = r.cross(&tangent);
+            let inv_mass_tangent = 1.0 / body.mass + r_cross_t * r_cross_t / body.inertia;
+            
+            let jt = -relative_velocity_new.dot(&tangent) / inv_mass_tangent;
+            
+            let friction_impulse = if jt.abs() <= j * 0.5 {
+                tangent.multiply(jt)
+            } else {
+                tangent.multiply(-j * 0.3 * jt.signum())
+            };
+            
+            body.velocity = body.velocity.add(&friction_impulse.multiply(1.0 / body.mass));
+            body.angular_velocity += r.cross(&friction_impulse) / body.inertia;
+        }
+    }
+
+    let percent = 0.8;
+    let slop = 0.005;
     let correction_magnitude = (penetration - slop).max(0.0) * percent;
     let correction = normal.multiply(correction_magnitude);
 

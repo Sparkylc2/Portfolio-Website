@@ -57,12 +57,12 @@
                                             <div class="project-links">
                                                 <a v-if="currentProject?.github" :href="currentProject.github"
                                                     target="_blank" class="project-link"
-                                                    :style="{ backgroundColor: getProjectColor(currentProject.color) }">
+                                                    :style="{ borderColor: getProjectColor(currentProject.color) }">
                                                     GitHub
                                                 </a>
                                                 <a v-if="currentProject?.demo" :href="currentProject.demo"
                                                     target="_blank" class="project-link"
-                                                    :style="{ backgroundColor: getProjectColor(currentProject.color) }">
+                                                    :style="{ borderColor: getProjectColor(currentProject.color) }">
                                                     Live Demo
                                                 </a>
                                             </div>
@@ -142,7 +142,7 @@ const projects = [
         description: 'Blade Element Momentum (BEM) theory implementation for wind turbine analysis.',
         technologies: ['C++', 'Python'],
         github: 'https://github.com/yourusername/turbine-designer',
-        demo: 'https://demo-link.com',
+        demo: null,
         interactiveComponent: WindTurbineBEM,
         detailedDescription: `
         <h3>About the Project</h3>
@@ -164,7 +164,7 @@ const projects = [
         description: 'Advanced computational fluid dynamics simulator for airfoil analysis using panel methods.',
         technologies: ['Matlab'],
         github: 'https://github.com/yourusername/panel-airfoil',
-        demo: 'https://demo-link.com',
+        demo: null,
         interactiveComponent: AirfoilSimulator,
         detailedDescription: `
         <h3>About the Project</h3>
@@ -608,6 +608,7 @@ const { elementData } = useElementTracker(overviewSection, {
     background-color: rgba(255, 255, 255, 0.2);
 }
 
+
 .project-links {
     display: flex;
     gap: 0.8rem;
@@ -625,6 +626,9 @@ const { elementData } = useElementTracker(overviewSection, {
     text-decoration: none;
     transition: all 0.3s ease;
     white-space: nowrap;
+    background-color: transparent;
+    border-radius: 0.4rem;
+    border: 0.15rem solid;
 }
 
 .project-link:hover {

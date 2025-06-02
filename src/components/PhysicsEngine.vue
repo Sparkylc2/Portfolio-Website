@@ -140,7 +140,7 @@ function initPendulumBlocks() {
 
 
     START_X = container.width / 2
-    START_Y = container.height / 3
+    START_Y = container.height / 2.5
 
 
     for (let i = 0; i < NUM_BOXES; i++) {
@@ -175,7 +175,6 @@ function initPendulumBlocks() {
     }
 
 
-    // free bodies
     for (let i = 0; i < 3; i+=2) {
         const id = engine.value.add_body(
             START_X/2 * (i + 1), START_Y,

@@ -2,62 +2,74 @@
     <div class="bem-simulator">
         <div class="controls-container">
             <form class="controls" @submit.prevent="runBEM">
-                <div class="control-group">
-                    <h3>Rotor Geometry</h3>
-                    <label>
-                        Radius (m):
-                        <input v-model.number="radius" type="number" step="1" placeholder="50" />
-                        <span class="underline"></span>
-                    </label>
-                    <label>
-                        Hub Radius (m):
-                        <input v-model.number="hubRadius" type="number" step="0.5" placeholder="2.5" />
-                        <span class="underline"></span>
-                    </label>
-                    <label>
-                        Blades:
-                        <input v-model.number="numBlades" type="number" min="1" max="5" step="1" placeholder="3" />
-                        <span class="underline"></span>
-                    </label>
-                </div>
-                <div class="control-group">
-                    <h3>Blade Profile</h3>
-                    <label>
-                        Chord Distribution:
-                        <MathLiveEditor ref="chordField" v-model="chord_distribution"
-                            :primaryColorKey="props.projectColor" />
-                    </label>
-                    <label>
-                        Twist Distribution:
-                        <MathLiveEditor ref="twistField" v-model="twist_distribution"
-                            :primaryColorKey="props.projectColor" />
-                    </label>
+                <div class="tabs-header">
+                    <TabBar :tabs="tabs" v-model:activeTab="activeTab" :indicatorColor="getColour('blue')" />
                 </div>
 
-                <div class="control-group">
-                    <h3>Operating Conditions</h3>
-                    <label>
-                        Wind (m/s):
-                        <input v-model.number="windSpeed" type="number" step="0.5" min="1" placeholder="10" />
-                        <span class="underline"></span>
-                    </label>
-                    <label>
-                        TSR:
-                        <input v-model.number="tsr" type="number" step="0.5" min="0.5" max="15" placeholder="7" />
-                        <span class="underline"></span>
-                    </label>
-                    <label>
-                        Airfoil:
-                        <select v-model="airfoil">
-                            <option value="NACA2412">NACA 2412</option>
-                            <option value="NACA0012">NACA 0012</option>
-                        </select>
-                    </label>
+                <div class="tabs-content">
+                    <div class="tab-panel" v-show="activeTab === 'geometry'">
+                        <div class="control-group">
+                            <label>
+                                Radius (m):
+                                <input v-model.number="radius" type="number" step="1" placeholder="50" />
+                                <span class="underline"></span>
+                            </label>
+                            <label>
+                                Hub Radius (m):
+                                <input v-model.number="hubRadius" type="number" step="0.5" placeholder="2.5" />
+                                <span class="underline"></span>
+                            </label>
+                            <label>
+                                Blades:
+                                <input v-model.number="numBlades" type="number" min="1" max="5" step="1"
+                                    placeholder="3" />
+                                <span class="underline"></span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="tab-panel" v-show="activeTab === 'profile'">
+                        <div class="control-group">
+                            <label>
+                                Chord Distribution:
+                                <MathLiveEditor ref="chordField" v-model="chord_distribution_latex"
+                                    :primaryColorKey="'blue'" @update:plaintext="val => chord_distribution_raw = val" />
+                            </label>
+                            <label>
+                                Twist Distribution:
+                                <MathLiveEditor ref="twistField" v-model="twist_distribution_latex"
+                                    :primaryColorKey="'blue'" @update:plaintext="val => twist_distribution_raw = val" />
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="tab-panel" v-show="activeTab === 'conditions'">
+                        <div class="control-group">
+                            <label>
+                                Wind (m/s):
+                                <input v-model.number="windSpeed" type="number" step="0.5" min="1" placeholder="10" />
+                                <span class="underline"></span>
+                            </label>
+                            <label>
+                                TSR:
+                                <input v-model.number="tsr" type="number" step="0.5" min="0.5" max="15"
+                                    placeholder="7" />
+                                <span class="underline"></span>
+                            </label>
+                            <label>
+                                Airfoil:
+                                <select v-model="airfoil">
+                                    <option value="NACA2412">NACA 2412</option>
+                                    <option value="NACA0012">NACA 0012</option>
+                                </select>
+                            </label>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="control-group buttons">
-                    <button type="submit">Run BEM</button>
-                    <button type="button" @click="runTSRSweep">TSR Sweep</button>
+                <div class="control-actions">
+                    <button type="submit" id="run-bem">Run BEM</button>
+                    <button type="button" id="run-tsr-sweep" @click="runTSRSweep">TSR Sweep</button>
                 </div>
             </form>
         </div>
@@ -66,54 +78,64 @@
             <div class="result-cards">
                 <div class="result-card">
                     <div class="result-label">Thrust</div>
-                    <div class="result-value">{{ airfoil.length !== 0 ? (results.thrust / 1000).toFixed(2) : 0 }} kN
-                    </div>
+                    <div class="result-value">{{ formatWithDynamicUnit(results.thrust, 'N') }}</div>
                 </div>
                 <div class="result-card">
                     <div class="result-label">Torque</div>
-                    <div class="result-value">{{ airfoil.length !== 0 ? (results.torque / 1000).toFixed(2) : 0 }} kNm
-                    </div>
+                    <div class="result-value">{{ formatWithDynamicUnit(results.torque, 'Nm') }}</div>
                 </div>
                 <div class="result-card">
                     <div class="result-label">Power</div>
-                    <div class="result-value">{{ airfoil.length !== 0 ? (results.power / 1000000).toFixed(3) : 0 }} MW
-                    </div>
+                    <div class="result-value">{{ formatWithDynamicUnit(results.power, 'W') }}</div>
                 </div>
                 <div class="result-card" :class="{ warning: results.cp > 0.593 }">
                     <div class="result-label">Cp</div>
-                    <div class="result-value">{{ airfoil.length !== 0 ? results.cp.toFixed(4) : 0 }}</div>
+                    <div class="result-value">{{ results.cp.toFixed(4) }}</div>
                     <div v-if="results.cp > 0.593" class="result-warning">Exceeds Betz limit!</div>
                 </div>
             </div>
         </div>
 
         <div class="plots-grid">
+            <div class="plot-container" v-show="plotMode === 'blade'">
+                <div class="plot-wrapper">
+                    <div class="plot-title">{{ plotTitle }}</div>
+                    <div v-if="!error" class="plot" ref="inductionPlot"></div>
+                    <div v-else class="plot-error-wrapper" ref="inductionPlot">
+                        <h2>An error occurred</h2>
+                    </div>
+                </div>
+            </div>
+
+            <div class="plot-container" v-show="plotMode === 'blade'">
+                <div class="plot-wrapper">
+                    <div class="plot-title">Angle of Attack & Lift Coefficient</div>
+                    <div v-if="!error" class="plot" ref="performancePlot"></div>
+                    <div v-else class="plot-error-wrapper" ref="performancePlot">
+                        <h2>An error occurred</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="plot-container" v-show="plotMode === 'sweep'">
+                <div class="plot-wrapper">
+                    <div class="plot-title">TSR Sweep Results</div>
+                    <div v-if="!error" class="plot" ref="sweepPlot"></div>
+                    <div v-else class="plot-error-wrapper" ref="sweepPlot">
+                        <h2>An error occurred</h2>
+                    </div>
+                </div>
+            </div>
+
             <div class="plot-container blade-plot">
                 <div class="plot-wrapper">
                     <div class="plot-title">3D Blade Geometry</div>
-                    <div class="plot" ref="bladePlot"></div>
-                </div>
-            </div>
-
-            <div class="plot-container">
-                <div class="plot-wrapper">
-                    <div class="plot-title">{{ plotTitle }}</div>
-                    <div v-if="!error" class="plot" ref="bemPlot"></div>
-                    <div v-else class="plot-error-wrapper" ref="bemPlot">
+                    <div v-if="!error" class="plot geometry" ref="bladePlot"></div>
+                    <div v-else class="plot-error-wrapper" ref="bladePlot">
                         <h2>An error occurred</h2>
                     </div>
                 </div>
             </div>
 
-            <div class="plot-container" v-if="showSecondPlot">
-                <div class="plot-wrapper">
-                    <div class="plot-title">Angle of Attack & Lift Coefficient</div>
-                    <div v-if="!error" class="plot" ref="secondPlot"></div>
-                    <div v-else class="plot-error-wrapper" ref="secondPlot">
-                        <h2>An error occurred</h2>
-                    </div>
-                </div>
-            </div>
         </div>
     </div>
 </template>
@@ -122,16 +144,12 @@
 import * as echarts from 'echarts'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch, nextTick } from 'vue'
+import getColour from '../composables/useGetColours.js'
 import init from '../wasm/wind_turbine.js'
 import MathLiveEditor from './MathParsingField.vue'
+import TabBar from './TabBar.vue'
 
-const props = defineProps({
-    projectColor: {
-        type: String,
-        default: 'rgb(140, 172, 204)'
-    }
-})
 
 const error = ref(false)
 const radius = ref(50)
@@ -142,23 +160,36 @@ const tsr = ref(7)
 const numSections = ref(20)
 const airfoil = ref('')
 
-const chord_distribution = ref("3.0 \\cdot (1.0 - \\frac{r}{50})")
-const twist_distribution = ref("0.5 \\cdot (1.0 - \\frac{r}{50})")
+const chord_distribution_latex = ref("3.0 \\cdot (1.0 - \\frac{r}{50})")
+const twist_distribution_latex = ref("0.5 \\cdot (1.0 - \\frac{r}{R})")
+
+const chord_distribution_raw = ref("");
+const twist_distribution_raw = ref("");
 
 const chordField = ref(null)
 const twistField = ref(null)
 
 const results = ref(null)
-const showSecondPlot = ref(false)
 const plotMode = ref('blade')
 
 const wasm = ref(null)
 
-const bemPlot = ref(null)
-const secondPlot = ref(null)
+const sweepPlot = ref(null)
+const inductionPlot = ref(null)
+const performancePlot = ref(null)
+
 const bladePlot = ref(null)
-let bemChart = null
-let secondChart = null
+
+const activeTab = ref('geometry')
+const tabs = ref([
+    { id: 'geometry', label: 'Rotor Geometry' },
+    { id: 'profile', label: 'Blade Profile' },
+    { id: 'conditions', label: 'Operating Conditions' }
+])
+
+let inductionChart = null
+let performanceChart = null
+let sweepChart = null
 let threeRenderer = null
 let threeScene = null
 let bladeMesh = null
@@ -170,22 +201,15 @@ const plotTitle = computed(() =>
 )
 
 function resizeCharts() {
-    bemChart?.resize()
-    secondChart?.resize()
+    inductionChart?.resize()
+    performanceChart?.resize()
+    sweepChart?.resize()
     if (threeRenderer && bladePlot.value) {
         const { clientWidth: w, clientHeight: h } = bladePlot.value
         threeCamera.aspect = w / h
         threeCamera.updateProjectionMatrix()
         threeRenderer.setSize(w, h)
     }
-}
-
-function getChordExpr() {
-    return chordField.value?.getPlaintext() || ''
-}
-
-function getTwistExpr() {
-    return twistField.value?.getPlaintext() || ''
 }
 
 function generateBladeGeometry() {
@@ -195,12 +219,11 @@ function generateBladeGeometry() {
         hubRadius.value + i * (radius.value - hubRadius.value) / numSections.value
     )
 
-
     const geometry = wasm.value.generateBladeSurface(
         rValues,
         airfoil.value,
-        getChordExpr(),
-        getTwistExpr()
+        chord_distribution_raw.value,
+        twist_distribution_raw.value
     )
 
     if (!geometry || !geometry.vertices || !geometry.indices) return { vertices: [], indices: [] }
@@ -211,18 +234,23 @@ function generateBladeGeometry() {
 onMounted(() => {
     try {
         if (bladePlot.value) initThree()
-
-        bemChart = echarts.init(bemPlot.value, null, { renderer: 'canvas' })
+        plotMode.value = 'blade';
+        inductionChart = echarts.init(inductionPlot.value, null, { renderer: 'canvas' })
+        performanceChart = echarts.init(performancePlot.value, null, { renderer: 'canvas' })
         window.addEventListener('resize', resizeCharts)
     } catch (err) {
         error.value = true
+        console.log('[WindTurbineBEM] Failed to initialize ECharts:', err)
         return
     }
 
     init()
         .then(mod => {
             wasm.value = mod
+            mod.onAbort = function (what) { error.value = true; }
             runBEM()
+            airfoil.value = 'NACA2412'
+            runBEM();
         })
         .catch(() => (error.value = true))
 
@@ -230,8 +258,9 @@ onMounted(() => {
 
 onUnmounted(() => {
     window.removeEventListener('resize', resizeCharts)
-    bemChart?.dispose()
-    secondChart?.dispose()
+    inductionChart?.dispose()
+    performanceChart?.dispose()
+    sweepChart?.dispose()
     if (threeRenderer) {
         threeRenderer.dispose()
     }
@@ -241,21 +270,17 @@ watch([radius, hubRadius, numBlades, airfoil], () => {
     updateBladeGeometry()
 })
 
-watch([chord_distribution, twist_distribution], () => {
+watch([chord_distribution_latex, twist_distribution_latex], () => {
     updateBladeGeometry()
 })
 
 async function runBEM() {
     if (!wasm.value) return
 
+
     try {
         plotMode.value = 'blade'
-        showSecondPlot.value = true
 
-        const chordExpr = getChordExpr()
-        const twistExpr = getTwistExpr()
-
-        wasm.value.loadPolarData()
         wasm.value.initializeRotor(
             radius.value,
             hubRadius.value,
@@ -263,11 +288,11 @@ async function runBEM() {
             windSpeed.value,
             tsr.value
         )
-        wasm.value.clearBladeSections()
+
         wasm.value.buildBladeSectionsWithExpressions(
             numSections.value,
-            chordExpr,
-            twistExpr,
+            chord_distribution_raw.value,
+            twist_distribution_raw.value,
             airfoil.value
         )
 
@@ -279,150 +304,12 @@ async function runBEM() {
     }
 }
 
-function plotBladeDistribution() {
-    if (!results.value || !bemChart) return
-
-    const sections = results.value.sections
-    const r = sections.map(s => s.r)
-    const a = sections.map(s => s.a)
-    const aPrime = sections.map(s => s.a_prime)
-    const alpha = sections.map(s => s.alpha)
-    const cl = sections.map(s => s.cl)
-
-    if (!secondChart && secondPlot.value) {
-        secondChart = echarts.init(secondPlot.value, null, { renderer: 'canvas' })
-    }
-
-    bemChart.setOption(
-        {
-            tooltip: { trigger: 'axis', backgroundColor: 'rgba(50,50,50,0.9)', textStyle: { color: '#fff' } },
-            legend: {
-                data: ['Axial Induction (a)', "Tangential Induction (a')"],
-                textStyle: { color: '#ccc' },
-                top: 10
-            },
-            grid: { left: '10%', right: '10%', top: '15%', bottom: '10%' },
-            xAxis: {
-                type: 'value',
-                name: 'Radius (m)',
-                nameTextStyle: { color: '#ccc' },
-                axisLine: { lineStyle: { color: '#666' } },
-                axisLabel: { color: '#ccc' },
-                splitLine: { lineStyle: { color: '#333' } }
-            },
-            yAxis: [
-                {
-                    type: 'value',
-                    name: 'a',
-                    nameTextStyle: { color: '#ccc' },
-                    axisLine: { lineStyle: { color: '#666' } },
-                    axisLabel: { color: '#ccc' },
-                    splitLine: { lineStyle: { color: '#333' } }
-                },
-                {
-                    type: 'value',
-                    name: "a'",
-                    nameTextStyle: { color: '#ccc' },
-                    position: 'right',
-                    axisLine: { lineStyle: { color: '#666' } },
-                    axisLabel: { color: '#ccc' }
-                }
-            ],
-            series: [
-                {
-                    name: 'Axial Induction (a)',
-                    type: 'line',
-                    data: r.map((x, i) => [x, a[i]]),
-                    smooth: true,
-                    lineStyle: { color: 'rgb(191, 223, 255)', width: 2 },
-                    itemStyle: { color: 'rgb(191, 223, 255)' }
-                },
-                {
-                    name: "Tangential Induction (a')",
-                    type: 'line',
-                    yAxisIndex: 1,
-                    data: r.map((x, i) => [x, aPrime[i]]),
-                    smooth: true,
-                    lineStyle: { color: 'rgb(255, 191, 191)', width: 2 },
-                    itemStyle: { color: 'rgb(255, 191, 191)' }
-                }
-            ]
-        },
-        true
-    )
-
-    if (secondChart) {
-        secondChart.setOption(
-            {
-                tooltip: { trigger: 'axis', backgroundColor: 'rgba(50,50,50,0.9)', textStyle: { color: '#fff' } },
-                legend: {
-                    data: ['Angle of Attack (°)', 'Lift Coefficient'],
-                    textStyle: { color: '#ccc' },
-                    top: 10
-                },
-                grid: { left: '10%', right: '10%', top: '15%', bottom: '10%' },
-                xAxis: {
-                    type: 'value',
-                    name: 'Radius (m)',
-                    nameTextStyle: { color: '#ccc' },
-                    axisLine: { lineStyle: { color: '#666' } },
-                    axisLabel: { color: '#ccc' },
-                    splitLine: { lineStyle: { color: '#333' } }
-                },
-                yAxis: [
-                    {
-                        type: 'value',
-                        name: 'α (°)',
-                        nameTextStyle: { color: '#ccc' },
-                        axisLine: { lineStyle: { color: '#666' } },
-                        axisLabel: { color: '#ccc' },
-                        splitLine: { lineStyle: { color: '#333' } }
-                    },
-                    {
-                        type: 'value',
-                        name: 'Cl',
-                        nameTextStyle: { color: '#ccc' },
-                        position: 'right',
-                        axisLine: { lineStyle: { color: '#666' } },
-                        axisLabel: { color: '#ccc' }
-                    }
-                ],
-                series: [
-                    {
-                        name: 'Angle of Attack (°)',
-                        type: 'line',
-                        data: r.map((x, i) => [x, alpha[i]]),
-                        smooth: true,
-                        lineStyle: { color: 'rgb(191, 255, 191)', width: 2 },
-                        itemStyle: { color: 'rgb(191, 255, 191)' }
-                    },
-                    {
-                        name: 'Lift Coefficient',
-                        type: 'line',
-                        yAxisIndex: 1,
-                        data: r.map((x, i) => [x, cl[i]]),
-                        smooth: true,
-                        lineStyle: { color: 'rgb(255, 223, 191)', width: 2 },
-                        itemStyle: { color: 'rgb(255, 223, 191)' }
-                    }
-                ]
-            },
-            true
-        )
-    }
-}
-
-
-
 async function runTSRSweep() {
     if (!wasm.value) return
 
     try {
         plotMode.value = 'sweep'
-        showSecondPlot.value = false
 
-        const chordExpr = getChordExpr()
-        const twistExpr = getTwistExpr()
 
         const tsrMin = 1
         const tsrMax = 12
@@ -436,16 +323,15 @@ async function runTSRSweep() {
 
         for (let tsrVal = tsrMin; tsrVal <= tsrMax; tsrVal += tsrStep) {
             wasm.value.initializeRotor(radius.value, hubRadius.value, numBlades.value, windSpeed.value, tsrVal)
-            wasm.value.clearBladeSections()
-            wasm.value.buildBladeSectionsWithExpressions(numSections.value, chordExpr, twistExpr, airfoil.value)
+            wasm.value.buildBladeSectionsWithExpressions(numSections.value, chord_distribution_raw.value, twist_distribution_raw.value, airfoil.value)
 
             const res = wasm.value.runBEM()
 
             tsrValues.push(tsrVal)
             cpValues.push(res.cp)
-            thrustValues.push(res.thrust / 1000)
-            torqueValues.push(res.torque / 1000)
-            powerValues.push(res.power / 1000000)
+            thrustValues.push(res.thrust)
+            torqueValues.push(res.torque)
+            powerValues.push(res.power)
         }
 
         const maxCp = Math.max(...cpValues)
@@ -453,25 +339,60 @@ async function runTSRSweep() {
         const optimalTsr = tsrValues[maxIdx]
 
         results.value = {
-            thrust: thrustValues[maxIdx] * 1000,
-            torque: torqueValues[maxIdx] * 1000,
-            power: powerValues[maxIdx] * 1000000,
+            thrust: thrustValues[maxIdx],
+            torque: torqueValues[maxIdx],
+            power: powerValues[maxIdx],
             cp: maxCp
         }
 
-        bemChart.setOption(
+        await nextTick();
+        if (!sweepChart) {
+            sweepChart = echarts.init(sweepPlot.value, null, { renderer: 'canvas' })
+        }
+
+
+        sweepChart.setOption(
             {
-                tooltip: { trigger: 'axis', backgroundColor: 'rgba(50,50,50,0.9)', textStyle: { color: '#fff' } },
+                tooltip: {
+                    trigger: 'axis',
+                    backgroundColor: 'rgba(50,50,50,0.9)',
+                    textStyle: { color: '#fff' },
+                    formatter: function (params) {
+                        let result = `TSR: ${params[0].value[0].toFixed(2)}<br/>`;
+
+                        params.forEach(param => {
+                            const colorSpan = `<span style="display:inline-block;margin-right:4px;border-radius:10px;width:10px;height:10px;background-color:${param.color};"></span>`;
+
+                            if (param.seriesName.includes('Power Coefficient')) {
+                                result += `${colorSpan}${param.seriesName}: ${param.value[1].toFixed(4)}<br/>`;
+                            } else if (param.seriesName.includes('Thrust')) {
+                                result += `${colorSpan}${param.seriesName}: ${param.value[1].toFixed(2)} kN<br/>`;
+                            }
+                        });
+
+                        return result;
+                    }
+                },
                 legend: {
                     data: ['Power Coefficient (Cp)', 'Thrust (kN)'],
                     textStyle: { color: '#ccc' },
                     top: 10
                 },
-                grid: { left: '10%', right: '10%', top: '15%', bottom: '10%' },
+                grid: {
+                    left: '10%',
+                    right: '10%',
+                    top: '15%',
+                    bottom: '15%'
+                },
                 xAxis: {
                     type: 'value',
                     name: 'Tip Speed Ratio',
-                    nameTextStyle: { color: '#ccc' },
+                    nameLocation: 'middle',
+                    nameGap: 35,
+                    nameTextStyle: {
+                        color: '#ccc',
+                        padding: [10, 0, 0, 0]
+                    },
                     axisLine: { lineStyle: { color: '#666' } },
                     axisLabel: { color: '#ccc' },
                     splitLine: { lineStyle: { color: '#333' } }
@@ -488,10 +409,10 @@ async function runTSRSweep() {
                     {
                         type: 'value',
                         name: 'Thrust (kN)',
-                        nameTextStyle: { color: '#ccc' },
+                        nameTextStyle: { color: '#fff' },
                         position: 'right',
                         axisLine: { lineStyle: { color: '#666' } },
-                        axisLabel: { color: '#ccc' }
+                        axisLabel: { color: '#fff' }
                     }
                 ],
                 series: [
@@ -522,7 +443,7 @@ async function runTSRSweep() {
                         name: 'Thrust (kN)',
                         type: 'line',
                         yAxisIndex: 1,
-                        data: tsrValues.map((x, i) => [x, thrustValues[i]]),
+                        data: tsrValues.map((x, i) => [x, powerValues[i]]),
                         smooth: true,
                         lineStyle: { color: '#ff7875', width: 2 },
                         itemStyle: { color: '#ff7875' }
@@ -536,6 +457,214 @@ async function runTSRSweep() {
         error.value = true
     }
 }
+
+
+
+function renderInductionFactorsPlot(r, a, aPrime) {
+
+    if (!inductionChart && inductionPlot.value) {
+        inductionChart = echarts.init(inductionPlot.value, null, { renderer: 'canvas' })
+    }
+    inductionChart.setOption(
+        {
+            tooltip: {
+                trigger: 'axis',
+                backgroundColor: 'rgba(50,50,50,0.9)',
+                textStyle: { color: '#fff' },
+                formatter: function (params) {
+                    let result = `Radius: ${params[0].value[0].toFixed(2)} m<br/>`;
+
+                    params.forEach(param => {
+                        const colorSpan = `<span style="display:inline-block;margin-right:4px;border-radius:10px;width:10px;height:10px;background-color:${param.color};"></span>`;
+
+                        if (param.seriesName.includes('Induction')) {
+                            result += `${colorSpan}${param.seriesName}: ${param.value[1].toFixed(4)}<br/>`;
+                        } else {
+                            result += `${colorSpan}${param.seriesName}: ${param.value[1].toFixed(2)}<br/>`;
+                        }
+                    });
+
+                    return result;
+                }
+            },
+            legend: {
+                data: ['Axial Induction (a)', "Tangential Induction (a')"],
+                textStyle: { color: '#ccc' },
+                top: 10
+            },
+            grid: {
+                left: '10%',
+                right: '10%',
+                top: '15%',
+                bottom: '15%'
+            },
+            xAxis: {
+                type: 'value',
+                name: 'Radius (m)',
+                nameLocation: 'middle',
+                nameGap: 35,
+                nameTextStyle: {
+                    color: '#ccc',
+                    padding: [10, 0, 0, 0]
+                },
+                axisLine: { lineStyle: { color: '#666' } },
+                axisLabel: { color: '#ccc' },
+                splitLine: { lineStyle: { color: '#333' } }
+            },
+            yAxis: [
+                {
+                    type: 'value',
+                    name: 'a',
+                    nameTextStyle: { color: '#ccc' },
+                    axisLine: { lineStyle: { color: '#666' } },
+                    axisLabel: { color: '#ccc' },
+                    splitLine: { lineStyle: { color: '#333' } }
+                },
+                {
+                    type: 'value',
+                    name: "a'",
+                    nameTextStyle: { color: '#fff' },
+                    position: 'right',
+                    axisLine: { lineStyle: { color: '#fff' } },
+                    axisLabel: { color: '#fff' }
+                }
+            ],
+            series: [
+                {
+                    name: 'Axial Induction (a)',
+                    type: 'line',
+                    data: r.map((x, i) => [x, a[i]]),
+                    smooth: true,
+                    lineStyle: { color: 'rgb(191, 223, 255)', width: 2 },
+                    itemStyle: { color: 'rgb(191, 223, 255)' }
+                },
+                {
+                    name: "Tangential Induction (a')",
+                    type: 'line',
+                    yAxisIndex: 1,
+                    data: r.map((x, i) => [x, aPrime[i]]),
+                    smooth: true,
+                    lineStyle: { color: 'rgb(255, 191, 191)', width: 2 },
+                    itemStyle: { color: 'rgb(255, 191, 191)' }
+                }
+            ]
+        },
+        true
+    )
+}
+
+function renderPerformanceValuesPlot(r, alpha, cl) {
+    if (!performanceChart && performancePlot.value) {
+        performanceChart = echarts.init(performancePlot.value, null, { renderer: 'canvas' })
+    }
+
+    performanceChart.setOption(
+        {
+            tooltip: {
+                trigger: 'axis',
+                backgroundColor: 'rgba(50,50,50,0.9)',
+                textStyle: { color: '#fff' },
+                formatter: function (params) {
+                    let result = `Radius: ${params[0].value[0].toFixed(2)} m<br/>`;
+
+                    params.forEach(param => {
+                        const colorSpan = `<span style="display:inline-block;margin-right:4px;border-radius:10px;width:10px;height:10px;background-color:${param.color};"></span>`;
+
+                        if (param.seriesName.includes('Angle of Attack')) {
+                            result += `${colorSpan}${param.seriesName}: ${param.value[1].toFixed(2)}°<br/>`;
+                        } else if (param.seriesName.includes('Lift')) {
+                            result += `${colorSpan}${param.seriesName}: ${param.value[1].toFixed(3)}<br/>`;
+                        }
+                    });
+
+                    return result;
+                }
+            },
+            legend: {
+                data: ['Angle of Attack (°)', 'Lift Coefficient'],
+                textStyle: { color: '#ccc' },
+                top: 10
+            },
+            grid: {
+                left: '10%',
+                right: '10%',
+                top: '15%',
+                bottom: '15%'
+            },
+            xAxis: {
+                type: 'value',
+                name: 'Radius (m)',
+                nameLocation: 'middle',
+                nameGap: 35,
+                nameTextStyle: {
+                    color: '#ccc',
+                    padding: [10, 0, 0, 0]
+                },
+                axisLine: { lineStyle: { color: '#666' } },
+                axisLabel: { color: '#ccc' },
+                splitLine: { lineStyle: { color: '#333' } }
+            },
+            yAxis: [
+                {
+                    type: 'value',
+                    name: 'α (°)',
+                    nameTextStyle: { color: '#ccc' },
+                    axisLine: { lineStyle: { color: '#666' } },
+                    axisLabel: { color: '#ccc' },
+                    splitLine: { lineStyle: { color: '#333' } }
+                },
+                {
+                    type: 'value',
+                    name: 'Cl',
+                    nameTextStyle: { color: '#fff' },
+                    position: 'right',
+                    axisLine: { lineStyle: { color: '#fff' } },
+                    axisLabel: { color: '#fff' }
+                }
+            ],
+            series: [
+                {
+                    name: 'Angle of Attack (°)',
+                    type: 'line',
+                    data: r.map((x, i) => [x, alpha[i]]),
+                    smooth: true,
+                    lineStyle: { color: 'rgb(191, 255, 191)', width: 2 },
+                    itemStyle: { color: 'rgb(191, 255, 191)' }
+                },
+                {
+                    name: 'Lift Coefficient',
+                    type: 'line',
+                    yAxisIndex: 1,
+                    data: r.map((x, i) => [x, cl[i]]),
+                    smooth: true,
+                    lineStyle: { color: 'rgb(255, 223, 191)', width: 2 },
+                    itemStyle: { color: 'rgb(255, 223, 191)' }
+                }
+            ]
+        },
+        true
+    )
+}
+
+function plotBladeDistribution() {
+    if (!results.value || !inductionChart || !performanceChart) return
+
+    const sections = results.value.sections
+    const r = sections.map(s => s.r)
+    const a = sections.map(s => s.a)
+    const aPrime = sections.map(s => s.a_prime)
+    const alpha = sections.map(s => s.alpha)
+    const cl = sections.map(s => s.cl)
+
+    renderInductionFactorsPlot(r, a, aPrime)
+
+    renderPerformanceValuesPlot(r, alpha, cl)
+
+
+}
+
+
+
 function initThree() {
     const el = bladePlot.value
     const { clientWidth: w, clientHeight: h } = el
@@ -593,6 +722,33 @@ function updateBladeGeometry() {
     threeScene.add(bladeMesh)
 }
 
+function formatWithDynamicUnit(value, baseUnit) {
+    const units = {
+        'N': ['N', 'kN', 'MN', 'GN'],
+        'W': ['W', 'kW', 'MW', 'GW'],
+        'Nm': ['Nm', 'kNm', 'MNm', 'GNm']
+    };
+
+    const unitScales = [1, 1e3, 1e6, 1e9];
+    const unitGroup = units[baseUnit] || [];
+
+    if (Math.abs(value) < 1) {
+        return `${value.toFixed(3)} ${unitGroup[0]}`;
+    }
+
+    let scale = 0;
+    let scaledValue = value;
+
+    while (Math.abs(scaledValue) >= 1000 && scale < unitGroup.length - 1) {
+        scaledValue /= 1000;
+        scale++;
+    }
+
+    const decimalPlaces = Math.abs(scaledValue) >= 100 ? 1 :
+        Math.abs(scaledValue) >= 10 ? 2 : 3;
+
+    return `${scaledValue.toFixed(decimalPlaces)} ${unitGroup[scale]}`;
+}
 </script>
 
 <style scoped>
@@ -610,40 +766,73 @@ function updateBladeGeometry() {
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: space-between;
-    gap: 2rem;
     padding: 1.5rem;
     background-color: rgb(36, 36, 36);
     border-radius: 8px;
+    width: 100%;
+}
+
+.tabs-header {
+    display: flex;
+    width: 100%;
+    margin-bottom: 0.5rem;
+}
+
+.tabs-content {
+    width: 100%;
+    padding: 1rem 0;
+}
+
+.tab-panel {
+    width: 100%;
+    animation: fadeIn 0.3s ease;
 }
 
 .control-group {
     display: flex;
     flex-wrap: wrap;
-    gap: 1rem;
-    align-items: flex-start;
+    gap: 1.5rem;
     justify-content: center;
+    width: 100%;
 }
 
-.control-group.main-group {
+.control-actions {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    margin-top: 1.5rem;
+    width: 100%;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+
+.controls {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 1.5rem;
+    background-color: rgb(36, 36, 36);
+    border-radius: 8px;
+    width: 100%;
+}
+
+.control-group {
     display: flex;
     flex-wrap: wrap;
-    gap: 2rem;
-    width: 100%;
-    justify-content: space-between;
-}
-
-.control-group h3 {
-    width: 100%;
-    margin: 0 0 0.1rem 0;
-    color: #ccc;
-    font-size: 16px;
-    font-weight: 600;
-}
-
-.control-group.buttons {
+    gap: 1.5rem;
     justify-content: center;
-    margin-top: 0.5rem;
+    width: 100%;
 }
 
 .controls-row {
@@ -745,7 +934,6 @@ button {
     border: none;
     font-weight: 600;
     cursor: pointer;
-    background-color: rgb(140, 172, 204);
     transition: all 0.3s ease;
 }
 
@@ -754,8 +942,16 @@ button:hover {
     filter: brightness(1.2);
 }
 
-button[type="button"] {
-    background-color: rgb(204, 140, 140);
+#run-bem {
+    background-color: transparent;
+    border-radius: 0.4rem;
+    border: 0.15rem solid rgb(140, 172, 204);
+}
+
+#run-tsr-sweep {
+    background-color: transparent;
+    border-radius: 0.4rem;
+    border: 0.15rem solid rgb(204, 140, 140);
 }
 
 .results-container {
@@ -860,6 +1056,15 @@ button[type="button"] {
     height: 400px;
     border-radius: 8px;
     background: rgb(36, 36, 36);
+}
+
+.geometry {
+    mask-image: linear-gradient(to top, transparent 0%, black 35%, black 65%, transparent 100%),
+        linear-gradient(to left, transparent 0%, black 35%, black 65%, transparent 100%);
+    mask-composite: intersect;
+    -webkit-mask-image: linear-gradient(to top, transparent 0%, black 35%, black 65%, transparent 100%),
+        linear-gradient(to left, transparent 0%, black 35%, black 65%, transparent 100%);
+    -webkit-mask-composite: source-in;
 }
 
 

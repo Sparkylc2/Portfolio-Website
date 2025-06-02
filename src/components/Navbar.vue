@@ -112,6 +112,10 @@ watch(
     color: #fff
 }
 
+.links a:hover {
+    color: #fff
+}
+
 .bar {
     position: absolute;
     bottom: 0;

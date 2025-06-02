@@ -19,7 +19,9 @@ const props = defineProps({
 
 const primaryColorStyle = computed(() => ({ '--underline-color': getColour(props.primaryColorKey) }));
 
-const emit = defineEmits(['update:modelValue'])
+console.log(props.primaryColorKey);
+
+const emit = defineEmits(['update:modelValue', 'update:plaintext'])
 
 const inputValue = ref(props.modelValue)
 const isUpdating = ref(false)
@@ -130,10 +132,6 @@ onMounted(async () => {
     mf.value.setValue(sanitizeLatex(props.modelValue), { emit: false })
 })
 
-defineExpose({
-    mathfield: mf,
-    getPlaintext: () => mf.value?.getValue('plain-text') || ''
-})
 </script>
 
 <style scoped>

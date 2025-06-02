@@ -210,17 +210,36 @@ public:
 
     BladeSection(double r, double c, double twist, double dr, AirfoilPolar *p, double rotor_radius)
         : radial_position(r), chord_length(c), twist_angle(twist),
-          differential_radius(dr), polar(p), a(1.0 / 3.0), a_prime(0.0)
+          differential_radius(dr), polar(p), a(1.0 / 3.0), a_prime(0.0),
+          extrapolator(nullptr)  
     {
+        try {
+            if (rotor_radius <= 0) {
+                if (DEBUG_POLARS)
+                    std::cout << "Invalid rotor radius: " << rotor_radius << std::endl;
+                return;
+            }
 
-        double cr75 = chord_length / (rotor_radius * 0.75);
-        if (polar && !polar->data.empty())
-        {
-            extrapolator = new ViternaExtrapolator(*polar, cr75);
+            double cr75 = chord_length / (rotor_radius * 0.75);
+            
+            if (std::isnan(cr75) || std::isinf(cr75)) {
+                if (DEBUG_POLARS)
+                    std::cout << "Invalid cr75 value: " << cr75 << std::endl;
+                return;
+            }
+            
+            if (polar && !polar->data.empty())
+            {
+                extrapolator = new ViternaExtrapolator(*polar, cr75);
+            }
         }
-        else
-        {
-            extrapolator = nullptr;
+        catch (const std::exception& e) {
+            if (DEBUG_POLARS)
+                std::cout << "Exception in BladeSection constructor: " << e.what() << std::endl;
+        }
+        catch (...) {
+            if (DEBUG_POLARS)
+                std::cout << "Unknown exception in BladeSection constructor" << std::endl;
         }
     }
 
@@ -304,21 +323,34 @@ public:
 
     void add_section(double r, double chord, double twist_deg, AirfoilPolar *polar)
     {
-        double dr;
-        if (sections.empty())
-        {
-            dr = r - hub_radius;
-        }
-        else
-        {
-            dr = r - sections.back().radial_position;
-        }
 
-        sections.emplace_back(r, chord, twist_deg * M_PI / 180.0, dr, polar, radius);
+        try
+        {
+            double dr;
+            if (sections.empty())
+            {
+                dr = r - hub_radius;
+            }
+            else
+            {
+                dr = r - sections.back().radial_position;
+            }
 
-        auto &sec = sections.back();
-        sec.local_solidity = num_blades * chord / (2.0 * M_PI * r);
-        sec.local_tsr = angular_velocity * r / wind_speed;
+            sections.emplace_back(r, chord, twist_deg * M_PI / 180.0, dr, polar, radius);
+            auto &sec = sections.back();
+            sec.local_solidity = num_blades * chord / (2.0 * M_PI * r);
+            sec.local_tsr = angular_velocity * r / wind_speed;
+        }
+        catch (const std::exception &e)
+        {
+            if (DEBUG_POLARS)
+                std::cout << "Error adding section: " << e.what() << std::endl;
+        }
+        catch (...)
+        {
+            if (DEBUG_POLARS)
+                std::cout << "Unknown error adding section" << std::endl;
+        }
     }
 
     void run_bem()
@@ -606,6 +638,11 @@ void loadPolarData()
 
     g_airfoil_coords["NACA2412"] = parseAirfoilData(naca2412_data);
     g_airfoil_coords["NACA0012"] = parseAirfoilData(naca0012_data);
+
+    if (DEBUG_POLARS)
+    {
+        std::cout << "loadPolarData() finished" << std::endl;
+    }
 }
 
 void initializeRotor(double radius, double hub_radius, int num_blades,
@@ -613,6 +650,11 @@ void initializeRotor(double radius, double hub_radius, int num_blades,
 {
     loadPolarData();
     g_rotor.initialize(radius, hub_radius, num_blades, wind_speed, tsr);
+
+    if (DEBUG_POLARS)
+    {
+        std::cout << "initializeRotor() finished" << std::endl;
+    }
 }
 
 void setExpressions(const std::string &chord_expr, const std::string &twist_expr)
@@ -629,52 +671,93 @@ void addBladeSection(double r, double chord, double twist_deg, std::string airfo
     {
         polar = &it->second;
     }
-    g_rotor.add_section(r, chord, twist_deg, polar);
-}
 
-void clearBladeSections()
-{
-    g_rotor.sections.clear();
+    g_rotor.add_section(r, chord, twist_deg, polar);
+
+    if (DEBUG_POLARS)
+    {
+        std::cout << "addBladeSection() called with r = " << r
+                  << ", chord = " << chord
+                  << ", twist_deg = " << twist_deg
+                  << ", airfoil = " << airfoil << std::endl;
+    }
 }
 
 void buildBladeSectionsWithExpressions(int num_sections, const std::string &chord_expr, const std::string &twist_expr, const std::string &airfoil)
 {
-    typedef exprtk::symbol_table<double> symbol_table_t;
-    typedef exprtk::expression<double> expression_t;
-    typedef exprtk::parser<double> parser_t;
-
-    double r;
-    double radius = g_rotor.radius;
-
-    symbol_table_t symbol_table;
-    symbol_table.add_variable("r", r);
-    symbol_table.add_variable("radius", radius);
-    symbol_table.add_constants();
-
-    expression_t chord_expression;
-    expression_t twist_expression;
-    chord_expression.register_symbol_table(symbol_table);
-    twist_expression.register_symbol_table(symbol_table);
-
-    parser_t parser;
-    if (!parser.compile(normalize_expr(chord_expr), chord_expression))
+    try
     {
-        std::cout << "Failed to parse chord expression: " << parser.error() << std::endl;
-        return;
+        typedef exprtk::symbol_table<double> symbol_table_t;
+        typedef exprtk::expression<double> expression_t;
+        typedef exprtk::parser<double> parser_t;
+
+        double r;
+        double radius = g_rotor.radius;
+
+        symbol_table_t symbol_table;
+        symbol_table.add_variable("r", r);
+        symbol_table.add_variable("radius", radius);
+        symbol_table.add_variable("R", radius);
+        symbol_table.add_variable("R_h", g_rotor.hub_radius);
+        symbol_table.add_variable("TSR", g_rotor.tsr);
+
+        symbol_table.add_constants();
+
+        expression_t chord_expression;
+        expression_t twist_expression;
+        chord_expression.register_symbol_table(symbol_table);
+        twist_expression.register_symbol_table(symbol_table);
+
+        parser_t parser;
+        if (!parser.compile(normalize_expr(chord_expr), chord_expression))
+        {
+            if (DEBUG_POLARS)
+                std::cout << "Failed to parse chord expression: " << parser.error() << std::endl;
+            return;
+        }
+        if (!parser.compile(normalize_expr(twist_expr), twist_expression))
+        {
+            if (DEBUG_POLARS)
+                std::cout << "Failed to parse twist expression: " << parser.error() << std::endl;
+            return;
+        }
+
+        for (int i = 0; i < num_sections; i++)
+        {
+            r = g_rotor.hub_radius + (i + 0.5) * (g_rotor.radius - g_rotor.hub_radius) / num_sections;
+            double chord = chord_expression.value();
+            double twist = twist_expression.value() * 180.0 / M_PI;
+
+            if (DEBUG_POLARS)
+            {
+                std::cout << "Section " << i << ": r = " << r
+                          << ", chord = " << chord
+                          << ", twist = " << twist
+                          << ", airfoil = " << airfoil
+                          << ", num_sections = " << num_sections << std::endl;
+            }
+
+            addBladeSection(r, chord, twist, airfoil);
+        }
+
+        if (DEBUG_POLARS)
+        {
+            std::cout << "buildBladeSectionsWithExpressions() finished" << std::endl;
+        }
     }
-    if (!parser.compile(normalize_expr(twist_expr), twist_expression))
+    catch (const std::exception &e)
     {
-        std::cout << "Failed to parse twist expression: " << parser.error() << std::endl;
-        return;
+        if (DEBUG_POLARS)
+        {
+            std::cout << "Exception in buildBladeSectionsWithExpressions: " << e.what() << std::endl;
+        }
     }
-
-    for (int i = 0; i < num_sections; i++)
+    catch (...)
     {
-        r = g_rotor.hub_radius + (i + 0.5) * (g_rotor.radius - g_rotor.hub_radius) / num_sections;
-        double chord = chord_expression.value();
-        double twist = twist_expression.value() * 180.0 / M_PI;
-
-        addBladeSection(r, chord, twist, airfoil);
+        if (DEBUG_POLARS)
+        {
+            std::cout << "Unknown exception in buildBladeSectionsWithExpressions" << std::endl;
+        }
     }
 }
 
@@ -715,14 +798,16 @@ val runBEM()
     }
     catch (const std::exception &e)
     {
-        std::cout << "Exception in runBEM: " << e.what() << std::endl;
+        if (DEBUG_POLARS)
+            std::cout << "Exception in runBEM: " << e.what() << std::endl;
         val error = val::object();
         error.set("error", e.what());
         return error;
     }
     catch (...)
     {
-        std::cout << "Unknown exception in runBEM" << std::endl;
+        if (DEBUG_POLARS)
+            std::cout << "Unknown exception in runBEM" << std::endl;
         val error = val::object();
         error.set("error", "Unknown error occurred");
         return error;
@@ -902,7 +987,6 @@ EMSCRIPTEN_BINDINGS(bem_module)
     function("loadPolarData", &loadPolarData);
     function("initializeRotor", &initializeRotor);
     function("addBladeSection", &addBladeSection);
-    function("clearBladeSections", &clearBladeSections);
     function("buildBladeSectionsWithExpressions", &buildBladeSectionsWithExpressions);
     function("runBEM", &runBEM);
     function("setDebugMode", &setDebugMode);
