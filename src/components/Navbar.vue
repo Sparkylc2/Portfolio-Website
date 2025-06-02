@@ -1,6 +1,5 @@
 <template>
     <nav class="navbar" :class="{ 'mobile-menu-open': mobileMenuOpen }">
-        <!-- Mobile menu button -->
         <button class="mobile-menu-toggle" @click="toggleMobileMenu" v-if="isMobile">
             <span class="hamburger-line"></span>
             <span class="hamburger-line"></span>
@@ -29,7 +28,7 @@
 </template>
 
 <script setup>
-import { ref, watch, nextTick, onMounted, computed, onUnmounted } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 
 const props = defineProps({
     tabs: { type: Array, required: true },
@@ -43,11 +42,9 @@ const barRef = ref(null)
 const mobileMenuOpen = ref(false)
 const isMobile = ref(false)
 
-// Filter visible tabs for mobile
 const visibleTabs = computed(() => {
     if (!isMobile.value) return props.tabs
 
-    // On mobile, filter out project/paper specific tabs when not in those sections
     return props.tabs.filter(t => {
         if (t.parent === 'Projects' && props.activeTab !== 'Overview' && props.activeTab !== 'Details') {
             return false
@@ -73,7 +70,6 @@ function toggleMobileMenu() {
 function moveBarTo(el) {
     if (!el || !navRef.value || !barRef.value) return
 
-    // Don't animate bar on mobile when menu is closed
     if (isMobile.value && !mobileMenuOpen.value) return
 
     const navBox = navRef.value.getBoundingClientRect()
@@ -162,6 +158,7 @@ watch(
     height: 48px;
     background: rgb(36, 36, 36);
     border: 1px solid rgba(255, 255, 255, 0.1);
+    border-color: v-bind('props.indicatorColor');
     border-radius: 0.5rem;
     cursor: pointer;
     z-index: 1001;
@@ -184,7 +181,7 @@ watch(
 }
 
 .mobile-menu-open .hamburger-line:nth-child(1) {
-    transform: rotate(45deg) translate(5px, 5px);
+    transform: rotate(45deg) translate(5px, 6px);
 }
 
 .mobile-menu-open .hamburger-line:nth-child(2) {
@@ -192,7 +189,7 @@ watch(
 }
 
 .mobile-menu-open .hamburger-line:nth-child(3) {
-    transform: rotate(-45deg) translate(5px, -5px);
+    transform: rotate(-45deg) translate(5px, -6px); 
 }
 
 .links {

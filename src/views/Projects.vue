@@ -322,7 +322,9 @@ const { elementData } = useElementTracker(overviewSection, {
 </script>
 
 <style scoped>
-/* Scrollbar styles */
+* {
+    box-sizing: border-box;
+}
 .projects-container,
 .projects-grid-wrapper,
 .project-details-section,
@@ -340,7 +342,6 @@ const { elementData } = useElementTracker(overviewSection, {
     height: 0 !important;
 }
 
-/* Base styles */
 .date {
     font-size: 0.9rem;
     color: rgb(225, 225, 225);
@@ -425,6 +426,7 @@ const { elementData } = useElementTracker(overviewSection, {
     transform: scale(1);
     opacity: 1;
     transition: transform 0.3s ease, opacity 0.3s ease, border-color 0.3s ease;
+    box-sizing: content-box;
 }
 
 .project-card.active {
@@ -592,7 +594,6 @@ const { elementData } = useElementTracker(overviewSection, {
     filter: brightness(1.2);
 }
 
-/* Animations */
 .slide-fade-enter-active,
 .slide-fade-leave-active {
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -618,7 +619,6 @@ const { elementData } = useElementTracker(overviewSection, {
     opacity: 0;
 }
 
-/* Mobile styles */
 @media (max-width: 768px) {
     .page-title {
         font-size: 2rem;
@@ -697,12 +697,13 @@ const { elementData } = useElementTracker(overviewSection, {
         display: block;
         position: fixed;
         top: 1rem;
-        right: 1rem;
+        left: 1rem;
         width: 48px;
         height: 48px;
-        background: rgba(0, 0, 0, 0.5);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        border-radius: 50%;
+        background: rgba(0, 0, 0, 0.0);
+        border: 1px solid #ccc;
+        border-color: v-bind('getProjectColor(currentProject?.color)');
+        border-radius: 0.5rem;
         cursor: pointer;
         z-index: 101;
         font-size: 2rem;
@@ -758,7 +759,6 @@ const { elementData } = useElementTracker(overviewSection, {
     }
 }
 
-/* Tablet styles */
 @media (min-width: 769px) and (max-width: 1024px) {
     .page-title {
         font-size: 2.5rem;
@@ -795,7 +795,6 @@ const { elementData } = useElementTracker(overviewSection, {
     }
 }
 
-/* Large screen optimizations */
 @media (min-width: 1920px) {
     .page-title {
         font-size: 3.5rem;
@@ -834,7 +833,7 @@ const { elementData } = useElementTracker(overviewSection, {
     }
 }
 
-/* Ultra-wide screen optimizations */
+
 @media (min-width: 2560px) {
     .page-title {
         font-size: 4rem;

@@ -2,7 +2,13 @@
     <div class="papers-container">
         <h1 class="page-title">Papers</h1>
         <div class="content-layout" :class="{ 'has-expanded': expandedPaper !== null }">
-            <div class="papers-grid-wrapper">
+            <button v-if="expandedPaper !== null && isMobile" class="mobile-back-button-wrapper" @click="closePaper">
+                <div class="mobile-back-button">
+                    <span>←</span> Back
+                </div>
+            </button>
+
+            <div class="papers-grid-wrapper" v-show="!isMobile || expandedPaper === null">
                 <div class="papers-grid" :class="{ 'has-active': expandedPaper !== null }">
                     <div v-for="(paper, index) in papers" :key="index" class="paper-card" :class="{
                         'active': expandedPaper === index,
@@ -14,8 +20,8 @@
                         <div class="paper-content">
                             <h2 :style="{ color: getPaperTitleColor(paper.color) }">{{ paper.title }}</h2>
                             <p class="authors">{{ paper.authors }}</p>
-                            <p class="venue">{{ paper.venue }}</p>
-                            <p>{{ paper.description }}</p>
+                            <p class="venue line-clamp-2">{{ paper.venue }}</p>
+                            <p class="description line-clamp-3">{{ paper.description }}</p>
                             <div class="date">
                                 <span>{{ paper.dateRange }}</span>
                             </div>
@@ -26,20 +32,21 @@
                 </div>
             </div>
 
-            <div v-if="expandedPaper !== null" class="paper-details-section" id="paperDetailsSection">
+            <div v-if="expandedPaper !== null && (!isMobile || expandedPaper !== null)" class="paper-details-section"
+                :class="{ 'mobile-fullscreen': isMobile }" id="paperDetailsSection">
                 <div class="paper-details-content">
                     <div class="paper-sections">
                         <div class="section" :style="{ outlineColor: getBorderColor(currentPaper?.color, true) }">
                             <Transition name="fade" mode="out-in">
                                 <div v-if="activeSection === 'Paper'" key="paper" class="section-content"
                                     ref="parentScroll" id="sectionContent">
-                                    <h2>{{ currentPaper?.title }}</h2>
-                                    <p class="authors">{{ currentPaper?.authors }}</p>
-                                    <p class="venue">{{ currentPaper?.venue }}</p>
-                                    <p>{{ currentPaper?.description }}</p>
-
-                                    <div class="pdf-viewer" ref="pdfWrapper">
-                                        <PDFViewer v-if="currentPaper?.pdf" :pdfFileName="currentPaper.pdf"
+                                    <div v-if="!isMobile && currentPaper?.pdf" class="pdf-viewer" ref="pdfWrapper">
+                                        <PDFViewer :pdfFileName="currentPaper.pdf"
+                                            :accentColor="getPaperColor(currentPaper?.color)"
+                                            :key="currentPaper?.pdf + currentPaper?.color" />
+                                    </div>
+                                    <div v-else>
+                                        <PDFViewer :pdfFileName="currentPaper.pdf"
                                             :accentColor="getPaperColor(currentPaper?.color)"
                                             :key="currentPaper?.pdf + currentPaper?.color" />
                                     </div>
@@ -57,7 +64,7 @@
 </template>
 
 <script setup>
-import { computed, nextTick, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import PDFViewer from '../components/PDFViewer.vue'
 
 const props = defineProps({
@@ -70,6 +77,22 @@ const emit = defineEmits(['update:selectedPaper', 'update:selectedPaperColor'])
 const expandedPaper = ref(null)
 const pdfWrapper = ref(null)
 const parentScroll = ref(null)
+const isMobile = ref(false)
+const isTablet = ref(false)
+
+const checkScreenSize = () => {
+    isMobile.value = window.innerWidth <= 768
+    isTablet.value = window.innerWidth > 768 && window.innerWidth <= 1024
+}
+
+onMounted(() => {
+    checkScreenSize()
+    window.addEventListener('resize', checkScreenSize)
+})
+
+onUnmounted(() => {
+    window.removeEventListener('resize', checkScreenSize)
+})
 
 watch(() => props.selectedPaper, (newVal) => {
     expandedPaper.value = newVal
@@ -105,7 +128,7 @@ const papers = [
         
         <h3>Results</h3>
         <p>Our method demonstrates significant improvements in simulation stability and performance compared to traditional approaches...</p>
-      `,
+        `,
         color: 'red',
         dateRange: '2024-01-15 to 2024-02-15'
     },
@@ -127,8 +150,8 @@ const papers = [
           <li>Deep learning models for blade shape optimization</li>
           <li>Reinforcement learning for control strategies</li>
           <li>Integration with BEM theory</li>
-        </ul>
-      `,
+        </ul>`
+        ,
         color: 'blue',
         dateRange: '2024-01-15 to 2024-02-15'
     },
@@ -150,8 +173,8 @@ const papers = [
           <li>Adaptive mesh refinement strategies</li>
           <li>High-order panel representations</li>
           <li>GPU acceleration techniques</li>
-        </ul>
-      `,
+        </ul>`
+        ,
         color: 'green',
         dateRange: '2024-01-15 to 2024-02-15'
     },
@@ -173,8 +196,8 @@ const papers = [
           <li>Unified framework for FSI problems</li>
           <li>Improved stability conditions</li>
           <li>Parallel implementation strategies</li>
-        </ul>
-      `,
+        </ul>`
+        ,
         color: 'yellow',
         dateRange: '2024-01-15 to 2024-02-15'
     }
@@ -186,6 +209,10 @@ const currentPaper = computed(() =>
 
 const openPaper = (index) => {
     expandedPaper.value = index
+}
+
+const closePaper = () => {
+    expandedPaper.value = null
 }
 
 const togglePaper = (index) => {
@@ -252,130 +279,117 @@ const getPaperTitleColor = (color) => {
     return colors[color] || '#e63946'
 }
 
-const waitForElements = () => {
-    return new Promise((resolve) => {
-        const checkElements = () => {
-            const parent = parentScroll.value
-            const wrapper = pdfWrapper.value
-
-            if (!parent || !wrapper) {
-                setTimeout(checkElements, 100)
-                return
-            }
-
-            resolve({ parent, wrapper })
-        }
-
-        checkElements()
-    })
-}
 
 onMounted(async () => {
     await nextTick()
 
-    openPaper(0);
-
-    const { parent, wrapper } = await waitForElements()
-
-    if (!parent || !wrapper) return
-
-    const iframe = wrapper.querySelector('iframe')
-    if (!iframe) return
-
-    let isScrollingPDF = false
-
-    const isParentAtBottom = () => {
-        const tolerance = 0
-        return parent.scrollTop + parent.clientHeight >= parent.scrollHeight - tolerance
+    if (!isMobile.value) {
+        openPaper(0);
     }
 
-    const canPDFScroll = (direction) => {
-        const win = iframe.contentWindow
-        if (!win) return false
+    // if (!isMobile.value) {
+    //     const { parent, wrapper } = await waitForElements()
 
-        const pdfContainer = win.document.querySelector('#viewerContainer')
-        if (!pdfContainer) return false
+    //     if (!parent || !wrapper) return
 
-        if (direction > 0) {
-            return pdfContainer.scrollTop + pdfContainer.clientHeight < pdfContainer.scrollHeight
-        } else {
-            return pdfContainer.scrollTop > 0
-        }
-    }
+    //     const iframe = wrapper.querySelector('iframe')
+    //     if (!iframe) return
 
-    parent.addEventListener('wheel', (e) => {
-        const win = iframe.contentWindow
-        if (!win) return
+    //     let isScrollingPDF = false
 
-        const pdfContainer = win.document.querySelector('#viewerContainer')
-        if (!pdfContainer) return
+    //     const isParentAtBottom = () => {
+    //         const tolerance = 0
+    //         return parent.scrollTop + parent.clientHeight >= parent.scrollHeight - tolerance
+    //     }
 
-        const deltaY = e.deltaY
-        const scrollingDown = deltaY > 0
+    //     const canPDFScroll = (direction) => {
+    //         const win = iframe.contentWindow
+    //         if (!win) return false
 
-        if (isParentAtBottom() && scrollingDown && canPDFScroll(deltaY)) {
-            e.preventDefault()
-            pdfContainer.scrollTop += deltaY
-            isScrollingPDF = true
-        } else if (!scrollingDown && isScrollingPDF) {
-            if (pdfContainer.scrollTop > 0) {
-                e.preventDefault()
-                pdfContainer.scrollTop += deltaY
-            } else {
-                isScrollingPDF = false
-            }
-        }
+    //         const pdfContainer = win.document.querySelector('#viewerContainer')
+    //         if (!pdfContainer) return false
 
-    }, { passive: false })
+    //         if (direction > 0) {
+    //             return pdfContainer.scrollTop + pdfContainer.clientHeight < pdfContainer.scrollHeight
+    //         } else {
+    //             return pdfContainer.scrollTop > 0
+    //         }
+    //     }
 
-    iframe.addEventListener('load', () => {
-        const win = iframe.contentWindow
-        if (!win) return
+    //     parent.addEventListener('wheel', (e) => {
+    //         const win = iframe.contentWindow
+    //         if (!win) return
 
-        win.document.addEventListener('wheel', (e) => {
-            const pdfContainer = win.document.querySelector('#viewerContainer')
-            if (!pdfContainer) return
+    //         const pdfContainer = win.document.querySelector('#viewerContainer')
+    //         if (!pdfContainer) return
 
-            const deltaY = e.deltaY
-            const scrollingDown = deltaY > 0
+    //         const deltaY = e.deltaY
+    //         const scrollingDown = deltaY > 0
 
-            if (!isParentAtBottom() && scrollingDown) {
-                e.preventDefault()
-                parent.scrollTop += deltaY
-                isScrollingPDF = false
-            }
-            else if (!scrollingDown && pdfContainer.scrollTop <= 0) {
-                e.preventDefault()
-                parent.scrollTop += deltaY
-                isScrollingPDF = false
-            }
-            else {
-                isScrollingPDF = true
-            }
-        }, { passive: false })
+    //         if (isParentAtBottom() && scrollingDown && canPDFScroll(deltaY)) {
+    //             e.preventDefault()
+    //             pdfContainer.scrollTop += deltaY
+    //             isScrollingPDF = true
+    //         } else if (!scrollingDown && isScrollingPDF) {
+    //             if (pdfContainer.scrollTop > 0) {
+    //                 e.preventDefault()
+    //                 pdfContainer.scrollTop += deltaY
+    //             } else {
+    //                 isScrollingPDF = false
+    //             }
+    //         }
 
-        win.document.addEventListener('keydown', (e) => {
-            const keys = ['ArrowDown', 'ArrowUp', 'PageDown', 'PageUp', 'Home', 'End', ' ']
-            if (keys.includes(e.key)) {
-                const pdfContainer = win.document.querySelector('#viewerContainer')
-                if (!pdfContainer) return
+    //     }, { passive: false })
 
-                if (!isParentAtBottom() && ['ArrowDown', 'PageDown', ' '].includes(e.key)) {
-                    e.preventDefault()
-                    parent.scrollTop += e.key === 'PageDown' ? parent.clientHeight : 40
-                } else if (pdfContainer.scrollTop <= 0 && ['ArrowUp', 'PageUp'].includes(e.key)) {
-                    e.preventDefault()
-                    parent.scrollTop -= e.key === 'PageUp' ? parent.clientHeight : 40
-                }
-            }
-        })
-    })
+    //     iframe.addEventListener('load', () => {
+    //         const win = iframe.contentWindow
+    //         if (!win) return
 
-    parent.addEventListener('scroll', () => {
-        if (!isParentAtBottom()) {
-            isScrollingPDF = false
-        }
-    })
+    //         win.document.addEventListener('wheel', (e) => {
+    //             const pdfContainer = win.document.querySelector('#viewerContainer')
+    //             if (!pdfContainer) return
+
+    //             const deltaY = e.deltaY
+    //             const scrollingDown = deltaY > 0
+
+    //             if (!isParentAtBottom() && scrollingDown) {
+    //                 e.preventDefault()
+    //                 parent.scrollTop += deltaY
+    //                 isScrollingPDF = false
+    //             }
+    //             else if (!scrollingDown && pdfContainer.scrollTop <= 0) {
+    //                 e.preventDefault()
+    //                 parent.scrollTop += deltaY
+    //                 isScrollingPDF = false
+    //             }
+    //             else {
+    //                 isScrollingPDF = true
+    //             }
+    //         }, { passive: false })
+
+    //         win.document.addEventListener('keydown', (e) => {
+    //             const keys = ['ArrowDown', 'ArrowUp', 'PageDown', 'PageUp', 'Home', 'End', ' ']
+    //             if (keys.includes(e.key)) {
+    //                 const pdfContainer = win.document.querySelector('#viewerContainer')
+    //                 if (!pdfContainer) return
+
+    //                 if (!isParentAtBottom() && ['ArrowDown', 'PageDown', ' '].includes(e.key)) {
+    //                     e.preventDefault()
+    //                     parent.scrollTop += e.key === 'PageDown' ? parent.clientHeight : 40
+    //                 } else if (pdfContainer.scrollTop <= 0 && ['ArrowUp', 'PageUp'].includes(e.key)) {
+    //                     e.preventDefault()
+    //                     parent.scrollTop -= e.key === 'PageUp' ? parent.clientHeight : 40
+    //                 }
+    //             }
+    //         })
+    //     })
+
+    //     parent.addEventListener('scroll', () => {
+    //         if (!isParentAtBottom()) {
+    //             isScrollingPDF = false
+    //         }
+    //     })
+    // }
 })
 </script>
 
@@ -397,25 +411,18 @@ onMounted(async () => {
     height: 0 !important;
 }
 
-.pdf-viewer {
-    width: 100%;
-    height: 100%;
-    overflow: visible;
-    display: block;
-    position: relative;
+.line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
 }
 
-.date {
-    font-size: 0.9rem;
-    color: rgb(225, 225, 225);
-    display: flex;
-    justify-content: end;
-    padding-bottom: 0.1rem;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.paper-card:hover .date {
-    color: var(--paper-date-hover);
+.line-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
 }
 
 .papers-container {
@@ -426,13 +433,16 @@ onMounted(async () => {
     bottom: 0;
     overflow: hidden;
 }
+.paper-sections {
+    flex-grow: 1;
+}
 
 .page-title {
-    font-size: 3rem;
+    font-size: clamp(2rem, 5vw, 3rem);
     font-weight: bold;
     position: fixed;
-    top: 2rem;
-    left: 2rem;
+    top: clamp(1rem, 3vw, 2rem);
+    left: clamp(1rem, 3vw, 2rem);
     margin: 0;
     z-index: 5;
 }
@@ -451,6 +461,36 @@ onMounted(async () => {
     justify-content: flex-start;
 }
 
+.mobile-back-button-wrapper {
+    display: none;
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    z-index: 10;
+    background: rgb(36, 36, 36);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    font-size: 1rem;
+    min-height: 44px;
+    cursor: pointer;
+}
+
+.mobile-back-button-wrapper .mobile-back-button {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    border-radius: 0.25rem;
+    padding: 0.5rem;
+    border: 0.1rem solid v-bind('getPaperColor(currentPaper?.color)');
+}
+
+.mobile-back-button:hover {
+    filter: brightness(1.1);
+}
+
 .papers-grid-wrapper {
     position: relative;
     width: 600px;
@@ -462,10 +502,6 @@ onMounted(async () => {
     -ms-overflow-style: none;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     overscroll-behavior: contain;
-}
-
-.papers-grid-wrapper::-webkit-scrollbar {
-    display: none;
 }
 
 .papers-grid {
@@ -496,14 +532,14 @@ onMounted(async () => {
     opacity: 1;
 }
 
-.paper-card:hover .paper-indicator {
-    width: 100%;
-}
-
 .paper-card:hover {
     transform: translateY(-4px);
     box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
     background-color: #252525;
+}
+
+.paper-card:hover .paper-indicator {
+    width: 100%;
 }
 
 .paper-card.inactive {
@@ -523,19 +559,38 @@ onMounted(async () => {
 
 .paper-content h2 {
     margin-bottom: 0.5rem;
+    font-size: clamp(1.1rem, 2.5vw, 1.5rem);
 }
 
 .paper-content .authors {
-    font-size: 0.9rem;
+    font-size: clamp(0.85rem, 2vw, 0.9rem);
     color: #999;
     margin-bottom: 0.25rem;
 }
 
 .paper-content .venue {
-    font-size: 0.9rem;
+    font-size: clamp(0.85rem, 2vw, 0.9rem);
     color: #bbb;
     margin-bottom: 0.75rem;
     font-style: italic;
+}
+
+.paper-content .description {
+    font-size: clamp(0.9rem, 2vw, 1rem);
+    line-height: 1.5;
+}
+
+.date {
+    font-size: clamp(0.8rem, 1.8vw, 0.9rem);
+    color: rgb(225, 225, 225);
+    display: flex;
+    justify-content: end;
+    padding-bottom: 0.1rem;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.paper-card:hover .date {
+    color: var(--paper-date-hover);
 }
 
 .paper-indicator {
@@ -568,10 +623,6 @@ onMounted(async () => {
     transform: scale(1);
 }
 
-.paper-details-section::-webkit-scrollbar {
-    display: none;
-}
-
 .paper-details-content {
     padding: 1rem;
     padding-top: 2rem;
@@ -579,6 +630,9 @@ onMounted(async () => {
     background: transparent;
 }
 
+.paper-details {
+    margin: 2rem;
+}
 .section {
     display: flex;
     flex-direction: column;
@@ -589,10 +643,10 @@ onMounted(async () => {
     outline: 1px solid v-bind('getPaperColor(currentPaper?.color)');
     outline-offset: 1px;
     overflow: hidden;
+    flex-grow: 1;
 }
 
 .section-content {
-    padding: 2rem;
     overflow-y: auto;
     scrollbar-width: thin;
     scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
@@ -600,36 +654,84 @@ onMounted(async () => {
     display: flex;
     flex-direction: column;
     min-height: 100%;
+    flex-grow: 1;
 }
 
-.section-content::-webkit-scrollbar {
-    width: 6px;
-}
-
-.section-content::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-.section-content::-webkit-scrollbar-thumb {
-    background-color: rgba(255, 255, 255, 0.2);
-    border-radius: 3px;
-}
-
-.section-content::-webkit-scrollbar-thumb:hover {
-    background-color: rgba(255, 255, 255, 0.3);
+.section-content h2 {
+    font-size: clamp(1.5rem, 3vw, 2rem);
+    margin-bottom: 1rem;
 }
 
 .section-content .authors {
-    font-size: 1.1rem;
+    font-size: clamp(1rem, 2vw, 1.1rem);
     color: #ccc;
     margin-bottom: 0.5rem;
 }
 
 .section-content .venue {
-    font-size: 1rem;
+    font-size: clamp(0.95rem, 2vw, 1rem);
     color: #aaa;
     margin-bottom: 1.5rem;
     font-style: italic;
+}
+
+.paper-description {
+    font-size: clamp(0.95rem, 2vw, 1.05rem);
+    line-height: 1.6;
+    margin-bottom: 2rem;
+}
+
+
+.pdf-viewer {
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    display: block;
+    position: relative;
+}
+:deep(.pdf-viewer > *) {
+    flex: 1;
+    height: 100%;
+    min-height: 100%;
+}
+
+
+.mobile-pdf-section {
+    margin: 2rem 0;
+    padding: 2rem;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    text-align: center;
+}
+
+.mobile-pdf-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 1rem 2rem;
+    background: transparent;
+    color: white;
+    border: 2px solid;
+    border-radius: 8px;
+    text-decoration: none;
+    font-size: 1.1rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.mobile-pdf-link:hover {
+    transform: translateY(-2px);
+    filter: brightness(1.2);
+}
+
+.pdf-icon {
+    font-size: 1.5rem;
+}
+
+.mobile-pdf-note {
+    margin-top: 1rem;
+    font-size: 0.9rem;
+    color: #999;
 }
 
 .paper-meta {
@@ -639,7 +741,6 @@ onMounted(async () => {
     grid-template-columns: 1fr auto;
     align-items: flex-end;
     padding-top: 2rem;
-
 }
 
 .keywords {
@@ -651,6 +752,7 @@ onMounted(async () => {
 
 .keywords h3 {
     margin-bottom: 0.75rem;
+    font-size: clamp(1.1rem, 2.5vw, 1.3rem);
 }
 
 .keyword-tags {
@@ -664,7 +766,7 @@ onMounted(async () => {
 .keyword-tag {
     padding: 0.2rem 0.6rem;
     border-radius: 1rem;
-    font-size: 0.9rem;
+    font-size: clamp(0.8rem, 2vw, 0.9rem);
     transition: all 0.3s ease;
     background-color: rgba(255, 255, 255, 0.1);
     color: #fff;
@@ -691,12 +793,29 @@ onMounted(async () => {
     text-decoration: none;
     transition: all 0.3s ease;
     white-space: nowrap;
+    border: 0.15rem solid;
+    background-color: transparent;
+    font-size: clamp(0.9rem, 2vw, 1rem);
 }
 
 .paper-link:hover {
     transform: translateY(-2px);
     filter: brightness(1.2);
 }
+
+
+.paper-details h3 {
+    font-size: clamp(1.2rem, 2.5vw, 1.5rem);
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+}
+
+.paper-details p,
+.paper-details li {
+    font-size: clamp(0.95rem, 2vw, 1.05rem);
+    line-height: 1.6;
+}
+
 
 .fade-enter-active,
 .fade-leave-active {
@@ -706,5 +825,263 @@ onMounted(async () => {
 .fade-enter-from,
 .fade-leave-to {
     opacity: 0;
+}
+
+
+@media (max-width: 768px) {
+    .page-title {
+        font-size: 2rem;
+        top: 1rem;
+        left: 1rem;
+        z-index: 6;
+    }
+
+    .content-layout {
+        flex-direction: column;
+        padding: 4rem 1rem 1rem;
+        gap: 0;
+        height: 100vh;
+    }
+
+    .mobile-back-button-wrapper {
+        display: block;
+    }
+
+    .papers-grid-wrapper {
+        width: 100%;
+        max-width: 100%;
+        height: calc(100vh - 5rem);
+        padding: 0;
+    }
+
+    .papers-grid {
+        padding: 1rem 0;
+        gap: 0.75rem;
+    }
+
+    .paper-card {
+        padding: 1.25rem;
+        margin: 0 0.5rem;
+    }
+
+    .paper-details-section.mobile-fullscreen {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        width: 100%;
+        height: 100vh;
+        max-height: 100vh;
+        min-width: unset;
+        border-radius: 0;
+        z-index: 10;
+        opacity: 1;
+        transform: scale(1);
+        padding-bottom: 0;
+    }
+
+    .paper-details-content {
+        padding: 1rem;
+        padding-top: 4rem;
+        height: 100vh;
+        overflow-y: auto;
+    }
+
+    @media (max-width: 768px) {
+        .page-title {
+            font-size: 2rem;
+            top: 1rem;
+            left: 1rem;
+            z-index: 6;
+        }
+
+        .content-layout {
+            flex-direction: column;
+            padding: 4rem 1rem 1rem;
+            gap: 0;
+            height: 100vh;
+        }
+
+        .mobile-back-button-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            position: fixed;
+            top: 1rem;
+            left: 1rem;
+            background: rgb(36, 36, 36);
+            font-size: 1rem;
+            padding: 0 0.9rem;
+            min-height: 44px;
+            z-index: 100;
+        }
+
+        .papers-grid-wrapper {
+            width: 100%;
+            max-width: 100%;
+            height: auto;
+            max-height: calc(100vh - 5rem);
+            padding: 0;
+        }
+
+        .papers-grid {
+            padding: 1rem 0;
+            width: 100%;
+            min-width: 0;
+        }
+
+        .paper-card {
+            padding: 1.25rem;
+            width: 100%;
+        }
+
+        .paper-card.active,
+        .paper-card.inactive {
+            display: none;
+        }
+
+        .paper-details-section {
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            max-height: 100vh;
+            min-width: 0;
+            border-radius: 0;
+            z-index: 99;
+            overflow-y: auto;
+            padding-bottom: 0;
+            background: rgb(36, 36, 36);
+            animation: slideUp .25s ease;
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(100%);
+            }
+
+            to {
+                transform: translateY(0);
+            }
+        }
+
+        .section {
+            max-height: none;
+            min-height: 100vh;
+            outline: none;
+        }
+
+        .section-content {
+            padding: 1.5rem;
+        }
+
+        .paper-meta {
+            grid-template-columns: 1fr;
+            gap: 1.25rem;
+        }
+
+        .paper-links {
+            align-self: flex-start;
+            padding-bottom: 0;
+        }
+
+        .keyword-tags {
+            gap: 0.4rem;
+        }
+
+        .keyword-tag {
+            font-size: 0.85rem;
+        }
+
+        .fade-enter-from,
+        .fade-leave-to {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+    }
+
+    @media (min-width: 769px) and (max-width: 1024px) {
+        .page-title {
+            font-size: 2.5rem;
+            top: 1.5rem;
+            left: 1.5rem;
+        }
+
+        .content-layout {
+            padding: 5rem 1.5rem 1.5rem;
+            gap: 1.5rem;
+        }
+
+        .papers-grid-wrapper,
+        .papers-grid {
+            width: 350px;
+            min-width: 350px;
+        }
+
+        .papers-grid.has-active {
+            width: 300px;
+            min-width: 300px;
+        }
+
+        .paper-details-section {
+            min-width: 350px;
+        }
+    }
+
+    @media (min-width: 1920px) {
+        .page-title {
+            font-size: 3.5rem;
+        }
+
+        .content-layout {
+            gap: 2.5rem;
+            padding: 7rem 3rem 3rem;
+        }
+
+        .papers-grid-wrapper,
+        .papers-grid {
+            width: 500px;
+            min-width: 500px;
+        }
+
+        .papers-grid.has-active {
+            width: 450px;
+            min-width: 450px;
+        }
+
+        .paper-card {
+            padding: 2rem;
+        }
+
+        .paper-card h2 {
+            font-size: 1.5rem;
+        }
+
+        .paper-details-section {
+            min-width: 500px;
+        }
+    }
+
+    @media (min-width: 2560px) {
+        .page-title {
+            font-size: 4rem;
+        }
+
+        .papers-grid-wrapper,
+        .papers-grid {
+            width: 600px;
+            min-width: 600px;
+        }
+
+        .papers-grid.has-active {
+            width: 550px;
+            min-width: 550px;
+        }
+
+        .paper-details-section {
+            min-width: 600px;
+        }
+    }
 }
 </style>

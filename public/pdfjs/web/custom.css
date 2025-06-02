@@ -119,14 +119,14 @@ body::-webkit-scrollbar {
 	margin-bottom: 0.5rem;
 	position: relative;
 	overflow: hidden;
-	background-color: rgba(36, 36, 36, 0.5);
+	background-color: rgba(36, 36, 36, 1);
 	transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 	transform: translateY(0) scale(1);
 }
 
 #outlineView a.active,
 #outlineView a:focus {
-	background-color: transparent !important;
+	background-color: rgb(36, 36, 36) !important;
 	transform: translateX(-2px) scale(1.02);
 	color: #fff;
 }
@@ -241,7 +241,7 @@ body::-webkit-scrollbar {
 
 * {
 	scrollbar-width: thin;
-	scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+	scrollbar-color: rgba(255, 255, 255, 0) transparent;
 }
 
 #sidebarContainer,
@@ -258,6 +258,10 @@ body::-webkit-scrollbar {
 }
 
 @media (max-width: 1200px) {
+    #sidebarContainer {
+        display: none !important; 
+    }
+    
 	#sidebarContainer {
 		width: 200px;
 	}
