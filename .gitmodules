@@ -1,3 +1,0 @@
-[submodule "wasm-src/cpp/physics_engine"]
-	path = wasm-src/cpp/physics_engine
-	url = https://github.com/Sparkylc2/PhysicsEngineWASMDemo.git
