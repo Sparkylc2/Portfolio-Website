@@ -6,7 +6,8 @@
 <script setup>
 import { Application, Graphics } from 'pixi.js'
 import { nextTick, onMounted, onUnmounted, ref, shallowRef, watch } from 'vue'
-import initWasm, { ConstraintPhysicsEngine } from '../wasm/physics_engine.js'
+// import initWasm, { PhysicsEngineModule } from '../wasm/physics_engine.js'
+import PhysicsEngineModule from '../wasm/physics_engine.js'
 
 const props = defineProps({
     elementData: { type: Object, default: null },
@@ -48,7 +49,7 @@ function setupResizeObserver() {
     resizeObserver.value = new ResizeObserver(() => {
 
         canvasOnResize()
-        syncElementBoxes()
+        // syncElementBoxes()
     });
 
     if (props.elementData.container.element) {
@@ -144,9 +145,9 @@ function initPendulumBlocks() {
 
 
     for (let i = 0; i < NUM_BOXES; i++) {
-        const id = engine.value.add_body(
+        const id = engine.value.addBoxBody(
             START_X + i * SPACING, START_Y,
-            BOX_SIZE, BOX_SIZE, 1
+            BOX_SIZE, BOX_SIZE, false
         )
 
         const g = new Graphics()
@@ -164,22 +165,24 @@ function initPendulumBlocks() {
     }
 
 
-    engine.value.add_fixed_distance_constraint(
-        START_X - SPACING, START_Y,
-        bodyBoxes[0].id, SPACING, 0.9
-    )
-    for (let i = 0; i < bodyBoxes.length - 1; i++) {
-        engine.value.add_distance_constraint(
-            bodyBoxes[i].id, bodyBoxes[i + 1].id, SPACING, 0.9
-        )
-    }
+
+    // engine.value.add_fixed_distance_constraint(
+    //     START_X - SPACING, START_Y,
+    //     bodyBoxes[0].id, SPACING, 0.9
+    // )
+    // for (let i = 0; i < bodyBoxes.length - 1; i++) {
+    //     engine.value.add_distance_constraint(
+    //         bodyBoxes[i].id, bodyBoxes[i + 1].id, SPACING, 0.9
+    //     )
+    // }
 
 
     for (let i = 0; i < 3; i+=2) {
-        const id = engine.value.add_body(
+        const id = engine.value.addBoxBody(
             START_X/2 * (i + 1), START_Y,
-            BOX_SIZE, BOX_SIZE, 1
+            BOX_SIZE, BOX_SIZE, false
         );
+
 
         const g = new Graphics()
         g.zIndex = 2
@@ -224,7 +227,7 @@ const canvasOnResize = async () => {
     }
 
     if (engine.value) {
-        engine.value.set_bounds(width, height);  
+        // engine.value.set_bounds(width, height);  
     }
 };
 
@@ -274,9 +277,11 @@ function drawSpring(g, a, b, segments = 6, offset = 10) {
 
 
 onMounted(async () => {
-    await initWasm()
-    engine.value = new ConstraintPhysicsEngine()
-    engine.value.set_gravity(0, 981)
+    // await initWasm()
+    // engine.value = new PhysicsEngineModule()
+    // engine.value.set_gravity(0, 981)
+
+    engine.value = await PhysicsEngineModule()
 
     app.value = new Application()
     await app.value.init({
@@ -300,7 +305,7 @@ onMounted(async () => {
 
 
     initPendulumBlocks()
-    syncElementBoxes()
+    // syncElementBoxes()
 
 
     springG = new Graphics()
@@ -310,41 +315,61 @@ onMounted(async () => {
     let last = performance.now()
     tickerFunction.value = () => {
         const now = performance.now()
-        engine.value.update(Math.min(now - last, 50))
+        engine.value.setDT((now - last)/100)
         last = now
 
-        springG.clear()
-        const p0 = engine.value.body_position(bodyBoxes[0].id)
-        drawSpring(springG, [START_X - SPACING, START_Y], p0)
-        for (let i = 0; i < 2; i++) {
-            const a = engine.value.body_position(bodyBoxes[i].id)
-            const b = engine.value.body_position(bodyBoxes[i + 1].id)
-            drawSpring(springG, a, b)
-        }
-        if (isDragging.value) {
-            const dragged = engine.value.body_position(bodyBoxes[dragIndex.value].id)
-            drawSpring(springG, dragged, [mousePos.value.x, mousePos.value.y])
-        }
+        // springG.clear()
+        // const p0 = engine.value.body_position(bodyBoxes[0].id)
+        // drawSpring(springG, [START_X - SPACING, START_Y], p0)
+        // for (let i = 0; i < 2; i++) {
+        //     const a = engine.value.body_position(bodyBoxes[i].id)
+        //     const b = engine.value.body_position(bodyBoxes[i + 1].id)
+        //     drawSpring(springG, a, b)
+        // }
+        // if (isDragging.value) {
+        //     const dragged = engine.value.body_position(bodyBoxes[dragIndex.value].id)
+        //     drawSpring(springG, dragged, [mousePos.value.x, mousePos.value.y])
+        // }
+
+        let st = performance.now();
+        engine.value.step();
+        let et = performance.now();
+        console.log('step time', et - st, 'ms')
+        console.log('step', engine.value.getDT())
 
 
         for (const { id, g } of bodyBoxes) {
-            const pos = engine.value.body_position(id)
-            const angle = engine.value.body_angle(id)
-            g.position.set(pos[0], pos[1])
-            g.rotation = angle
+            const x = engine.value.getBodyX(id);
+            const y = engine.value.getBodyY(id);
+            const angle = engine.value.getBodyAngle(id);
+
+            g.position.set(x, y)
+            g.rotation = angle;
         }
 
-        for (const { id, g } of elementBoxes) {
-            if (!g) continue;
-            const pos = engine.value.body_position(id)
-            const angle = engine.value.body_angle(id)
-            g.position.set(pos[0], pos[1])
-            g.rotation = angle
-        }
+
+
+        // for (const { id, g } of bodyBoxes) {
+        //     const pos = engine.value.body_position(id)
+        //     const angle = engine.value.body_angle(id)
+        //     g.position.set(pos[0], pos[1])
+        //     g.rotation = angle
+        // }
+
+        // for (const { id, g } of elementBoxes) {
+        //     if (!g) continue;
+        //     const pos = engine.value.body_position(id)
+        //     const angle = engine.value.body_angle(id)
+        //     g.position.set(pos[0], pos[1])
+        //     g.rotation = angle
+        // }
     }
 
     app.value.ticker.add(tickerFunction.value);
+
 });
+
+
 
 
 onUnmounted(() => {
@@ -369,24 +394,24 @@ onUnmounted(() => {
         springG = null;
     }
 
-    bodyBoxes.forEach(box => {
-        if (box.g) {
-            app.value?.stage?.removeChild(box.g)
-            box.g.destroy(true)
-        }
-    })
+    // bodyBoxes.forEach(box => {
+    //     if (box.g) {
+    //         app.value?.stage?.removeChild(box.g)
+    //         box.g.destroy(true)
+    //     }
+    // })
 
-    bodyBoxes.length = 0;
+    // bodyBoxes.length = 0;
 
 
-    elementBoxes.forEach(box => {
-        if (box.g) {
-            app.value?.stage?.removeChild(box.g)
-            box.g.destroy(true)
-        }
-    })
+    // elementBoxes.forEach(box => {
+    //     if (box.g) {
+    //         app.value?.stage?.removeChild(box.g)
+    //         box.g.destroy(true)
+    //     }
+    // })
 
-    elementBoxes.length = 0;
+    // elementBoxes.length = 0;
 
     if (app.value) {
         if (pixiContainer.value && pixiContainer.value.contains(app.value.canvas)) {
@@ -401,7 +426,7 @@ onUnmounted(() => {
     }
 
     if (engine.value) {
-        engine.value.destroy();
+        // engine.value.destroy();
     }
 
     app.value = null
