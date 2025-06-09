@@ -49,7 +49,7 @@ function setupResizeObserver() {
     resizeObserver.value = new ResizeObserver(() => {
 
         canvasOnResize()
-        // syncElementBoxes()
+        syncElementBoxes()
     });
 
     if (props.elementData.container.element) {
@@ -117,18 +117,18 @@ function syncElementBoxes() {
     const elements = props.elementData?.elements || [];
     if (!container) return;
 
-    elementBoxes.forEach(box => { if (box.g) app.value.stage.removeChild(box.g) });
     elementBoxes.length = 0;
 
     for (const el of elements) {
         if (!el.textWidth || !el.textHeight) continue;
         if (el.element.nodeName === "DIV") continue;
 
-        const id = engine.value.add_fixed_body(
+        const id = engine.value.addBoxBody(
             el.textX + (el.textWidth / 2),
             el.textY + (el.textHeight / 2),
-            el.textWidth / 2,
-            el.textHeight / 2
+            el.textWidth,
+            el.textHeight,
+            true
         );
 
         elementBoxes.push({ id: id, g: null });
@@ -140,7 +140,7 @@ function initPendulumBlocks() {
 
 
 
-    START_X = container.width / 2
+    START_X = container.width / 4
     START_Y = container.height / 2.5
 
 
@@ -177,11 +177,13 @@ function initPendulumBlocks() {
     // }
 
 
+
     for (let i = 0; i < 3; i+=2) {
         const id = engine.value.addBoxBody(
             START_X/2 * (i + 1), START_Y,
             BOX_SIZE, BOX_SIZE, false
         );
+        engine.value.addGravity(id);
 
 
         const g = new Graphics()
@@ -227,7 +229,7 @@ const canvasOnResize = async () => {
     }
 
     if (engine.value) {
-        // engine.value.set_bounds(width, height);  
+        engine.value.setBounds(width, height);  
     }
 };
 
@@ -305,13 +307,14 @@ onMounted(async () => {
 
 
     initPendulumBlocks()
-    // syncElementBoxes()
+    syncElementBoxes()
+
+    
 
 
     springG = new Graphics()
     springG.zIndex = 1
     app.value.stage.addChild(springG)
-
     let last = performance.now()
     tickerFunction.value = () => {
         const now = performance.now()
@@ -331,19 +334,19 @@ onMounted(async () => {
         //     drawSpring(springG, dragged, [mousePos.value.x, mousePos.value.y])
         // }
 
+        console.log(engine.value.getWallBodyIndices())
         let st = performance.now();
         engine.value.step();
         let et = performance.now();
-        console.log('step time', et - st, 'ms')
-        console.log('step', engine.value.getDT())
+        // console.log('step time', et - st, 'ms')
+        // console.log('step', engine.value.getDT())
 
 
         for (const { id, g } of bodyBoxes) {
-            const x = engine.value.getBodyX(id);
-            const y = engine.value.getBodyY(id);
+            const pos = engine.value.getBodyPos(id);
             const angle = engine.value.getBodyAngle(id);
 
-            g.position.set(x, y)
+            g.position.set(pos.x, pos.y);
             g.rotation = angle;
         }
 
