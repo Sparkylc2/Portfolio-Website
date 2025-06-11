@@ -76,7 +76,9 @@
                                         </div>
                                     </div>
                                     <div v-else-if="activeSection === 'Details'" key="details" class="section-content">
-                                        <div class="project-details" v-html="currentProject?.detailedDescription"></div>
+                                        <!-- <div class="project-details" v-html="currentProject?.detailedDescription"></div> -->
+                                         <component :is="currentProject?.detailedDescription"
+                                            v-if="currentProject?.detailedDescription" class="project-details" />
                                     </div>
                                 </Transition>
                             </div>
@@ -94,6 +96,10 @@ import AirfoilSimulator from '../components/AirfoilSimulator.vue'
 import PhysicsEngine from '../components/PhysicsEngine.vue'
 import WindTurbineBEM from '../components/WindTurbineBEM.vue'
 import { useElementTracker } from '../composables/usePhysicsEngine.js'
+
+import PhysicsDetails from '../components/PhysicsDetails.vue'
+import AirfoilSimulatorDetails from '../components/AirfoilSimulatorDetails.vue'
+import WindTurbineBEMDetails from '../components/WindTurbineBEMDetails.vue'
 
 const props = defineProps({
     activeSection: String,
@@ -137,23 +143,7 @@ const projects = [
         github: 'https://github.com/Sparkylc2/PhysicsEngine',
         demo: null,
         interactiveComponent: PhysicsEngine,
-        detailedDescription: `
-        <h3>About the Project</h3>
-        <p>My first major project, written over the course of a number of months.</p>
-        <p> It features: </p>
-        <ul>
-          <li>, Rod Constraints, and Motor Constraints</li>
-          <li>Interactive pendulum demonstration</li>
-          <li>Collision detection</li>
-        </ul>
-        
-        <h3>Features</h3>
-        <ul>
-          <li>Real-time physics simulation</li>
-          <li>Interactive pendulum demonstration</li>
-          <li>Collision detection</li>
-        </ul>
-      `,
+        detailedDescription: PhysicsDetails,
         color: 'red',
         dateRange: 'December 2023 - March 2024'
     },
@@ -164,17 +154,7 @@ const projects = [
         github: 'https://github.com/yourusername/turbine-designer',
         demo: null,
         interactiveComponent: WindTurbineBEM,
-        detailedDescription: `
-        <h3>About the Project</h3>
-        <p>Description of the wind turbine designer...</p>
-        
-        <h3>Features</h3>
-        <ul>
-          <li>Real-time 3D visualization</li>
-          <li>Customizable parameters</li>
-          <li>Performance analysis</li>
-        </ul>
-      `,
+        detailedDescription: WindTurbineBEMDetails,
         color: 'blue',
         dateRange: 'May 2025 - June 2025'
     },
@@ -185,57 +165,9 @@ const projects = [
         github: 'https://github.com/yourusername/panel-airfoil',
         demo: null,
         interactiveComponent: AirfoilSimulator,
-        detailedDescription: `
-        <h3>About the Project</h3>
-        <p>A sophisticated panel method implementation for analyzing airfoil performance in potential flow conditions.</p>
-        
-        <h3>Features</h3>
-        <ul>
-          <li>Real-time pressure distribution calculation</li>
-          <li>Lift and drag coefficient analysis</li>
-          <li>Interactive airfoil geometry modification</li>
-          <li>Streamline visualization</li>
-        </ul>
-        
-        <h3>Technical Details</h3>
-        <ul>
-          <li>Source and vortex panel method implementation</li>
-          <li>Kutta condition enforcement</li>
-          <li>Automated mesh generation</li>
-          <li>Performance optimization for real-time analysis</li>
-        </ul>
-      `,
+        detailedDescription: AirfoilSimulatorDetails,
         color: 'blue',
         dateRange: 'February 2025 - March 2025'
-    },
-    {
-        title: 'Numerical Methods Library',
-        description: 'Comprehensive implementation of advanced numerical methods for engineering applications.',
-        technologies: ['Python', 'NumPy', 'SymPy', 'Jupyter'],
-        github: 'https://github.com/yourusername/numerical-methods',
-        demo: 'https://demo-link.com',
-        interactiveComponent: null,
-        detailedDescription: `
-        <h3>About the Project</h3>
-        <p>A robust collection of numerical methods implementations developed during advanced engineering coursework.</p>
-        
-        <h3>Features</h3>
-        <ul>
-          <li>Root finding algorithms (Newton-Raphson, Secant, Bisection)</li>
-          <li>Linear system solvers (Gauss-Seidel, SOR, Conjugate Gradient)</li>
-          <li>ODE solvers (Runge-Kutta, Adams-Bashforth)</li>
-          <li>Optimization algorithms (Gradient Descent, Conjugate Gradient)</li>
-        </ul>
-        
-        <h3>Applications</h3>
-        <ul>
-          <li>Heat transfer simulations</li>
-          <li>Structural analysis</li>
-          <li>Fluid dynamics calculations</li>
-          <li>Optimization problems</li>
-        </ul>
-      `,
-        color: 'yellow'
     }
 ]
 
@@ -325,6 +257,7 @@ const { elementData } = useElementTracker(overviewSection, {
 * {
     box-sizing: border-box;
 }
+
 .projects-container,
 .projects-grid-wrapper,
 .project-details-section,

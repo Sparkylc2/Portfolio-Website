@@ -287,3 +287,231 @@ export function useElementTracker(containerRef, options = {}) {
 		cleanup,
 	};
 }
+
+
+
+export class MouseInteractionManager {
+    constructor(app, engine, camera) {
+        this.app = app;
+        this.engine = engine;
+        this.camera = camera;
+        
+        this.mousePos = { x: 0, y: 0 };
+        this.mouseDown = false;
+        this.isDragging = false;
+        this.draggedBodyIndex = -1;
+        
+
+        this.currentTool = 'select';
+        this.toolConfig = {
+            box: { width: 20, height: 20 },
+            circle: { radius: 10 },
+            spring: { stiffness: 300, damping: 10, anchorMode: 'body' },
+            motor: { targetVelocity: 5 }
+        };
+        
+
+        this.interactionResults = [];
+        this.springPreview = null;
+        
+
+        this.onBodyAdded = null;
+        this.onForceAdded = null;
+    }
+    
+    setTool(tool) {
+        this.currentTool = tool;
+        this.clearInteractionResults();
+    }
+    
+    updateToolConfig(tool, config) {
+        this.toolConfig[tool] = { ...this.toolConfig[tool], ...config };
+    }
+    
+    screenToWorld(screenX, screenY) {
+        return { x: screenX, y: screenY };
+    }
+    
+    onPointerDown(event) {
+        const rect = this.app.canvas.getBoundingClientRect();
+        const x = event.clientX - rect.left;
+        const y = event.clientY - rect.top;
+        const worldPos = this.screenToWorld(x, y);
+        
+        this.mousePos = worldPos;
+        this.mouseDown = true;
+        
+        switch (this.currentTool) {
+            case 'select':
+                this.handleSelectTool(worldPos);
+                break;
+            case 'box':
+                this.addBox(worldPos);
+                break;
+            case 'circle':
+                this.addCircle(worldPos);
+                break;
+            case 'spring':
+                this.handleSpringTool(worldPos);
+                break;
+            case 'motor':
+                this.handleMotorTool(worldPos);
+                break;
+        }
+    }
+    
+    onPointerMove(event) {
+        const rect = this.app.canvas.getBoundingClientRect();
+        const x = event.clientX - rect.left;
+        const y = event.clientY - rect.top;
+        const worldPos = this.screenToWorld(x, y);
+        
+        this.mousePos = worldPos;
+        
+        if (this.isDragging && this.draggedBodyIndex >= 0) {
+            this.engine.update_mouse_position(worldPos.x, worldPos.y);
+        }
+        
+        if (this.currentTool === 'spring' && this.interactionResults.length === 1) {
+            this.updateSpringPreview(worldPos);
+        }
+    }
+    
+    onPointerUp() {
+        this.mouseDown = false;
+        
+        if (this.isDragging) {
+            this.engine.end_mouse_drag();
+            this.isDragging = false;
+            this.draggedBodyIndex = -1;
+        }
+    }
+    
+    handleSelectTool(worldPos) {
+        const bodyIndex = this.engine.start_mouse_drag(worldPos.x, worldPos.y);
+        
+        if (bodyIndex >= 0) {
+            this.isDragging = true;
+            this.draggedBodyIndex = bodyIndex;
+        }
+    }
+    
+    addBox(worldPos) {
+        const config = this.toolConfig.box;
+        const index = this.engine.addBoxBody(
+            worldPos.x, 
+            worldPos.y, 
+            config.width, 
+            config.height, 
+            false
+        );
+        
+        this.engine.addGravity(index);
+        
+        if (this.onBodyAdded) {
+            this.onBodyAdded('box', index, worldPos);
+        }
+    }
+    
+    addCircle(worldPos) {
+        const config = this.toolConfig.circle;
+        const index = this.engine.addCircleBody(
+            worldPos.x, 
+            worldPos.y, 
+            config.radius, 
+            false
+        );
+        
+        this.engine.addGravity(index);
+        
+        if (this.onBodyAdded) {
+            this.onBodyAdded('circle', index, worldPos);
+        }
+    }
+    
+    handleSpringTool(worldPos) {
+        const bodyIndex = this.engine.getBodyAtPosition(worldPos.x, worldPos.y);
+        
+        if (this.toolConfig.spring.anchorMode === 'body' && bodyIndex >= 0) {
+            this.interactionResults.push({
+                bodyIndex,
+                worldPos: { ...worldPos },
+                localPos: this.worldToLocal(worldPos, bodyIndex)
+            });
+            
+            if (this.interactionResults.length === 2) {
+                const config = this.toolConfig.spring;
+                this.engine.addSpringBetween(
+                    this.interactionResults[0].bodyIndex,
+                    this.interactionResults[1].bodyIndex,
+                    config.stiffness,
+                    config.damping
+                );
+                
+                if (this.onForceAdded) {
+                    this.onForceAdded('spring', this.interactionResults);
+                }
+                
+                this.clearInteractionResults();
+            }
+        } else if (this.toolConfig.spring.anchorMode === 'fixed') {
+            if (bodyIndex >= 0) {
+                const config = this.toolConfig.spring;
+                this.engine.addSpringToPoint(
+                    bodyIndex,
+                    worldPos.x,
+                    worldPos.y,
+                    config.stiffness,
+                    config.damping
+                );
+                
+                if (this.onForceAdded) {
+                    this.onForceAdded('spring', [{ bodyIndex, worldPos }]);
+                }
+            }
+        }
+    }
+    
+    handleMotorTool(worldPos) {
+        const bodyIndex = this.engine.getBodyAtPosition(worldPos.x, worldPos.y);
+        
+        if (bodyIndex >= 0) {
+            const config = this.toolConfig.motor;
+            this.engine.addMotorToBody(bodyIndex, config.targetVelocity);
+            
+            if (this.onForceAdded) {
+                this.onForceAdded('motor', [{ bodyIndex }]);
+            }
+        }
+    }
+    
+    worldToLocal(worldPos, bodyIndex) {
+        const bodyX = this.engine.getBodyX(bodyIndex);
+        const bodyY = this.engine.getBodyY(bodyIndex);
+        const angle = this.engine.getBodyAngle(bodyIndex);
+        
+        const dx = worldPos.x - bodyX;
+        const dy = worldPos.y - bodyY;
+        const cos = Math.cos(-angle);
+        const sin = Math.sin(-angle);
+        
+        return {
+            x: dx * cos - dy * sin,
+            y: dx * sin + dy * cos
+        };
+    }
+    
+    updateSpringPreview(worldPos) {
+
+        if (this.springPreview) {
+            this.springPreview.updateEndPoint(worldPos);
+        }
+    }
+    
+    clearInteractionResults() {
+        this.interactionResults = [];
+        if (this.springPreview) {
+            this.springPreview.clear();
+        }
+    }
+}

@@ -154,52 +154,6 @@ const papers = [
         ,
         color: 'blue',
         dateRange: '2024-01-15 to 2024-02-15'
-    },
-    {
-        title: 'Advances in Panel Method Aerodynamics',
-        authors: 'Michael Brown, Sarah Davis, Thomas Wilson',
-        venue: 'Journal of Computational Physics 2024',
-        description: 'Recent developments in panel method implementations for aerodynamic analysis with applications to modern aircraft design.',
-        keywords: ['Aerodynamics', 'Panel Methods', 'CFD', 'Aircraft Design'],
-        pdf: 'https://example.com/paper3.pdf',
-        arxiv: 'https://arxiv.org/abs/2024.34567',
-        doi: 'https://doi.org/10.1016/j.jcp.2024.02.456',
-        detailedDescription: `
-        <h3>Abstract</h3>
-        <p>We present recent advances in panel method implementations that significantly improve accuracy and computational efficiency for aerodynamic analysis...</p>
-        
-        <h3>Technical Innovations</h3>
-        <ul>
-          <li>Adaptive mesh refinement strategies</li>
-          <li>High-order panel representations</li>
-          <li>GPU acceleration techniques</li>
-        </ul>`
-        ,
-        color: 'green',
-        dateRange: '2024-01-15 to 2024-02-15'
-    },
-    {
-        title: 'Numerical Methods for Fluid-Structure Interaction',
-        authors: 'Lisa Anderson, Robert Martin, Karen Thompson',
-        venue: 'International Journal of Numerical Methods in Engineering 2024',
-        description: 'Comprehensive review and new developments in numerical methods for solving fluid-structure interaction problems.',
-        keywords: ['FSI', 'Numerical Methods', 'Computational Mechanics', 'FEM'],
-        pdf: 'https://example.com/paper4.pdf',
-        arxiv: 'https://arxiv.org/abs/2024.45678',
-        doi: 'https://doi.org/10.1002/nme.2024.789',
-        detailedDescription: `
-        <h3>Abstract</h3>
-        <p>This paper provides a comprehensive review of current numerical methods for fluid-structure interaction and introduces novel approaches...</p>
-        
-        <h3>Contributions</h3>
-        <ul>
-          <li>Unified framework for FSI problems</li>
-          <li>Improved stability conditions</li>
-          <li>Parallel implementation strategies</li>
-        </ul>`
-        ,
-        color: 'yellow',
-        dateRange: '2024-01-15 to 2024-02-15'
     }
 ]
 

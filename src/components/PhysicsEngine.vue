@@ -27,13 +27,15 @@ const tickerFunction = ref(null);
 const resizeObserver = shallowRef(null)
 
 
+const activeTool = ref('Box')
+const toolMap = { None: 0, Circle: 1, Box: 2, Spring: 3, Motor: 4 }
 
 const elementBoxes = []
 const bodyBoxes = []
-let springG = null
+let forceGraphics = null
 
 
-const BOX_SIZE = 16.5
+const BOX_SIZE = 30
 const NUM_BOXES = 3
 const SPACING = 40
 let START_X = 0
@@ -72,145 +74,139 @@ watch(() => props.elementData?.container, (newContainer, oldContainer) => {
 
 
 
+watch(() => activeTool, (t) => {
+    if (engine.value) engine.value.setActiveTool(toolMap[t] ?? 0)
+}, { immediate: true })
+
+
+// watch(() => circleRadius, (r) => {
+//     if (engine.value) engine.value.setCircleRadius(r)
+// }, { immediate: true })
+
+
 
 
 function onPointerDown(ev) {
-    if (!app.value) return;
-    const rect = app.value.canvas.getBoundingClientRect();
-    const x = ev.clientX - rect.left;
-    const y = ev.clientY - rect.top;
-
-    const idx = engine.value.start_mouse_drag(x, y);
-
-    if (idx === -1) return;
-    if (!bodyBoxes[idx]) return;
+    if (!app.value || !engine.value) return;
+    const { left, top } = app.value.canvas.getBoundingClientRect()
+    const x = ev.clientX - left
+    const y = ev.clientY - top
 
 
-    isDragging.value = true;
-    dragIndex.value = idx
-    mousePos.value = { x: x, y: y }
-
+    console.log('Pointer down at:', x, y)
+    engine.value.mouseDown(x, y)
 }
 
 
-function onPointerMove(e) {
-    if (!app.value) return;
-    if (!isDragging.value) return
-
-    const rect = app.value.canvas.getBoundingClientRect()
-    const x = e.clientX - rect.left
-    const y = e.clientY - rect.top
-    mousePos.value = { x, y }
-    engine.value.update_mouse_position(x, y)
+function onPointerMove(ev) {
+    if (!app.value || !engine.value) return
+    const { left, top } = app.value.canvas.getBoundingClientRect()
+    engine.value.mouseMove(ev.clientX - left, ev.clientY - top)
 }
 
-function onPointerUp() {
-    if (!app.value) return;
 
-    engine.value.end_mouse_drag()
-    isDragging.value = false
-    dragIndex.value = -1
+function onPointerUp(ev) {
+    if (!app.value || !engine.value) return
+    const { left, top } = app.value.canvas.getBoundingClientRect()
+    engine.value.mouseUp(ev.clientX - left, ev.clientY - top)
 }
 
 function syncElementBoxes() {
-    const container = props.elementData?.container;
-    const elements = props.elementData?.elements || [];
-    if (!container) return;
+    // const container = props.elementData?.container;
+    // const elements = props.elementData?.elements || [];
+    // if (!container) return;
 
-    elementBoxes.length = 0;
+    // elementBoxes.length = 0;
 
-    for (const el of elements) {
-        if (!el.textWidth || !el.textHeight) continue;
-        if (el.element.nodeName === "DIV") continue;
+    // for (const el of elements) {
+    //     if (!el.textWidth || !el.textHeight) continue;
+    //     if (el.element.nodeName === "DIV") continue;
 
-        const id = engine.value.addBoxBody(
-            el.textX + (el.textWidth / 2),
-            el.textY + (el.textHeight / 2),
-            el.textWidth,
-            el.textHeight,
-            true
-        );
+    //     const id = engine.value.addBoxBody(
+    //         el.textX + (el.textWidth / 2),
+    //         el.textY + (el.textHeight / 2),
+    //         el.textWidth,
+    //         el.textHeight,
+    //         true
+    //     );
 
-        elementBoxes.push({ id: id, g: null });
-    }
+    //     elementBoxes.push({ id: id, g: null, type: "box" });
+    // }
 }
+
 
 function initPendulumBlocks() {
-    const container = props.elementData?.container;
+    // const container = props.elementData?.container;
 
 
 
-    START_X = container.width / 4
-    START_Y = container.height / 2.5
+    // START_X = container.width / 4
+    // START_Y = container.height / 2.5
+
+    // let first = null;
+
+    // for (let i = 0; i < NUM_BOXES; i++) {
+    //     const id = addBoxBody(START_X + i * SPACING, START_Y,
+    //         BOX_SIZE, BOX_SIZE, false);
+    //     if (i == 0) {
+    //         // engine.value.addSpringToPoint(id, START_X - SPACING, START_Y, 10, 0);
+    //         engine.value.addGravity(id);
+    //         const anchor = new Graphics()
+    //         anchor.zIndex = 3
+    //         anchor.circle(START_X - SPACING, START_Y, 10)
+    //         anchor.fill(0xffffff)
+    //         anchor.setStrokeStyle({
+    //             width: 3, color: 0x000000
+    //         });
+
+    //         anchor.stroke()
+    //         app.value.stage.addChild(anchor)
+    //     } else {
+    //         engine.value.addSpringBetween(
+    //             bodyBoxes[i - 1].id, id, 10, 0
+    //         )
+    //         engine.value.addGravity(id);
+    //     }
 
 
-    for (let i = 0; i < NUM_BOXES; i++) {
-        const id = engine.value.addBoxBody(
-            START_X + i * SPACING, START_Y,
-            BOX_SIZE, BOX_SIZE, false
-        )
-
-        const g = new Graphics()
-        g.zIndex = 2
-        g.rect(-BOX_SIZE, -BOX_SIZE, BOX_SIZE * 2, BOX_SIZE * 2)
-        g.fill(0xffffff)
-        g.setStrokeStyle({
-            width: 3,
-            color: 0x000000
-        })
-        g.stroke()
-
-        app.value.stage.addChild(g)
-        bodyBoxes.push({ id, g })
-    }
-
-
-
-    // engine.value.add_fixed_distance_constraint(
-    //     START_X - SPACING, START_Y,
-    //     bodyBoxes[0].id, SPACING, 0.9
-    // )
-    // for (let i = 0; i < bodyBoxes.length - 1; i++) {
-    //     engine.value.add_distance_constraint(
-    //         bodyBoxes[i].id, bodyBoxes[i + 1].id, SPACING, 0.9
-    //     )
-    // }
-
-
-
-    for (let i = 0; i < 3; i+=2) {
-        const id = engine.value.addBoxBody(
-            START_X/2 * (i + 1), START_Y,
-            BOX_SIZE, BOX_SIZE, false
-        );
-        engine.value.addGravity(id);
-
-
-        const g = new Graphics()
-        g.zIndex = 2
-        g.rect(-BOX_SIZE, -BOX_SIZE, BOX_SIZE * 2, BOX_SIZE * 2)
-        g.fill(0xffffff)
-        g.setStrokeStyle({
-            width: 3,
-            color: 0x000000
-        })
-        g.stroke()
-        app.value.stage.addChild(g)
-        bodyBoxes.push({ id, g })
-        
-    }
-
-    const anchor = new Graphics()
-    anchor.zIndex = 3
-    anchor.circle(START_X - SPACING, START_Y, 10)
-    anchor.fill(0xffffff)
-    anchor.setStrokeStyle({
-        width: 3, color: 0x000000
-    });
-
-    anchor.stroke()
-    app.value.stage.addChild(anchor)
 }
+
+
+// engine.value.add_fixed_distance_constraint(
+//     START_X - SPACING, START_Y,
+//     bodyBoxes[0].id, SPACING, 0.9
+// )
+// for (let i = 0; i < bodyBoxes.length - 1; i++) {
+//     engine.value.add_distance_constraint(
+//         bodyBoxes[i].id, bodyBoxes[i + 1].id, SPACING, 0.9
+//     )
+// }
+
+
+
+// for (let i = 0; i < 3; i += 2) {
+//     const id = engine.value.addBoxBody(
+//         START_X / 2 * (i + 1), START_Y,
+//         BOX_SIZE, BOX_SIZE, false
+//     );
+//     engine.value.addGravity(id);
+
+
+//     const g = new Graphics()
+//     g.zIndex = 2
+//     g.rect(-BOX_SIZE, -BOX_SIZE, BOX_SIZE * 2, BOX_SIZE * 2)
+//     g.fill(0xffffff)
+//     g.setStrokeStyle({
+//         width: 3,
+//         color: 0x000000
+//     })
+//     g.stroke()
+//     app.value.stage.addChild(g)
+//     bodyBoxes.push({ id, g })
+
+// }
+
+// }
 
 const canvasOnResize = async () => {
     if (!pixiContainer.value || !props.elementData?.container) return;
@@ -223,39 +219,58 @@ const canvasOnResize = async () => {
     pixiContainer.value.style.top = `${props.elementData.container.ref.offsetTop}px`;
     pixiContainer.value.style.width = `${width}px`;
     pixiContainer.value.style.height = `${height}px`;
-    
+
     if (app.value && app.value.renderer) {
         app.value.renderer.resize(width, height);
     }
 
     if (engine.value) {
-        engine.value.setBounds(width, height);  
+        engine.value.setBounds(width, height);
     }
 };
 
 
+
+function addBoxBody(x, y, width, height, is_static) {
+    const id = engine.value.addBoxBody(x, y,
+        width, height, is_static);
+    const g = new Graphics()
+    g.zIndex = 2
+    g.rect(-BOX_SIZE / 2, -BOX_SIZE / 2, BOX_SIZE, BOX_SIZE)
+    g.fill(0xffffff)
+    g.setStrokeStyle({
+        width: 3,
+        color: 0x000000
+    })
+    g.stroke()
+
+    app.value.stage.addChild(g)
+    bodyBoxes.push({ id: id, g: g, type: "box" })
+    return id;
+}
+
 function drawSpring(g, a, b, segments = 6, offset = 10) {
-    const dx = b[0] - a[0], dy = b[1] - a[1]
+    const dx = b.x - a.x, dy = b.y - a.y
     const len = Math.hypot(dx, dy); if (!len) return
     const dir = [dx / len, dy / len]
     const perp = [-dir[1], dir[0]]
     const step = len / segments
-    let start = [...a]
+    let start = [a.x, a.y]
 
 
 
     const zigzag = (thick, color, g) => {
         g.setStrokeStyle({ width: thick, color: color })
 
-        g.moveTo(a[0], a[1])
-        g.lineTo(b[0], b[1])
+        g.moveTo(a.x, a.y)
+        g.lineTo(b.x, b.y)
         g.stroke()
 
-        start = [...a]
+        start = [a.x, a.y]
         for (let i = 0; i < segments; i++) {
             const end = [
-                a[0] + dir[0] * step * (i + 1),
-                a[1] + dir[1] * step * (i + 1)
+                a.x + dir[0] * step * (i + 1),
+                a.y + dir[1] * step * (i + 1)
             ]
             const mid = [(start[0] + end[0]) / 2, (start[1] + end[1]) / 2]
             const offsetDir = i % 2 ? -1 : 1
@@ -276,14 +291,81 @@ function drawSpring(g, a, b, segments = 6, offset = 10) {
     zigzag(2, 0xffffff, g)
 }
 
+function drawRotationArrow(graphics, x, y, angularVelocity) {
+    const radius = 15;
+    const direction = angularVelocity > 0 ? 1 : -1;
+    const arrowSize = 5;
+
+    graphics.arc(x, y, radius, 0, Math.PI * 1.5 * direction);
 
 
-onMounted(async () => {
-    // await initWasm()
-    // engine.value = new PhysicsEngineModule()
-    // engine.value.set_gravity(0, 981)
+    const arrowAngle = Math.PI * 1.5 * direction;
+    const arrowX = x + Math.cos(arrowAngle) * radius;
+    const arrowY = y + Math.sin(arrowAngle) * radius;
 
-    engine.value = await PhysicsEngineModule()
+    graphics.lineTo(
+        arrowX + Math.cos(arrowAngle + Math.PI * 0.8) * arrowSize,
+        arrowY + Math.sin(arrowAngle + Math.PI * 0.8) * arrowSize
+    );
+    graphics.moveTo(arrowX, arrowY);
+    graphics.lineTo(
+        arrowX + Math.cos(arrowAngle - Math.PI * 0.8) * arrowSize,
+        arrowY + Math.sin(arrowAngle - Math.PI * 0.8) * arrowSize
+    );
+}
+
+function drawForceGraphics() {
+    if (!forceGraphics) return;
+
+    const forces = engine.value.getAllForcesForVisualization();
+
+    forceGraphics.clear();
+    for (let i = 0; i < forces.length; i++) {
+        const force = forces[i];
+        if (force.type === "spring") {
+            const pointA = force.pointA;
+            const pointB = force.pointB;
+            drawSpring(forceGraphics, pointA, pointB, 6, 10);
+        } else if (force.type === "motor") {
+            if (force.bodyIndex >= 0) {
+                const body = bodyBoxes.find(b => b.id === force.bodyIndex);
+                if (body) {
+                    forceGraphics.lineStyle(1, 0xFF0000);
+                    const x = engine.value.getBodyX(force.bodyIndex);
+                    const y = engine.value.getBodyY(force.bodyIndex);
+
+                    forceGraphics.beginFill(0xFF0000, 0.1);
+                    forceGraphics.drawCircle(x, y, 10);
+                    forceGraphics.endFill();
+
+                    drawRotationArrow(forceGraphics, x, y, force.targetAngularVelocity);
+                }
+            }
+        }
+    }
+}
+
+
+function initListeners() {
+    if (!pixiContainer.value) return;
+
+    window.addEventListener('pointerdown', onPointerDown);
+    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointerup', onPointerUp);
+    window.addEventListener('pointerleave', onPointerUp);
+}
+
+function initForceGraphics() {
+    if (!app.value) return;
+
+    forceGraphics = new Graphics();
+    forceGraphics.zIndex = 1;
+    app.value.stage.addChild(forceGraphics);
+}
+
+async function initPixiContainer() {
+    if (!pixiContainer.value) return;
+
 
     app.value = new Application()
     await app.value.init({
@@ -292,34 +374,26 @@ onMounted(async () => {
         resolution: window.devicePixelRatio || 1,
         autoDensity: true,
         antialias: true
-    })
+    });
 
     pixiContainer.value.appendChild(app.value.canvas)
-    canvasOnResize()
+    pixiContainer.value.classList.add('pixi-container');
+    pixiContainer.value.style.position = 'absolute';
+    pixiContainer.value.style.background = 'transparent';
 
 
-    app.value.stage.eventMode = 'static'
-    window.addEventListener('mousedown', onPointerDown)
-    window.addEventListener('mousemove', onPointerMove)
-    window.addEventListener('mouseup', onPointerUp)
-    window.addEventListener('touchend', onPointerUp)
-    window.addEventListener('touchcancel', onPointerUp)
+}
 
 
-    initPendulumBlocks()
-    syncElementBoxes()
+function initTicker() {
 
-    
-
-
-    springG = new Graphics()
-    springG.zIndex = 1
-    app.value.stage.addChild(springG)
     let last = performance.now()
     tickerFunction.value = () => {
         const now = performance.now()
-        engine.value.setDT((now - last)/100)
+        engine.value.setDT((now - last) / 100)
         last = now
+
+        drawForceGraphics()
 
         // springG.clear()
         // const p0 = engine.value.body_position(bodyBoxes[0].id)
@@ -334,15 +408,9 @@ onMounted(async () => {
         //     drawSpring(springG, dragged, [mousePos.value.x, mousePos.value.y])
         // }
 
-        console.log(engine.value.getWallBodyIndices())
-        let st = performance.now();
         engine.value.step();
-        let et = performance.now();
-        // console.log('step time', et - st, 'ms')
-        // console.log('step', engine.value.getDT())
 
-
-        for (const { id, g } of bodyBoxes) {
+        for (const { id, g, type } of bodyBoxes) {
             const pos = engine.value.getBodyPos(id);
             const angle = engine.value.getBodyAngle(id);
 
@@ -370,6 +438,21 @@ onMounted(async () => {
 
     app.value.ticker.add(tickerFunction.value);
 
+}
+
+onMounted(async () => {
+    engine.value = await PhysicsEngineModule()
+
+
+    await initPixiContainer()
+    initListeners()
+    initForceGraphics()
+    canvasOnResize()
+    syncElementBoxes()
+    initPendulumBlocks()
+    initTicker()
+
+
 });
 
 
@@ -381,7 +464,7 @@ onUnmounted(() => {
     window.removeEventListener('touchend', onPointerUp)
     window.removeEventListener('touchcancel', onPointerUp)
 
-    
+
     if (resizeObserver.value) {
         resizeObserver.value.disconnect()
         resizeObserver.value = null
@@ -391,10 +474,10 @@ onUnmounted(() => {
         app.value.ticker.remove(tickerFunction)
     }
 
-    if (springG) {
-        app.value?.stage?.removeChild(springG);
-        springG.destroy(true);
-        springG = null;
+    if (forceGraphics) {
+        app.value?.stage?.removeChild(forceGraphics);
+        forceGraphics.destroy(true);
+        forceGraphics = null;
     }
 
     // bodyBoxes.forEach(box => {
@@ -447,6 +530,7 @@ onUnmounted(() => {
     position: absolute;
     cursor: pointer;
     background: transparent;
+    pointer-events: auto;
 }
 
 .outer-wrapper {
