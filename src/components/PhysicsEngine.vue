@@ -1,47 +1,145 @@
 <template>
-    <div ref="pixiContainer" class="pixi-container" />
-</template>
+    <div class="physics-container">
+        <div class="controls-overlay">
+            <div class="control-panel">
+                <div class="panel-header">
+                    <Dropdown v-model="activeTool" :options="toolDropdownItems" placeholder="Select Tool"
+                        class="tool-dropdown" />
+                </div>
 
+                <Transition name="panel-content" mode="out-in">
+                    <div v-if="activeTool !== 'None'" class="panel-content">
+                        <div v-if="activeTool === 'Box'" class="tool-controls">
+                            <div class="control-group">
+                                <label>
+                                    Width:
+                                    <input v-model.number="toolProps.box.width" type="number" step="5" min="10"
+                                        max="200" />
+                                    <span class="underline"></span>
+                                </label>
+                                <label>
+                                    Height:
+                                    <input v-model.number="toolProps.box.height" type="number" step="5" min="10"
+                                        max="200" />
+                                    <span class="underline"></span>
+                                </label>
+                            </div>
+                            <div class="control-group">
+                                <label class="checkbox-label">
+                                    <input v-model="toolProps.box.isStatic" type="checkbox" class="custom-checkbox" />
+                                    <span class="checkbox-text">Static</span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input v-model="toolProps.box.gravity" type="checkbox" class="custom-checkbox" />
+                                    <span class="checkbox-text">Gravity</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div v-else-if="activeTool === 'Circle'" class="tool-controls">
+                            <div class="control-group">
+                                <label>
+                                    Radius:
+                                    <input v-model.number="toolProps.circle.radius" type="number" step="5" min="5"
+                                        max="100" />
+                                    <span class="underline"></span>
+                                </label>
+                            </div>
+                            <div class="control-group">
+                                <label class="checkbox-label">
+                                    <input v-model="toolProps.circle.isStatic" type="checkbox"
+                                        class="custom-checkbox" />
+                                    <span class="checkbox-text">Static</span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input v-model="toolProps.circle.gravity" type="checkbox" class="custom-checkbox" />
+                                    <span class="checkbox-text">Gravity</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div v-else-if="activeTool === 'Spring'" class="tool-controls">
+                            <div class="control-group">
+                                <label>
+                                    Stiffness:
+                                    <input v-model.number="toolProps.spring.stiffness" type="number" step="50" min="50"
+                                        max="1000" />
+                                    <span class="underline"></span>
+                                </label>
+                                <label>
+                                    Damping:
+                                    <input v-model.number="toolProps.spring.damping" type="number" step="1" min="0"
+                                        max="50" />
+                                    <span class="underline"></span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div v-else-if="activeTool === 'Motor'" class="tool-controls">
+                            <div class="control-group">
+                                <label>
+                                    Speed:
+                                    <input v-model.number="toolProps.motor.speed" type="number" step="0.5" min="-20"
+                                        max="20" />
+                                    <span class="underline"></span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </Transition>
+            </div>
+        </div>
+
+        <div ref="pixiContainer" class="pixi-container" />
+    </div>
+</template>
 
 <script setup>
 import { Application, Graphics } from 'pixi.js'
-import { nextTick, onMounted, onUnmounted, ref, shallowRef, watch } from 'vue'
-// import initWasm, { PhysicsEngineModule } from '../wasm/physics_engine.js'
+import { computed, nextTick, onMounted, onUnmounted, ref, shallowRef, watch } from 'vue'
 import PhysicsEngineModule from '../wasm/physics_engine.js'
+import Dropdown from './Dropdown.vue'
+
+const toolLabels = {
+    None: 'Select',
+    Circle: 'Add Circle',
+    Box: 'Add Box',
+    Spring: 'Add Spring',
+    Motor: 'Add Motor'
+}
+
+const toolDropdownItems = computed(() => {
+    return Object.entries(toolLabels).map(([key, label]) => ({
+        value: key,
+        label: label,
+    }))
+})
 
 const props = defineProps({
     elementData: { type: Object, default: null },
     projectColor: { type: String, default: 'red' }
 })
 
-
 const pixiContainer = ref(null)
 const app = ref(null)
 const engine = ref(null)
 
-const isDragging = ref(false)
-const mousePos = ref({ x: 0, y: 0 })
-const dragIndex = ref(-1)
-const tickerFunction = ref(null);
-
+const tickerFunction = ref(null)
 const resizeObserver = shallowRef(null)
-
 
 const activeTool = ref('Box')
 const toolMap = { None: 0, Circle: 1, Box: 2, Spring: 3, Motor: 4 }
 
-const elementBoxes = []
-const bodyBoxes = []
-let forceGraphics = null
+const toolProps = ref({
+    box: { width: 50, height: 50, isStatic: false, gravity: true },
+    circle: { radius: 25, isStatic: false, gravity: true },
+    spring: { stiffness: 300, damping: 10 },
+    motor: { speed: 5 }
+})
 
-
-const BOX_SIZE = 30
-const NUM_BOXES = 3
-const SPACING = 40
-let START_X = 0
-let START_Y = 0
-
-
+const bodyGraphics = new Map()
+const forceGraphics = ref(null)
+const previewGraphics = ref(null)
 
 function setupResizeObserver() {
     if (!props.elementData?.container || !app.value || !engine.value) return
@@ -49,10 +147,8 @@ function setupResizeObserver() {
     if (resizeObserver.value) resizeObserver.value.disconnect()
 
     resizeObserver.value = new ResizeObserver(() => {
-
         canvasOnResize()
-        syncElementBoxes()
-    });
+    })
 
     if (props.elementData.container.element) {
         resizeObserver.value.observe(props.elementData.container.element)
@@ -72,205 +168,83 @@ watch(() => props.elementData?.container, (newContainer, oldContainer) => {
     setupResizeObserver()
 }, { immediate: true })
 
-
-
-watch(() => activeTool, (t) => {
-    if (engine.value) engine.value.setActiveTool(toolMap[t] ?? 0)
+watch(() => activeTool.value, (tool) => {
+    if (engine.value) {
+        engine.value.setActiveTool(toolMap[tool])
+    }
 }, { immediate: true })
 
+watch(() => toolProps.value.box, (props) => {
+    if (engine.value) {
+        engine.value.setBoxProperties(props.width, props.height, props.isStatic, props.gravity)
+    }
+}, { deep: true, immediate: true })
 
-// watch(() => circleRadius, (r) => {
-//     if (engine.value) engine.value.setCircleRadius(r)
-// }, { immediate: true })
+watch(() => toolProps.value.circle, (props) => {
+    if (engine.value) {
+        engine.value.setCircleProperties(props.radius, props.isStatic, props.gravity)
+    }
+}, { deep: true, immediate: true })
 
+watch(() => toolProps.value.spring, (props) => {
+    if (engine.value) {
+        engine.value.setSpringProperties(props.stiffness, props.damping)
+    }
+}, { deep: true, immediate: true })
 
-
+watch(() => toolProps.value.motor, (props) => {
+    if (engine.value) {
+        engine.value.setMotorProperties(props.speed)
+    }
+}, { deep: true, immediate: true })
 
 function onPointerDown(ev) {
-    if (!app.value || !engine.value) return;
+    if (!app.value || !engine.value) return
     const { left, top } = app.value.canvas.getBoundingClientRect()
     const x = ev.clientX - left
     const y = ev.clientY - top
 
-
-    console.log('Pointer down at:', x, y)
     engine.value.mouseDown(x, y)
 }
-
 
 function onPointerMove(ev) {
     if (!app.value || !engine.value) return
     const { left, top } = app.value.canvas.getBoundingClientRect()
-    engine.value.mouseMove(ev.clientX - left, ev.clientY - top)
-}
+    const x = ev.clientX - left
+    const y = ev.clientY - top
 
+    engine.value.mouseMove(x, y)
+}
 
 function onPointerUp(ev) {
     if (!app.value || !engine.value) return
     const { left, top } = app.value.canvas.getBoundingClientRect()
-    engine.value.mouseUp(ev.clientX - left, ev.clientY - top)
+    const x = ev.clientX - left
+    const y = ev.clientY - top
+
+    engine.value.mouseUp(x, y)
 }
 
-function syncElementBoxes() {
-    // const container = props.elementData?.container;
-    // const elements = props.elementData?.elements || [];
-    // if (!container) return;
+function drawSpring(g, xa, ya, xb, yb, segments = 6, offset = 10) {
+    const dx = xb - xa, dy = yb - ya
+    const len = Math.hypot(dx, dy)
+    if (!len) return
 
-    // elementBoxes.length = 0;
-
-    // for (const el of elements) {
-    //     if (!el.textWidth || !el.textHeight) continue;
-    //     if (el.element.nodeName === "DIV") continue;
-
-    //     const id = engine.value.addBoxBody(
-    //         el.textX + (el.textWidth / 2),
-    //         el.textY + (el.textHeight / 2),
-    //         el.textWidth,
-    //         el.textHeight,
-    //         true
-    //     );
-
-    //     elementBoxes.push({ id: id, g: null, type: "box" });
-    // }
-}
-
-
-function initPendulumBlocks() {
-    // const container = props.elementData?.container;
-
-
-
-    // START_X = container.width / 4
-    // START_Y = container.height / 2.5
-
-    // let first = null;
-
-    // for (let i = 0; i < NUM_BOXES; i++) {
-    //     const id = addBoxBody(START_X + i * SPACING, START_Y,
-    //         BOX_SIZE, BOX_SIZE, false);
-    //     if (i == 0) {
-    //         // engine.value.addSpringToPoint(id, START_X - SPACING, START_Y, 10, 0);
-    //         engine.value.addGravity(id);
-    //         const anchor = new Graphics()
-    //         anchor.zIndex = 3
-    //         anchor.circle(START_X - SPACING, START_Y, 10)
-    //         anchor.fill(0xffffff)
-    //         anchor.setStrokeStyle({
-    //             width: 3, color: 0x000000
-    //         });
-
-    //         anchor.stroke()
-    //         app.value.stage.addChild(anchor)
-    //     } else {
-    //         engine.value.addSpringBetween(
-    //             bodyBoxes[i - 1].id, id, 10, 0
-    //         )
-    //         engine.value.addGravity(id);
-    //     }
-
-
-}
-
-
-// engine.value.add_fixed_distance_constraint(
-//     START_X - SPACING, START_Y,
-//     bodyBoxes[0].id, SPACING, 0.9
-// )
-// for (let i = 0; i < bodyBoxes.length - 1; i++) {
-//     engine.value.add_distance_constraint(
-//         bodyBoxes[i].id, bodyBoxes[i + 1].id, SPACING, 0.9
-//     )
-// }
-
-
-
-// for (let i = 0; i < 3; i += 2) {
-//     const id = engine.value.addBoxBody(
-//         START_X / 2 * (i + 1), START_Y,
-//         BOX_SIZE, BOX_SIZE, false
-//     );
-//     engine.value.addGravity(id);
-
-
-//     const g = new Graphics()
-//     g.zIndex = 2
-//     g.rect(-BOX_SIZE, -BOX_SIZE, BOX_SIZE * 2, BOX_SIZE * 2)
-//     g.fill(0xffffff)
-//     g.setStrokeStyle({
-//         width: 3,
-//         color: 0x000000
-//     })
-//     g.stroke()
-//     app.value.stage.addChild(g)
-//     bodyBoxes.push({ id, g })
-
-// }
-
-// }
-
-const canvasOnResize = async () => {
-    if (!pixiContainer.value || !props.elementData?.container) return;
-
-    await nextTick();
-    const { x, y, width, height } = props.elementData.container;
-    pixiContainer.value.style.position = 'absolute';
-
-    pixiContainer.value.style.left = `${props.elementData.container.ref.offsetLeft}px`;
-    pixiContainer.value.style.top = `${props.elementData.container.ref.offsetTop}px`;
-    pixiContainer.value.style.width = `${width}px`;
-    pixiContainer.value.style.height = `${height}px`;
-
-    if (app.value && app.value.renderer) {
-        app.value.renderer.resize(width, height);
-    }
-
-    if (engine.value) {
-        engine.value.setBounds(width, height);
-    }
-};
-
-
-
-function addBoxBody(x, y, width, height, is_static) {
-    const id = engine.value.addBoxBody(x, y,
-        width, height, is_static);
-    const g = new Graphics()
-    g.zIndex = 2
-    g.rect(-BOX_SIZE / 2, -BOX_SIZE / 2, BOX_SIZE, BOX_SIZE)
-    g.fill(0xffffff)
-    g.setStrokeStyle({
-        width: 3,
-        color: 0x000000
-    })
-    g.stroke()
-
-    app.value.stage.addChild(g)
-    bodyBoxes.push({ id: id, g: g, type: "box" })
-    return id;
-}
-
-function drawSpring(g, a, b, segments = 6, offset = 10) {
-    const dx = b.x - a.x, dy = b.y - a.y
-    const len = Math.hypot(dx, dy); if (!len) return
     const dir = [dx / len, dy / len]
     const perp = [-dir[1], dir[0]]
     const step = len / segments
-    let start = [a.x, a.y]
 
-
-
-    const zigzag = (thick, color, g) => {
+    const zigzag = (thick, color) => {
         g.setStrokeStyle({ width: thick, color: color })
-
-        g.moveTo(a.x, a.y)
-        g.lineTo(b.x, b.y)
+        g.moveTo(xa, ya)
+        g.lineTo(xb, yb)
         g.stroke()
 
-        start = [a.x, a.y]
+        let start = [xa, ya]
         for (let i = 0; i < segments; i++) {
             const end = [
-                a.x + dir[0] * step * (i + 1),
-                a.y + dir[1] * step * (i + 1)
+                xa + dir[0] * step * (i + 1),
+                ya + dir[1] * step * (i + 1)
             ]
             const mid = [(start[0] + end[0]) / 2, (start[1] + end[1]) / 2]
             const offsetDir = i % 2 ? -1 : 1
@@ -287,85 +261,158 @@ function drawSpring(g, a, b, segments = 6, offset = 10) {
         }
     }
 
-    zigzag(7, 0x000000, g)
-    zigzag(2, 0xffffff, g)
+    zigzag(7, 0x000000)
+    zigzag(2, 0xffffff)
 }
 
-function drawRotationArrow(graphics, x, y, angularVelocity) {
-    const radius = 15;
-    const direction = angularVelocity > 0 ? 1 : -1;
-    const arrowSize = 5;
+function drawRotationArrow(g, x, y, speed) {
+    const radius = 20
+    const direction = speed > 0 ? 1 : -1
+    const arrowSize = 6
 
-    graphics.arc(x, y, radius, 0, Math.PI * 1.5 * direction);
+    g.setStrokeStyle({ width: 3, color: 0xFF0000 })
+    g.arc(x, y, radius, 0, Math.PI * 1.5 * direction)
+    g.stroke()
 
+    const arrowAngle = Math.PI * 1.5 * direction
+    const arrowX = x + Math.cos(arrowAngle) * radius
+    const arrowY = y + Math.sin(arrowAngle) * radius
 
-    const arrowAngle = Math.PI * 1.5 * direction;
-    const arrowX = x + Math.cos(arrowAngle) * radius;
-    const arrowY = y + Math.sin(arrowAngle) * radius;
-
-    graphics.lineTo(
+    g.moveTo(arrowX, arrowY)
+    g.lineTo(
         arrowX + Math.cos(arrowAngle + Math.PI * 0.8) * arrowSize,
         arrowY + Math.sin(arrowAngle + Math.PI * 0.8) * arrowSize
-    );
-    graphics.moveTo(arrowX, arrowY);
-    graphics.lineTo(
+    )
+    g.moveTo(arrowX, arrowY)
+    g.lineTo(
         arrowX + Math.cos(arrowAngle - Math.PI * 0.8) * arrowSize,
         arrowY + Math.sin(arrowAngle - Math.PI * 0.8) * arrowSize
-    );
+    )
+    g.stroke()
 }
 
-function drawForceGraphics() {
-    if (!forceGraphics) return;
+function updateBodies() {
+    if (!engine.value) return
 
-    const forces = engine.value.getAllForcesForVisualization();
+    const bodies = engine.value.getBodiesForRender()
 
-    forceGraphics.clear();
-    for (let i = 0; i < forces.length; i++) {
-        const force = forces[i];
-        if (force.type === "spring") {
-            const pointA = force.pointA;
-            const pointB = force.pointB;
-            drawSpring(forceGraphics, pointA, pointB, 6, 10);
-        } else if (force.type === "motor") {
-            if (force.bodyIndex >= 0) {
-                const body = bodyBoxes.find(b => b.id === force.bodyIndex);
-                if (body) {
-                    forceGraphics.lineStyle(1, 0xFF0000);
-                    const x = engine.value.getBodyX(force.bodyIndex);
-                    const y = engine.value.getBodyY(force.bodyIndex);
+    const existingIds = new Set(bodies.map(b => b.id))
+    for (const [id, g] of bodyGraphics) {
+        if (!existingIds.has(id)) {
+            app.value.stage.removeChild(g)
+            g.destroy()
+            bodyGraphics.delete(id)
+        }
+    }
 
-                    forceGraphics.beginFill(0xFF0000, 0.1);
-                    forceGraphics.drawCircle(x, y, 10);
-                    forceGraphics.endFill();
+    for (const body of bodies) {
+        let g = bodyGraphics.get(body.id)
 
-                    drawRotationArrow(forceGraphics, x, y, force.targetAngularVelocity);
-                }
+        if (!g) {
+            g = new Graphics()
+            g.zIndex = 2
+            app.value.stage.addChild(g)
+            bodyGraphics.set(body.id, g)
+        }
+
+        g.position.set(body.x, body.y)
+        g.rotation = body.angle
+
+        g.clear()
+
+        const fillColor = body.isSelected ? 0xFFAAAA : 0xFFFFFF
+        const strokeColor = body.isStatic ? 0x666666 : 0x000000
+        const strokeWidth = body.isSelected ? 4 : 3
+
+        g.setStrokeStyle({ width: strokeWidth, color: strokeColor })
+        g.beginFill(fillColor)
+
+        if (body.type === 'circle') {
+            g.drawCircle(0, 0, body.radius)
+        } else {
+            g.drawRect(-body.width / 2, -body.height / 2, body.width, body.height)
+        }
+
+        g.endFill()
+        g.stroke()
+    }
+}
+
+function updateForces() {
+    if (!engine.value || !forceGraphics.value) return
+
+    const forces = engine.value.getForcesForRender()
+
+    forceGraphics.value.clear()
+    previewGraphics.value.clear()
+
+    for (const force of forces) {
+        if (force.type === 'spring') {
+            drawSpring(forceGraphics.value, force.xa, force.ya, force.xb, force.yb)
+        } else if (force.type === 'motor') {
+            const body = engine.value.getBodiesForRender().find(b => b.id === force.bodyId)
+            if (body) {
+                forceGraphics.value.beginFill(0xFF0000, 0.1)
+                forceGraphics.value.drawCircle(body.x, body.y, 15)
+                forceGraphics.value.endFill()
+
+                drawRotationArrow(forceGraphics.value, body.x, body.y, force.speed)
             }
+        } else if (force.type === 'spring_preview') {
+            const rect = app.value.canvas.getBoundingClientRect()
+            const mouseX = mousePos.x - rect.left
+            const mouseY = mousePos.y - rect.top
+
+            previewGraphics.value.setStrokeStyle({ width: 2, color: 0x888888, alpha: 0.5 })
+            previewGraphics.value.moveTo(force.xa, force.ya)
+            previewGraphics.value.lineTo(mouseX, mouseY)
+            previewGraphics.value.stroke()
         }
     }
 }
 
-
-function initListeners() {
-    if (!pixiContainer.value) return;
-
-    window.addEventListener('pointerdown', onPointerDown);
-    window.addEventListener('pointermove', onPointerMove);
-    window.addEventListener('pointerup', onPointerUp);
-    window.addEventListener('pointerleave', onPointerUp);
+const mousePos = ref({ x: 0, y: 0 })
+function trackMouse(ev) {
+    mousePos.value = { x: ev.clientX, y: ev.clientY }
 }
 
-function initForceGraphics() {
-    if (!app.value) return;
+const canvasOnResize = async () => {
+    if (!pixiContainer.value || !props.elementData?.container) return
 
-    forceGraphics = new Graphics();
-    forceGraphics.zIndex = 1;
-    app.value.stage.addChild(forceGraphics);
+    await nextTick()
+    const { width, height } = props.elementData.container
+
+    pixiContainer.value.style.position = 'absolute'
+    pixiContainer.value.style.left = `${props.elementData.container.ref.offsetLeft}px`
+    pixiContainer.value.style.top = `${props.elementData.container.ref.offsetTop}px`
+    pixiContainer.value.style.width = `${width}px`
+    pixiContainer.value.style.height = `${height}px`
+
+    if (app.value?.renderer) {
+        app.value.renderer.resize(width, height)
+    }
+
+    if (engine.value) {
+        engine.value.setBounds(width, height)
+    }
+}
+
+function initListeners() {
+    window.addEventListener('pointerdown', onPointerDown)
+    window.addEventListener('pointermove', onPointerMove)
+    window.addEventListener('pointerup', onPointerUp)
+    window.addEventListener('mousemove', trackMouse)
+}
+
+function removeListeners() {
+    window.removeEventListener('pointerdown', onPointerDown)
+    window.removeEventListener('pointermove', onPointerMove)
+    window.removeEventListener('pointerup', onPointerUp)
+    window.removeEventListener('mousemove', trackMouse)
 }
 
 async function initPixiContainer() {
-    if (!pixiContainer.value) return;
-
+    if (!pixiContainer.value) return
 
     app.value = new Application()
     await app.value.init({
@@ -374,169 +421,303 @@ async function initPixiContainer() {
         resolution: window.devicePixelRatio || 1,
         autoDensity: true,
         antialias: true
-    });
+    })
 
     pixiContainer.value.appendChild(app.value.canvas)
-    pixiContainer.value.classList.add('pixi-container');
-    pixiContainer.value.style.position = 'absolute';
-    pixiContainer.value.style.background = 'transparent';
 
+    forceGraphics.value = new Graphics()
+    forceGraphics.value.zIndex = 1
+    app.value.stage.addChild(forceGraphics.value)
 
+    previewGraphics.value = new Graphics()
+    previewGraphics.value.zIndex = 3
+    app.value.stage.addChild(previewGraphics.value)
 }
 
-
 function initTicker() {
-
     let last = performance.now()
+
     tickerFunction.value = () => {
         const now = performance.now()
         engine.value.setDT((now - last) / 100)
         last = now
 
-        drawForceGraphics()
+        engine.value.processEvents()
+        engine.value.step()
 
-        // springG.clear()
-        // const p0 = engine.value.body_position(bodyBoxes[0].id)
-        // drawSpring(springG, [START_X - SPACING, START_Y], p0)
-        // for (let i = 0; i < 2; i++) {
-        //     const a = engine.value.body_position(bodyBoxes[i].id)
-        //     const b = engine.value.body_position(bodyBoxes[i + 1].id)
-        //     drawSpring(springG, a, b)
-        // }
-        // if (isDragging.value) {
-        //     const dragged = engine.value.body_position(bodyBoxes[dragIndex.value].id)
-        //     drawSpring(springG, dragged, [mousePos.value.x, mousePos.value.y])
-        // }
-
-        engine.value.step();
-
-        for (const { id, g, type } of bodyBoxes) {
-            const pos = engine.value.getBodyPos(id);
-            const angle = engine.value.getBodyAngle(id);
-
-            g.position.set(pos.x, pos.y);
-            g.rotation = angle;
-        }
-
-
-
-        // for (const { id, g } of bodyBoxes) {
-        //     const pos = engine.value.body_position(id)
-        //     const angle = engine.value.body_angle(id)
-        //     g.position.set(pos[0], pos[1])
-        //     g.rotation = angle
-        // }
-
-        // for (const { id, g } of elementBoxes) {
-        //     if (!g) continue;
-        //     const pos = engine.value.body_position(id)
-        //     const angle = engine.value.body_angle(id)
-        //     g.position.set(pos[0], pos[1])
-        //     g.rotation = angle
-        // }
+        updateBodies()
+        updateForces()
     }
 
-    app.value.ticker.add(tickerFunction.value);
-
+    app.value.ticker.add(tickerFunction.value)
 }
 
 onMounted(async () => {
     engine.value = await PhysicsEngineModule()
 
-
     await initPixiContainer()
     initListeners()
-    initForceGraphics()
     canvasOnResize()
-    syncElementBoxes()
-    initPendulumBlocks()
     initTicker()
-
-
-});
-
-
-
+})
 
 onUnmounted(() => {
-    window.removeEventListener('mousemove', onPointerMove)
-    window.removeEventListener('mouseup', onPointerUp)
-    window.removeEventListener('touchend', onPointerUp)
-    window.removeEventListener('touchcancel', onPointerUp)
-
+    removeListeners()
 
     if (resizeObserver.value) {
         resizeObserver.value.disconnect()
         resizeObserver.value = null
     }
-    if (app.value?.ticker) {
+
+    if (app.value?.ticker && tickerFunction.value) {
         app.value.ticker.stop()
-        app.value.ticker.remove(tickerFunction)
+        app.value.ticker.remove(tickerFunction.value)
     }
 
-    if (forceGraphics) {
-        app.value?.stage?.removeChild(forceGraphics);
-        forceGraphics.destroy(true);
-        forceGraphics = null;
+    for (const [_, g] of bodyGraphics) {
+        app.value?.stage?.removeChild(g)
+        g.destroy(true)
+    }
+    bodyGraphics.clear()
+
+    if (forceGraphics.value) {
+        app.value?.stage?.removeChild(forceGraphics.value)
+        forceGraphics.value.destroy(true)
     }
 
-    // bodyBoxes.forEach(box => {
-    //     if (box.g) {
-    //         app.value?.stage?.removeChild(box.g)
-    //         box.g.destroy(true)
-    //     }
-    // })
-
-    // bodyBoxes.length = 0;
-
-
-    // elementBoxes.forEach(box => {
-    //     if (box.g) {
-    //         app.value?.stage?.removeChild(box.g)
-    //         box.g.destroy(true)
-    //     }
-    // })
-
-    // elementBoxes.length = 0;
+    if (previewGraphics.value) {
+        app.value?.stage?.removeChild(previewGraphics.value)
+        previewGraphics.value.destroy(true)
+    }
 
     if (app.value) {
-        if (pixiContainer.value && pixiContainer.value.contains(app.value.canvas)) {
+        if (pixiContainer.value?.contains(app.value.canvas)) {
             pixiContainer.value.removeChild(app.value.canvas)
         }
-
-        app.value.destroy(true, {
-            children: true,
-            texture: true,
-            baseTexture: true
-        })
-    }
-
-    if (engine.value) {
-        // engine.value.destroy();
+        app.value.destroy(true, { children: true, texture: true, baseTexture: true })
     }
 
     app.value = null
-    engine.value = null;
-    tickerFunction.value = null;
-    pixiContainer.value = null;
-});
+    engine.value = null
+    tickerFunction.value = null
+})
 
-
+defineExpose({
+    activeTool,
+    toolProps
+})
 </script>
 
 <style scoped>
+.physics-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+}
+
 .pixi-container {
     display: block;
     position: absolute;
-    cursor: pointer;
+    width: 100%;
+    height: 100%;
     background: transparent;
     pointer-events: auto;
 }
 
-.outer-wrapper {
-    width: 100%;
-    height: 100%;
-    position: relative;
+.controls-overlay {
+    position: absolute;
+    top: 1rem;
+    left: 1rem;
+    z-index: 100;
+    pointer-events: none;
+}
+
+.control-panel {
+    background-color: rgb(36, 36, 36);
+    border-radius: 8px;
     overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    pointer-events: auto;
+    min-width: 200px;
+    max-width: 280px;
+}
+
+.panel-header {
+    padding: 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.tool-dropdown {
+    width: 100%;
+}
+
+.panel-content {
+    padding: 1rem;
+}
+
+.tool-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.control-group {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    justify-content: space-between;
+}
+
+.control-group label {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    font-weight: 600;
+    font-size: 14px;
+    color: #ccc;
+    cursor: text;
+    flex: 1;
+    min-width: 80px;
+}
+
+.control-group input[type="number"] {
+    all: unset;
+    font-size: 14px;
+    padding: 0.3rem 0;
+    color: #fff;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    transition: border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    width: 100%;
+    appearance: textfield;
+}
+
+.control-group input[type="number"]::-webkit-inner-spin-button,
+.control-group input[type="number"]::-webkit-outer-spin-button {
+    appearance: none;
+    margin: 0;
+}
+
+.control-group input:focus {
+    outline: none;
+}
+
+.underline {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    height: 2px;
+    width: 0;
+    background-color: rgb(140, 172, 204);
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 9999px;
+}
+
+.control-group input:hover~.underline,
+.control-group input:focus~.underline {
+    width: 100%;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    user-select: none;
+    font-weight: 600;
+    font-size: 14px;
+    color: #ccc;
+    padding: 0.3rem 0;
+    transition: color 0.3s ease;
+}
+
+.checkbox-label:hover {
+    color: #fff;
+}
+
+.custom-checkbox {
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 4px;
+    background-color: transparent;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+}
+
+.custom-checkbox:hover {
+    border-color: rgba(140, 172, 204, 0.5);
+}
+
+.custom-checkbox:checked {
+    background-color: rgb(140, 172, 204);
+    border-color: rgb(140, 172, 204);
+}
+
+.custom-checkbox:checked::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 5px;
+    width: 5px;
+    height: 9px;
+    border: solid white;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+    animation: checkIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.checkbox-text {
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.panel-content-enter-active,
+.panel-content-leave-active {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.panel-content-enter-from {
+    opacity: 0;
+    transform: translateY(-10px);
+}
+
+.panel-content-leave-to {
+    opacity: 0;
+    transform: translateY(10px);
+}
+
+@keyframes checkIn {
+    from {
+        transform: rotate(45deg) scale(0);
+        opacity: 0;
+    }
+
+    50% {
+        transform: rotate(45deg) scale(1.2);
+    }
+
+    to {
+        transform: rotate(45deg) scale(1);
+        opacity: 1;
+    }
+}
+
+@media (max-width: 768px) {
+    .controls-overlay {
+        top: 0.5rem;
+        left: 0.5rem;
+        right: 0.5rem;
+    }
+
+    .control-panel {
+        max-width: none;
+        width: 100%;
+    }
+
+    .panel-content {
+        padding: 0.75rem;
+    }
 }
 </style>
