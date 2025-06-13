@@ -1,7 +1,7 @@
 <template>
     <div class="physics-container">
         <div class="controls-overlay">
-            <div class="control-panel">
+            <div class="control-panel" @pointerdown.stop @pointermove.stop @pointerup.stop>
                 <div class="panel-header">
                     <Dropdown v-model="activeTool" :options="toolDropdownItems" placeholder="Select Tool"
                         class="tool-dropdown" />
@@ -130,6 +130,10 @@ const resizeObserver = shallowRef(null)
 const activeTool = ref('Box')
 const toolMap = { None: 0, Circle: 1, Box: 2, Spring: 3, Motor: 4 }
 
+const mousePos = ref({ x: 0, y: 0 })
+
+
+
 const toolProps = ref({
     box: { width: 50, height: 50, isStatic: false, gravity: true },
     circle: { radius: 25, isStatic: false, gravity: true },
@@ -225,7 +229,7 @@ function onPointerUp(ev) {
     engine.value.mouseUp(x, y)
 }
 
-function drawSpring(g, xa, ya, xb, yb, segments = 6, offset = 10) {
+function drawSpring(g, xa, ya, xb, yb, segments = 6, offset = 10, opacity) {
     const dx = xb - xa, dy = yb - ya
     const len = Math.hypot(dx, dy)
     if (!len) return
@@ -235,7 +239,7 @@ function drawSpring(g, xa, ya, xb, yb, segments = 6, offset = 10) {
     const step = len / segments
 
     const zigzag = (thick, color) => {
-        g.setStrokeStyle({ width: thick, color: color })
+        g.setStrokeStyle({ width: thick, color: color, alpha: opacity || 1 })
         g.moveTo(xa, ya)
         g.lineTo(xb, yb)
         g.stroke()
@@ -265,12 +269,12 @@ function drawSpring(g, xa, ya, xb, yb, segments = 6, offset = 10) {
     zigzag(2, 0xffffff)
 }
 
-function drawRotationArrow(g, x, y, speed) {
+function drawRotationArrow(g, x, y, speed, opacity) {
     const radius = 20
     const direction = speed > 0 ? 1 : -1
     const arrowSize = 6
 
-    g.setStrokeStyle({ width: 3, color: 0xFF0000 })
+    g.setStrokeStyle({ width: 3, color: 0xFF0000, alpha: opacity || 1 })
     g.arc(x, y, radius, 0, Math.PI * 1.5 * direction)
     g.stroke()
 
@@ -325,15 +329,14 @@ function updateBodies() {
         const strokeWidth = body.isSelected ? 4 : 3
 
         g.setStrokeStyle({ width: strokeWidth, color: strokeColor })
-        g.beginFill(fillColor)
+        g.fill(fillColor)
 
         if (body.type === 'circle') {
             g.drawCircle(0, 0, body.radius)
         } else {
-            g.drawRect(-body.width / 2, -body.height / 2, body.width, body.height)
+            g.rect(-body.width / 2, -body.height / 2, body.width, body.height)
         }
-
-        g.endFill()
+        g.fill()
         g.stroke()
     }
 }
@@ -352,29 +355,36 @@ function updateForces() {
         } else if (force.type === 'motor') {
             const body = engine.value.getBodiesForRender().find(b => b.id === force.bodyId)
             if (body) {
-                forceGraphics.value.beginFill(0xFF0000, 0.1)
+                forceGraphics.value.fill(0xFF0000, 0.1)
                 forceGraphics.value.drawCircle(body.x, body.y, 15)
-                forceGraphics.value.endFill()
 
                 drawRotationArrow(forceGraphics.value, body.x, body.y, force.speed)
             }
         } else if (force.type === 'spring_preview') {
             const rect = app.value.canvas.getBoundingClientRect()
-            const mouseX = mousePos.x - rect.left
-            const mouseY = mousePos.y - rect.top
+            const mouseX = mousePos.value.x - rect.left
+            const mouseY = mousePos.value.y - rect.top
 
-            previewGraphics.value.setStrokeStyle({ width: 2, color: 0x888888, alpha: 0.5 })
-            previewGraphics.value.moveTo(force.xa, force.ya)
-            previewGraphics.value.lineTo(mouseX, mouseY)
-            previewGraphics.value.stroke()
+            drawSpring(previewGraphics.value, force.xa, force.ya, mouseX, mouseY, 6, 10, 0.5)
         }
     }
 }
 
-const mousePos = ref({ x: 0, y: 0 })
 function trackMouse(ev) {
     mousePos.value = { x: ev.clientX, y: ev.clientY }
 }
+
+
+function handleKeyDown(evt) {
+    if (evt.code === 'Escape') {
+        return;
+    } else if (evt.code === 'Space') {
+        if (engine.value && app.value?.ticker) {
+            engine.value.toggleIsPaused()
+        }
+    }
+}
+
 
 const canvasOnResize = async () => {
     if (!pixiContainer.value || !props.elementData?.container) return
@@ -397,11 +407,14 @@ const canvasOnResize = async () => {
     }
 }
 
+
+
 function initListeners() {
     window.addEventListener('pointerdown', onPointerDown)
     window.addEventListener('pointermove', onPointerMove)
     window.addEventListener('pointerup', onPointerUp)
     window.addEventListener('mousemove', trackMouse)
+    window.addEventListener('keydown', handleKeyDown)
 }
 
 function removeListeners() {
@@ -409,6 +422,7 @@ function removeListeners() {
     window.removeEventListener('pointermove', onPointerMove)
     window.removeEventListener('pointerup', onPointerUp)
     window.removeEventListener('mousemove', trackMouse)
+    window.removeEventListener('keydown', handleKeyDown)
 }
 
 async function initPixiContainer() {
@@ -426,11 +440,11 @@ async function initPixiContainer() {
     pixiContainer.value.appendChild(app.value.canvas)
 
     forceGraphics.value = new Graphics()
-    forceGraphics.value.zIndex = 1
+    forceGraphics.value.zIndex = 4
     app.value.stage.addChild(forceGraphics.value)
 
     previewGraphics.value = new Graphics()
-    previewGraphics.value.zIndex = 3
+    previewGraphics.value.zIndex = 5
     app.value.stage.addChild(previewGraphics.value)
 }
 
@@ -439,17 +453,43 @@ function initTicker() {
 
     tickerFunction.value = () => {
         const now = performance.now()
-        engine.value.setDT((now - last) / 100)
+        if (!engine.value.isPaused()) {
+            engine.value.setDT((now - last) / 100)
+            engine.value.step()
+        }
         last = now
 
         engine.value.processEvents()
-        engine.value.step()
 
         updateBodies()
         updateForces()
     }
 
     app.value.ticker.add(tickerFunction.value)
+}
+
+function initPhysicsParams() {
+    engine.value.setBoxProperties(
+        toolProps.value.box.width,
+        toolProps.value.box.height,
+        toolProps.value.box.isStatic,
+        toolProps.value.box.gravity
+    )
+
+    engine.value.setCircleProperties(
+        toolProps.value.circle.radius,
+        toolProps.value.circle.isStatic,
+        toolProps.value.circle.gravity
+    )
+
+    engine.value.setSpringProperties(
+        toolProps.value.spring.stiffness,
+        toolProps.value.spring.damping
+    )
+
+    engine.value.setMotorProperties(toolProps.value.motor.speed)
+    engine.value.setActiveTool(toolMap[activeTool.value])
+
 }
 
 onMounted(async () => {
@@ -459,6 +499,9 @@ onMounted(async () => {
     initListeners()
     canvasOnResize()
     initTicker()
+    initPhysicsParams()
+
+
 })
 
 onUnmounted(() => {
@@ -509,17 +552,22 @@ defineExpose({
 </script>
 
 <style scoped>
+
+.sizing {
+    width: 1091px;
+    height: 500px;
+}
 .physics-container {
-    position: relative;
+    position: absolute;
+    padding: 0px;
     width: 100%;
+    flex-grow: 1;
     height: 100%;
 }
 
 .pixi-container {
     display: block;
     position: absolute;
-    width: 100%;
-    height: 100%;
     background: transparent;
     pointer-events: auto;
 }
