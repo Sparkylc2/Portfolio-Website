@@ -59,7 +59,7 @@ body::-webkit-scrollbar {
 #sidebarContainer * {
 	border: none !important;
 	outline: none !important;
-    display: none;
+    display: flex;
 }
 
 #sidebarContainer::-webkit-scrollbar {

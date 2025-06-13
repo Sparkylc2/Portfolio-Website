@@ -89,7 +89,7 @@
                     <div class="result-value">{{ formatWithDynamicUnit(results.power, 'W') }}</div>
                 </div>
                 <div class="result-card" :class="{ warning: results.cp > 0.593 }">
-                    <div class="result-label">Cp</div>
+                    <div class="result-label">Power Coefficient</div>
                     <div class="result-value">{{ results.cp.toFixed(4) }}</div>
                     <div v-if="results.cp > 0.593" class="result-warning">Exceeds Betz limit!</div>
                 </div>

@@ -421,6 +421,7 @@ const { elementData } = useElementTracker(overviewSection, {
     display: flex;
     flex-direction: column;
     min-height: 500px;
+    height:  calc(80vh);
     max-height: calc(100vh - 12rem);
     background: rgb(36, 36, 36);
     border-radius: 0.5rem;
@@ -428,6 +429,7 @@ const { elementData } = useElementTracker(overviewSection, {
     outline-offset: 1px;
     transition: all 0.3s ease;
     overflow: hidden;
+    flex-grow: 1;
 }
 
 .section-content {

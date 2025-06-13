@@ -46,6 +46,10 @@ const props = defineProps({
         type: [String, Number],
         default: ''
     },
+    colorKey: {
+        type: [String],
+        default: ''
+    },
     options: {
         type: Array,
         required: true,

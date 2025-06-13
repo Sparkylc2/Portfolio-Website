@@ -1,94 +1,79 @@
 <template>
-    <div class="physics-container">
-        <div class="controls-overlay">
-            <div class="control-panel" @pointerdown.stop @pointermove.stop @pointerup.stop>
-                <div class="panel-header">
-                    <Dropdown v-model="activeTool" :options="toolDropdownItems" placeholder="Select Tool"
-                        class="tool-dropdown" />
-                </div>
+    <div class="physics-simulator" ref="simulatorContainer">
+        <form class="controls" @submit.prevent>
+            <label>
+                Tool:
+                <select v-model="activeTool">
+                    <option v-for="item in toolDropdownItems" :key="item.value" :value="item.value">
+                        {{ item.label }}
+                    </option>
+                </select>
+            </label>
 
-                <Transition name="panel-content" mode="out-in">
-                    <div v-if="activeTool !== 'None'" class="panel-content">
-                        <div v-if="activeTool === 'Box'" class="tool-controls">
-                            <div class="control-group">
-                                <label>
-                                    Width:
-                                    <input v-model.number="toolProps.box.width" type="number" step="5" min="10"
-                                        max="200" />
-                                    <span class="underline"></span>
-                                </label>
-                                <label>
-                                    Height:
-                                    <input v-model.number="toolProps.box.height" type="number" step="5" min="10"
-                                        max="200" />
-                                    <span class="underline"></span>
-                                </label>
-                            </div>
-                            <div class="control-group">
-                                <label class="checkbox-label">
-                                    <input v-model="toolProps.box.isStatic" type="checkbox" class="custom-checkbox" />
-                                    <span class="checkbox-text">Static</span>
-                                </label>
-                                <label class="checkbox-label">
-                                    <input v-model="toolProps.box.gravity" type="checkbox" class="custom-checkbox" />
-                                    <span class="checkbox-text">Gravity</span>
-                                </label>
-                            </div>
-                        </div>
+            <template v-if="activeTool === 'Box'">
+                <label>
+                    Width:
+                    <input v-model.number="toolProps.box.width" type="number" step="5" min="10" max="200" />
+                    <span class="underline"></span>
+                </label>
+                <label>
+                    Height:
+                    <input v-model.number="toolProps.box.height" type="number" step="5" min="10" max="200" />
+                    <span class="underline"></span>
+                </label>
+                <label class="text-checkbox-label">
+                    <input v-model="toolProps.box.isStatic" type="checkbox" class="text-checkbox-input" />
+                    <span class="text-checkbox">Static</span>
+                </label>
+                <label class="text-checkbox-label">
+                    <input v-model="toolProps.box.gravity" type="checkbox" class="text-checkbox-input" />
+                    <span class="text-checkbox">Gravity</span>
+                </label>
+            </template>
 
-                        <div v-else-if="activeTool === 'Circle'" class="tool-controls">
-                            <div class="control-group">
-                                <label>
-                                    Radius:
-                                    <input v-model.number="toolProps.circle.radius" type="number" step="5" min="5"
-                                        max="100" />
-                                    <span class="underline"></span>
-                                </label>
-                            </div>
-                            <div class="control-group">
-                                <label class="checkbox-label">
-                                    <input v-model="toolProps.circle.isStatic" type="checkbox"
-                                        class="custom-checkbox" />
-                                    <span class="checkbox-text">Static</span>
-                                </label>
-                                <label class="checkbox-label">
-                                    <input v-model="toolProps.circle.gravity" type="checkbox" class="custom-checkbox" />
-                                    <span class="checkbox-text">Gravity</span>
-                                </label>
-                            </div>
-                        </div>
+            <template v-else-if="activeTool === 'Circle'">
+                <label>
+                    Radius:
+                    <input v-model.number="toolProps.circle.radius" type="number" step="5" min="5" max="100" />
+                    <span class="underline"></span>
+                </label>
+                <label class="text-checkbox-label">
+                    <input v-model="toolProps.circle.isStatic" type="checkbox" class="text-checkbox-input" />
+                    <span class="text-checkbox">Static</span>
+                </label>
+                <label class="text-checkbox-label">
+                    <input v-model="toolProps.circle.gravity" type="checkbox" class="text-checkbox-input" />
+                    <span class="text-checkbox">Gravity</span>
+                </label>
+            </template>
 
-                        <div v-else-if="activeTool === 'Spring'" class="tool-controls">
-                            <div class="control-group">
-                                <label>
-                                    Stiffness:
-                                    <input v-model.number="toolProps.spring.stiffness" type="number" step="50" min="50"
-                                        max="1000" />
-                                    <span class="underline"></span>
-                                </label>
-                                <label>
-                                    Damping:
-                                    <input v-model.number="toolProps.spring.damping" type="number" step="1" min="0"
-                                        max="50" />
-                                    <span class="underline"></span>
-                                </label>
-                            </div>
-                        </div>
+            <template v-else-if="activeTool === 'Spring'">
+                <label>
+                    Stiffness:
+                    <input v-model.number="toolProps.spring.stiffness" type="number" step="50" min="50" max="1000" />
+                    <span class="underline"></span>
+                </label>
+                <label>
+                    Damping:
+                    <input v-model.number="toolProps.spring.damping" type="number" step="1" min="0" max="50" />
+                    <span class="underline"></span>
+                </label>
+            </template>
 
-                        <div v-else-if="activeTool === 'Motor'" class="tool-controls">
-                            <div class="control-group">
-                                <label>
-                                    Speed:
-                                    <input v-model.number="toolProps.motor.speed" type="number" step="0.5" min="-20"
-                                        max="20" />
-                                    <span class="underline"></span>
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-                </Transition>
+            <template v-else-if="activeTool === 'Motor'">
+                <label>
+                    Speed:
+                    <input v-model.number="toolProps.motor.speed" type="number" step="0.5" min="-20" max="20" />
+                    <span class="underline"></span>
+                </label>
+            </template>
+
+            <div class="controls-info">
+                <span class="info-text">Press <kbd>Space</kbd> to pause/unpause</span>
             </div>
-        </div>
+        </form>
+
+
 
         <div ref="pixiContainer" class="pixi-container" />
     </div>
@@ -98,7 +83,7 @@
 import { Application, Graphics } from 'pixi.js'
 import { computed, nextTick, onMounted, onUnmounted, ref, shallowRef, watch } from 'vue'
 import PhysicsEngineModule from '../wasm/physics_engine.js'
-import Dropdown from './Dropdown.vue'
+import {getSecondaryColor, getTertiaryColor} from '../composables/useGetColours.js'
 
 const toolLabels = {
     None: 'Select',
@@ -121,6 +106,7 @@ const props = defineProps({
 })
 
 const pixiContainer = ref(null)
+const simulatorContainer = ref(null)
 const app = ref(null)
 const engine = ref(null)
 
@@ -131,8 +117,6 @@ const activeTool = ref('Box')
 const toolMap = { None: 0, Circle: 1, Box: 2, Spring: 3, Motor: 4 }
 
 const mousePos = ref({ x: 0, y: 0 })
-
-
 
 const toolProps = ref({
     box: { width: 50, height: 50, isStatic: false, gravity: true },
@@ -165,12 +149,14 @@ watch(() => props.elementData?.container, (newContainer, oldContainer) => {
 
     if (!oldContainer ||
         newContainer.x !== oldContainer.x ||
-        newContainer.y !== oldContainer.y) {
+        newContainer.y !== oldContainer.y ||
+        newContainer.width !== oldContainer.width ||
+        newContainer.height !== oldContainer.height) {
         canvasOnResize()
     }
 
     setupResizeObserver()
-}, { immediate: true })
+}, { deep: true, immediate: true })
 
 watch(() => activeTool.value, (tool) => {
     if (engine.value) {
@@ -202,7 +188,22 @@ watch(() => toolProps.value.motor, (props) => {
     }
 }, { deep: true, immediate: true })
 
+function overMenu(ev) {
+    const target = ev.target
+
+      const isControlElement = 
+    target.closest('.controls') !== null || 
+    target.tagName === 'SELECT' ||
+    target.tagName === 'INPUT' ||
+    target.tagName === 'LABEL' ||
+    target.classList.contains('checkbox-label') ||
+    target.classList.contains('custom-checkbox') ||
+    target.classList.contains('checkbox-text');
+    return isControlElement;
+}
 function onPointerDown(ev) {
+    if (overMenu(ev)) return
+
     if (!app.value || !engine.value) return
     const { left, top } = app.value.canvas.getBoundingClientRect()
     const x = ev.clientX - left
@@ -212,6 +213,7 @@ function onPointerDown(ev) {
 }
 
 function onPointerMove(ev) {
+    if (overMenu(ev)) return
     if (!app.value || !engine.value) return
     const { left, top } = app.value.canvas.getBoundingClientRect()
     const x = ev.clientX - left
@@ -221,6 +223,7 @@ function onPointerMove(ev) {
 }
 
 function onPointerUp(ev) {
+    if (overMenu(ev)) return
     if (!app.value || !engine.value) return
     const { left, top } = app.value.canvas.getBoundingClientRect()
     const x = ev.clientX - left
@@ -361,6 +364,7 @@ function updateForces() {
                 drawRotationArrow(forceGraphics.value, body.x, body.y, force.speed)
             }
         } else if (force.type === 'spring_preview') {
+            if (activeTool.value !== 'Spring') continue
             const rect = app.value.canvas.getBoundingClientRect()
             const mouseX = mousePos.value.x - rect.left
             const mouseY = mousePos.value.y - rect.top
@@ -374,53 +378,79 @@ function trackMouse(ev) {
     mousePos.value = { x: ev.clientX, y: ev.clientY }
 }
 
-
 function handleKeyDown(evt) {
     if (evt.code === 'Escape') {
         return;
     } else if (evt.code === 'Space') {
+        evt.preventDefault()
         if (engine.value && app.value?.ticker) {
             engine.value.toggleIsPaused()
         }
     }
 }
 
-
 const canvasOnResize = async () => {
-    if (!pixiContainer.value || !props.elementData?.container) return
+    try {
+        if (!pixiContainer.value || !props.elementData?.container) return
 
-    await nextTick()
-    const { width, height } = props.elementData.container
+        await nextTick()
 
-    pixiContainer.value.style.position = 'absolute'
-    pixiContainer.value.style.left = `${props.elementData.container.ref.offsetLeft}px`
-    pixiContainer.value.style.top = `${props.elementData.container.ref.offsetTop}px`
-    pixiContainer.value.style.width = `${width}px`
-    pixiContainer.value.style.height = `${height}px`
+        const container = props.elementData.container;
+        const { width, height, x, y } = container;
 
-    if (app.value?.renderer) {
-        app.value.renderer.resize(width, height)
-    }
 
-    if (engine.value) {
-        engine.value.setBounds(width, height)
+
+
+        pixiContainer.value.style.position = 'fixed'
+        pixiContainer.value.style.left = `${x}px`
+        pixiContainer.value.style.top = `${y}px`
+        pixiContainer.value.style.width = `${width}px`
+        pixiContainer.value.style.height = `${height}px`
+
+        console.log(width, height, x, y);
+        if (app.value?.renderer) {
+            app.value.renderer.resize(width, height)
+        }
+
+        if (engine.value) {
+            engine.value.setBounds(width, height)
+        }
+    } catch (err) {
+        console.error('[PhysicsEngine] Error resizing canvas:', err)
     }
 }
 
+function measureContainerBounds() {
+    if (!pixiContainer.value || !props.elementData?.container) return
+    const containerRef = props.elementData.container.ref;
+    console.log(window.getComputedStyle(containerRef), "style");
 
+    const maxHeight = containerRef.clientHeight;
+    const maxWidth = containerRef.scrollWidth;
+    return {
+        width: maxWidth,
+        height: maxHeight,
+        x: containerRef.offsetLeft,
+        y: containerRef.offsetTop
+    }
+}
 
 function initListeners() {
-    window.addEventListener('pointerdown', onPointerDown)
-    window.addEventListener('pointermove', onPointerMove)
-    window.addEventListener('pointerup', onPointerUp)
+    if (pixiContainer.value) {
+        window.addEventListener('pointerdown', onPointerDown)
+        window.addEventListener('pointermove', onPointerMove)
+        window.addEventListener('pointerup', onPointerUp)
+    }
     window.addEventListener('mousemove', trackMouse)
     window.addEventListener('keydown', handleKeyDown)
 }
 
 function removeListeners() {
-    window.removeEventListener('pointerdown', onPointerDown)
-    window.removeEventListener('pointermove', onPointerMove)
-    window.removeEventListener('pointerup', onPointerUp)
+    if (pixiContainer.value) {
+        pixiContainer.value.removeEventListener('pointerdown', onPointerDown)
+        pixiContainer.value.removeEventListener('pointermove', onPointerMove)
+        pixiContainer.value.removeEventListener('pointerup', onPointerUp)
+    }
     window.removeEventListener('mousemove', trackMouse)
     window.removeEventListener('keydown', handleKeyDown)
 }
@@ -489,7 +519,6 @@ function initPhysicsParams() {
 
     engine.value.setMotorProperties(toolProps.value.motor.speed)
     engine.value.setActiveTool(toolMap[activeTool.value])
-
 }
 
 onMounted(async () => {
@@ -497,11 +526,13 @@ onMounted(async () => {
 
     await initPixiContainer()
     initListeners()
-    canvasOnResize()
     initTicker()
     initPhysicsParams()
 
-
+    if (props.elementData?.container) {
+        canvasOnResize()
+        setupResizeObserver()
+    }
 })
 
 onUnmounted(() => {
@@ -552,188 +583,203 @@ defineExpose({
 </script>
 
 <style scoped>
-
-.sizing {
-    width: 1091px;
-    height: 500px;
-}
-.physics-container {
-    position: absolute;
-    padding: 0px;
+.physics-simulator {
     width: 100%;
-    flex-grow: 1;
+    max-width: 1400px;
+    margin: 0 auto;
     height: 100%;
-}
-
-.pixi-container {
-    display: block;
-    position: absolute;
-    background: transparent;
-    pointer-events: auto;
-}
-
-.controls-overlay {
-    position: absolute;
-    top: 1rem;
-    left: 1rem;
-    z-index: 100;
-    pointer-events: none;
-}
-
-.control-panel {
-    background-color: rgb(36, 36, 36);
-    border-radius: 8px;
-    overflow: hidden;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-    pointer-events: auto;
-    min-width: 200px;
-    max-width: 280px;
-}
-
-.panel-header {
-    padding: 1rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.tool-dropdown {
-    width: 100%;
-}
-
-.panel-content {
-    padding: 1rem;
-}
-
-.tool-controls {
     display: flex;
     flex-direction: column;
-    gap: 1rem;
+    position: relative;
 }
 
-.control-group {
+.controls {
     display: flex;
-    gap: 1rem;
-    flex-wrap: wrap;
-    justify-content: space-between;
+    flex-wrap: nowrap;
+    justify-content: center;
+    gap: 1.5rem;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding: 1rem 1.5rem;
+    background-color: rgb(36, 36, 36);
+    border-radius: 8px;
+    overflow-x: auto;
+    flex-shrink: 0;
 }
 
-.control-group label {
+.controls label {
     position: relative;
     display: flex;
     flex-direction: column;
     font-weight: 600;
     font-size: 14px;
     color: #ccc;
+    white-space: nowrap;
     cursor: text;
-    flex: 1;
-    min-width: 80px;
 }
 
-.control-group input[type="number"] {
+.controls select {
     all: unset;
     font-size: 14px;
     padding: 0.3rem 0;
     color: #fff;
     border-bottom: 1px solid rgba(255, 255, 255, 0.2);
     transition: border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    width: 10rem;
+    appearance: none;
+    background-color: transparent;
+    cursor: pointer;
+    position: relative;
+}
+
+.controls label:has(select)::after {
+    content: '▼';
+    position: absolute;
+    right: 0;
+    bottom: 8px;
+    font-size: 10px;
+    color: #ccc;
+    pointer-events: none;
+}
+
+.controls select option {
+    background-color: rgb(50, 50, 50);
+    color: #fff;
+    padding: 0.5rem;
+}
+
+.controls select:hover~.underline,
+.controls select:focus~.underline {
     width: 100%;
+}
+
+.controls input {
+    all: unset;
+    font-size: 14px;
+    padding: 0.3rem 0;
+    color: #fff;
+    border-bottom: 1px solid transparent;
+    transition: border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    width: 6rem;
     appearance: textfield;
 }
 
-.control-group input[type="number"]::-webkit-inner-spin-button,
-.control-group input[type="number"]::-webkit-outer-spin-button {
+.controls input[type='number'] {
+    appearance: textfield;
+}
+
+.controls input::-webkit-inner-spin-button,
+.controls input::-webkit-outer-spin-button {
     appearance: none;
     margin: 0;
 }
 
-.control-group input:focus {
+.controls input::placeholder {
+    color: rgba(255, 255, 255, 0.3);
+}
+
+.controls input:focus,
+.controls select:focus {
     outline: none;
 }
 
-.underline {
+.controls .underline {
     position: absolute;
     bottom: 0;
     left: 0;
     height: 2px;
     width: 0;
-    background-color: rgb(140, 172, 204);
+    background-color: rgb(204, 140, 140);
     transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     border-radius: 9999px;
 }
 
-.control-group input:hover~.underline,
-.control-group input:focus~.underline {
+.controls input:hover~.underline {
     width: 100%;
 }
 
-.checkbox-label {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    cursor: pointer;
-    user-select: none;
-    font-weight: 600;
-    font-size: 14px;
-    color: #ccc;
-    padding: 0.3rem 0;
-    transition: color 0.3s ease;
+.controls input:focus~.underline {
+    width: 100%;
 }
 
-.checkbox-label:hover {
+.text-checkbox-label {
+  position: relative;
+  display: inline-block;
+  cursor: pointer;
+  margin: 0 5px;
+  user-select: none;
+}
+
+.text-checkbox-input {
+  position: absolute;
+  display: none !important;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  cursor: pointer;
+  z-index: 2;
+}
+
+.text-checkbox {
+  display: inline-block;
+  font-weight: 600;
+  font-size: 14px;
+  color: #ccc;
+  padding: 6px 14px;
+  border-radius: 14px;
+  border: 2px solid transparent;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  background-color: transparent;
+}
+
+.text-checkbox-input:checked + .text-checkbox {
+  color: #fff;
+  border-color: v-bind('getSecondaryColor(props.projectColor)');
+}
+
+.text-checkbox-input:not(:checked):hover + .text-checkbox {
+  border-color: v-bind('getTertiaryColor(props.projectColor)');
+}
+
+
+.controls-info {
+    display: flex;
+    align-items: center;
+    margin-left: 1rem;
+}
+
+.info-text {
+    color: #999;
+    font-size: 13px;
+}
+
+kbd {
+    background-color: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 3px;
+    padding: 2px 6px;
+    font-family: monospace;
+    font-size: 12px;
     color: #fff;
 }
 
-.custom-checkbox {
-    appearance: none;
-    width: 18px;
-    height: 18px;
-    border: 2px solid rgba(255, 255, 255, 0.3);
-    border-radius: 4px;
-    background-color: transparent;
-    cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    position: relative;
+
+.simulation-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    max-width: 1000px;
+    height: 100%;
 }
 
-.custom-checkbox:hover {
-    border-color: rgba(140, 172, 204, 0.5);
-}
 
-.custom-checkbox:checked {
-    background-color: rgb(140, 172, 204);
-    border-color: rgb(140, 172, 204);
-}
-
-.custom-checkbox:checked::after {
-    content: '';
+.pixi-container {
     position: absolute;
-    top: 2px;
-    left: 5px;
-    width: 5px;
-    height: 9px;
-    border: solid white;
-    border-width: 0 2px 2px 0;
-    transform: rotate(45deg);
-    animation: checkIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.checkbox-text {
-    font-weight: 600;
-    font-size: 14px;
-}
-
-.panel-content-enter-active,
-.panel-content-leave-active {
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.panel-content-enter-from {
-    opacity: 0;
-    transform: translateY(-10px);
-}
-
-.panel-content-leave-to {
-    opacity: 0;
-    transform: translateY(10px);
+    background: rgba(36, 36, 36, 0.0);
+    border-radius: 8px;
+    pointer-events: none;
+    z-index: 0;
 }
 
 @keyframes checkIn {
@@ -753,19 +799,23 @@ defineExpose({
 }
 
 @media (max-width: 768px) {
-    .controls-overlay {
-        top: 0.5rem;
-        left: 0.5rem;
-        right: 0.5rem;
-    }
-
-    .control-panel {
-        max-width: none;
-        width: 100%;
-    }
-
-    .panel-content {
+    .controls {
+        gap: 1rem;
         padding: 0.75rem;
+    }
+
+    .controls label {
+        font-size: 13px;
+    }
+
+    .controls input,
+    .controls select {
+        width: 5rem;
+        font-size: 13px;
+    }
+
+    .controls-info {
+        display: none;
     }
 }
 </style>

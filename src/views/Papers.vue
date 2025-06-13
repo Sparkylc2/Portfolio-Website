@@ -14,11 +14,11 @@
                         'active': expandedPaper === index,
                         'inactive': expandedPaper !== null && expandedPaper !== index
                     }" :style="{
-                        borderColor: getBorderColor(paper.color, expandedPaper === index),
-                        '--paper-date-hover': getPaperTitleColor(paper.color)
+                        borderColor: getSecondaryOrTertiaryColor(paper.color, expandedPaper === index),
+                        '--paper-date-hover': getPrimaryColor(paper.color)
                     }" @click="togglePaper(index)">
                         <div class="paper-content">
-                            <h2 :style="{ color: getPaperTitleColor(paper.color) }">{{ paper.title }}</h2>
+                            <h2 :style="{ color: getPrimaryColor(paper.color) }">{{ paper.title }}</h2>
                             <p class="authors">{{ paper.authors }}</p>
                             <p class="venue line-clamp-2">{{ paper.venue }}</p>
                             <p class="description line-clamp-3">{{ paper.description }}</p>
@@ -26,7 +26,7 @@
                                 <span>{{ paper.dateRange }}</span>
                             </div>
                             <div class="paper-indicator"
-                                :style="{ backgroundColor: getPaperIndicatorColor(paper.color) }"></div>
+                                :style="{ backgroundColor: getSecondaryColor(paper.color) }"></div>
                         </div>
                     </div>
                 </div>
@@ -36,18 +36,18 @@
                 :class="{ 'mobile-fullscreen': isMobile }" id="paperDetailsSection">
                 <div class="paper-details-content">
                     <div class="paper-sections">
-                        <div class="section" :style="{ outlineColor: getBorderColor(currentPaper?.color, true) }">
+                        <div class="section" :style="{ outlineColor: getSecondaryOrTertiaryColor(currentPaper?.color, true) }">
                             <Transition name="fade" mode="out-in">
                                 <div v-if="activeSection === 'Paper'" key="paper" class="section-content"
                                     ref="parentScroll" id="sectionContent">
                                     <div v-if="!isMobile && currentPaper?.pdf" class="pdf-viewer" ref="pdfWrapper">
                                         <PDFViewer :pdfFileName="currentPaper.pdf"
-                                            :accentColor="getPaperColor(currentPaper?.color)"
+                                            :accentColor="getSecondaryColor(currentPaper?.color)"
                                             :key="currentPaper?.pdf + currentPaper?.color" />
                                     </div>
                                     <div v-else>
                                         <PDFViewer :pdfFileName="currentPaper.pdf"
-                                            :accentColor="getPaperColor(currentPaper?.color)"
+                                            :accentColor="getSecondaryColor(currentPaper?.color)"
                                             :key="currentPaper?.pdf + currentPaper?.color" />
                                     </div>
                                 </div>
@@ -66,6 +66,7 @@
 <script setup>
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import PDFViewer from '../components/PDFViewer.vue'
+import { getPrimaryColor, getSecondaryColor, getTertiaryColor, getSecondaryOrTertiaryColor} from '../composables/useGetColours'
 
 const props = defineProps({
     activeSection: String,
@@ -110,24 +111,23 @@ const papers = [
         title: 'Theoretical, Computational, and Experimental Approaches to Pipe Flow꞉ A Comparative Study',
         authors: 'Lukas Campbell',
         venue: 'Imperial College London, Department of Aeronautics',
-        description: 'A novel approach to real-time physics simulation using constraint-based methods with improved stability.',
+        description:  'A comprehensive study on the analysis of pipe flow using theoretical, computational, and experimental methods.',
         keywords: ['Physics Simulation', 'Verlet Integration', 'Real-time', 'Constraints'],
         pdf: 'PipeFlowLabReport.pdf',
         arxiv: 'https://arxiv.org/abs/2024.12345',
         doi: 'https://doi.org/10.1145/1234567',
         detailedDescription: `
         <h3>Abstract</h3>
-        <p>We present a novel constraint-based physics simulation method that combines the stability of Verlet integration with efficient constraint solving techniques...</p>
+        
         
         <h3>Key Contributions</h3>
         <ul>
-          <li>Novel constraint formulation for improved stability</li>
-          <li>Efficient solver implementation</li>
-          <li>Real-time performance on consumer hardware</li>
+        
+        
+        
         </ul>
         
         <h3>Results</h3>
-        <p>Our method demonstrates significant improvements in simulation stability and performance compared to traditional approaches...</p>
         `,
         color: 'red',
         dateRange: '2024-01-15 to 2024-02-15'
@@ -143,13 +143,11 @@ const papers = [
         doi: 'https://doi.org/10.1016/j.renene.2024.01.123',
         detailedDescription: `
         <h3>Abstract</h3>
-        <p>This paper presents a comprehensive machine learning framework for optimizing wind turbine performance through blade design and control optimization...</p>
+        
         
         <h3>Methodology</h3>
         <ul>
-          <li>Deep learning models for blade shape optimization</li>
-          <li>Reinforcement learning for control strategies</li>
-          <li>Integration with BEM theory</li>
+
         </ul>`
         ,
         color: 'blue',
