@@ -21,13 +21,36 @@
                     <input v-model.number="toolProps.box.height" type="number" step="5" min="10" max="200" />
                     <span class="underline"></span>
                 </label>
-                <label class="text-checkbox-label">
-                    <input v-model="toolProps.box.isStatic" type="checkbox" class="text-checkbox-input" />
-                    <span class="text-checkbox">Static</span>
+                <label>
+                    Static:
+                    <div class="checkbox-container">
+                        <div
+                            class="checkbox"
+                            :class="{ 'checkbox--selected': toolProps.box.isStatic }"
+                            @click="toolProps.box.isStatic = !toolProps.box.isStatic"
+                        >
+                            <svg v-if="toolProps.box.isStatic" class="checkbox__check" width="12" height="12" viewBox="0 0 16 16">
+                                <path d="M2 8L6 12L14 4" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <span class="underline"></span>
                 </label>
-                <label class="text-checkbox-label">
-                    <input v-model="toolProps.box.gravity" type="checkbox" class="text-checkbox-input" />
-                    <span class="text-checkbox">Gravity</span>
+
+                <label>
+                    Gravity:
+                    <div class="checkbox-container">
+                        <div
+                            class="checkbox"
+                            :class="{ 'checkbox--selected': toolProps.box.gravity }"
+                            @click="toolProps.box.gravity = !toolProps.box.gravity"
+                        >
+                            <svg v-if="toolProps.box.gravity" class="checkbox__check" width="12" height="12" viewBox="0 0 16 16">
+                                <path d="M2 8L6 12L14 4" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <span class="underline"></span>
                 </label>
             </template>
 
@@ -37,13 +60,36 @@
                     <input v-model.number="toolProps.circle.radius" type="number" step="5" min="5" max="100" />
                     <span class="underline"></span>
                 </label>
-                <label class="text-checkbox-label">
-                    <input v-model="toolProps.circle.isStatic" type="checkbox" class="text-checkbox-input" />
-                    <span class="text-checkbox">Static</span>
+                <label>
+                    Static:
+                    <div class="checkbox-container">
+                        <div
+                            class="checkbox"
+                            :class="{ 'checkbox--selected': toolProps.circle.isStatic }"
+                            @click="toolProps.circle.isStatic = !toolProps.circle.isStatic"
+                        >
+                            <svg v-if="toolProps.circle.isStatic" class="checkbox__check" width="12" height="12" viewBox="0 0 16 16">
+                                <path d="M2 8L6 12L14 4" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <span class="underline"></span>
                 </label>
-                <label class="text-checkbox-label">
-                    <input v-model="toolProps.circle.gravity" type="checkbox" class="text-checkbox-input" />
-                    <span class="text-checkbox">Gravity</span>
+
+                <label>
+                    Gravity:
+                    <div class="checkbox-container">
+                        <div
+                            class="checkbox"
+                            :class="{ 'checkbox--selected': toolProps.circle.gravity }"
+                            @click="toolProps.circle.gravity = !toolProps.circle.gravity"
+                        >
+                            <svg v-if="toolProps.circle.gravity" class="checkbox__check" width="12" height="12" viewBox="0 0 16 16">
+                                <path d="M2 8L6 12L14 4" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <span class="underline"></span>
                 </label>
             </template>
 
@@ -83,7 +129,6 @@
 import { Application, Graphics } from 'pixi.js'
 import { computed, nextTick, onMounted, onUnmounted, ref, shallowRef, watch } from 'vue'
 import PhysicsEngineModule from '../wasm/physics_engine.js'
-import {getSecondaryColor, getTertiaryColor} from '../composables/useGetColours.js'
 
 const toolLabels = {
     None: 'Select',
@@ -113,6 +158,18 @@ const engine = ref(null)
 const tickerFunction = ref(null)
 const resizeObserver = shallowRef(null)
 
+// Debounce helper for resize observer
+let resizeTimeout = null;
+function scheduleResize() {
+    if (resizeTimeout) clearTimeout(resizeTimeout);
+    // Wait 100 ms after the *last* resize observer fire – long enough for
+    // the layout to settle and avoid width/height = 0.
+    resizeTimeout = setTimeout(() => {
+        resizeTimeout = null;
+        canvasOnResize();
+    }, 100);
+}
+
 const activeTool = ref('Box')
 const toolMap = { None: 0, Circle: 1, Box: 2, Spring: 3, Motor: 4 }
 
@@ -135,7 +192,7 @@ function setupResizeObserver() {
     if (resizeObserver.value) resizeObserver.value.disconnect()
 
     resizeObserver.value = new ResizeObserver(() => {
-        canvasOnResize()
+        scheduleResize();
     })
 
     if (props.elementData.container.element) {
@@ -191,14 +248,13 @@ watch(() => toolProps.value.motor, (props) => {
 function overMenu(ev) {
     const target = ev.target
 
-      const isControlElement = 
-    target.closest('.controls') !== null || 
-    target.tagName === 'SELECT' ||
-    target.tagName === 'INPUT' ||
-    target.tagName === 'LABEL' ||
-    target.classList.contains('checkbox-label') ||
-    target.classList.contains('custom-checkbox') ||
-    target.classList.contains('checkbox-text');
+    const isControlElement = 
+        target.tagName === 'SELECT' ||
+        target.tagName === 'INPUT' ||
+        target.tagName === 'LABEL' ||
+        target.classList.contains('checkbox-container') ||
+        target.classList.contains('checkbox') ||
+        target.classList.contains('checkbox__check') 
     return isControlElement;
 }
 function onPointerDown(ev) {
@@ -420,21 +476,6 @@ const canvasOnResize = async () => {
     }
 }
 
-function measureContainerBounds() {
-    if (!pixiContainer.value || !props.elementData?.container) return
-    const containerRef = props.elementData.container.ref;
-    console.log(window.getComputedStyle(containerRef), "style");
-
-    const maxHeight = containerRef.clientHeight;
-    const maxWidth = containerRef.scrollWidth;
-    return {
-        width: maxWidth,
-        height: maxHeight,
-        x: containerRef.offsetLeft,
-        y: containerRef.offsetTop
-    }
-}
-
 function initListeners() {
     if (pixiContainer.value) {
         window.addEventListener('pointerdown', onPointerDown)
@@ -521,6 +562,8 @@ function initPhysicsParams() {
     engine.value.setActiveTool(toolMap[activeTool.value])
 }
 
+
+
 onMounted(async () => {
     engine.value = await PhysicsEngineModule()
 
@@ -533,6 +576,7 @@ onMounted(async () => {
         canvasOnResize()
         setupResizeObserver()
     }
+
 })
 
 onUnmounted(() => {
@@ -541,6 +585,11 @@ onUnmounted(() => {
     if (resizeObserver.value) {
         resizeObserver.value.disconnect()
         resizeObserver.value = null
+    }
+
+    if (resizeTimeout) {
+        clearTimeout(resizeTimeout);
+        resizeTimeout = null;
     }
 
     if (app.value?.ticker && tickerFunction.value) {
@@ -578,7 +627,7 @@ onUnmounted(() => {
 
 defineExpose({
     activeTool,
-    toolProps
+    toolProps,
 })
 </script>
 
@@ -595,10 +644,10 @@ defineExpose({
 
 .controls {
     display: flex;
-    flex-wrap: nowrap;
     justify-content: center;
-    gap: 1.5rem;
+    flex-wrap: nowrap;
     align-items: center;
+    gap: 1.5rem;
     margin-bottom: 1.5rem;
     padding: 1rem 1.5rem;
     background-color: rgb(36, 36, 36);
@@ -702,45 +751,56 @@ defineExpose({
     width: 100%;
 }
 
-.text-checkbox-label {
-  position: relative;
-  display: inline-block;
-  cursor: pointer;
-  margin: 0 5px;
-  user-select: none;
+.checkbox-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.25rem;
 }
 
-.text-checkbox-input {
-  position: absolute;
-  display: none !important;
-  width: 100%;
-  height: 100%;
-  margin: 0;
-  cursor: pointer;
-  z-index: 2;
+.checkbox {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 0.9rem;
+    height: 0.9rem;
+    background-color: rgb(50, 50, 50);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 3px;
+    transition: background-color 0.3s, border-color 0.3s;
 }
 
-.text-checkbox {
-  display: inline-block;
-  font-weight: 600;
-  font-size: 14px;
-  color: #ccc;
-  padding: 6px 14px;
-  border-radius: 14px;
-  border: 2px solid transparent;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  background-color: transparent;
+.checkbox--selected {
+    background-color: rgb(204, 140, 140);
+    border-color: rgb(255, 255, 255);
 }
 
-.text-checkbox-input:checked + .text-checkbox {
-  color: #fff;
-  border-color: v-bind('getSecondaryColor(props.projectColor)');
+.checkbox__text {
+    font-weight: 600;
+    font-size: 14px;
+    color: #ccc;
 }
 
-.text-checkbox-input:not(:checked):hover + .text-checkbox {
-  border-color: v-bind('getTertiaryColor(props.projectColor)');
+.checkbox__check {
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    pointer-events: none;
 }
 
+.checkbox__label {
+    font-weight: 600;
+    font-size: 14px;
+    color: #ccc;
+    user-select: none;
+    min-width: 60px;
+    text-align: right;
+}
 
 .controls-info {
     display: flex;
@@ -802,6 +862,7 @@ kbd {
     .controls {
         gap: 1rem;
         padding: 0.75rem;
+        justify-content: flex-start;   
     }
 
     .controls label {
@@ -818,4 +879,16 @@ kbd {
         display: none;
     }
 }
+
+.checkbox-container {
+    display: flex;
+    align-items: center;      
+    justify-content: center;  
+    width: 6rem;              
+    padding: 0.3rem 0;        
+    border-bottom: 1px solid transparent; 
+}
+
 </style>
+
+
