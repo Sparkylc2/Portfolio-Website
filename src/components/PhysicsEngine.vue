@@ -264,7 +264,6 @@ function overMenu(ev) {
 function onPointerDown(ev) {
     const active = document.activeElement;
     if (active && (active.tagName === 'SELECT' || active.tagName === 'INPUT')) {
-      console.log('Blur active element:', active.tagName);
       active.blur();               
     }
 
