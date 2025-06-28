@@ -115,6 +115,11 @@ function setActive(key, evt) {
     if (clickWouldHitParent(key)) return
     if (key === props.activeTab) return
 
+    if(key === 'GitHub') {
+        window.open('https://github.com/Sparkylc2', '_blank')
+        return
+    }
+
     moveBarTo(evt.currentTarget)
     requestAnimationFrame(() => emit('update:activeTab', key))
 }

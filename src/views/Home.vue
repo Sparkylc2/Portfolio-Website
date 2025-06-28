@@ -10,11 +10,6 @@
 
             <Papers v-if="currentTab === 'Papers'" :activeSection="paperSection" :selectedPaper="selectedPaper"
                 @update:selectedPaper="handlePaperChange" @update:selectedPaperColor="handleProjectPaperColorChange" />
-
-            <div v-if="currentTab === 'GitHub'" class="github-content">
-                <h1>GitHub</h1>
-                <p>yeyueuyeeuye</p>
-            </div>
         </div>
     </div>
 </template>
