@@ -8,18 +8,18 @@
                         'active': expandedProject === index,
                         'inactive': expandedProject !== null && expandedProject !== index
                     }" @click="toggleProject(index)" :style="{
-                        borderColor: getBorderColor(project.color, expandedProject === index),
-                        '--project-date-hover': getProjectTitleColor(project.color)
+                        borderColor: getSecondaryOrTertiaryColor(project.color, expandedProject === index),
+                        '--project-date-hover': getPrimaryColor(project.color)
                     }">
                         <div class="project-content">
-                            <h2 :style="{ color: getProjectTitleColor(project.color) }">{{ project.title }}</h2>
+                            <h2 :style="{ color: getPrimaryColor(project.color) }">{{ project.title }}</h2>
                             <p>{{ project.description }}</p>
                             <div class="date">
-                                <span :style="{ '--project-date-hover': getProjectTitleColor(project.color) }">{{
+                                <span :style="{ '--project-date-hover': getPrimaryColor(project.color) }">{{
                                     project.dateRange }}</span>
                             </div>
                             <div class="project-indicator"
-                                :style="{ backgroundColor: getProjectIndicatorColor(project.color) }"></div>
+                                :style="{ backgroundColor: getSecondaryColor(project.color) }"></div>
                         </div>
                     </div>
                 </div>
@@ -33,7 +33,7 @@
                     <div class="project-details-content">
                         <div class="project-sections">
                             <div class="section" ref="overviewSection"
-                                :style="{ outlineColor: getBorderColor(currentProject?.color, true) }">
+                                :style="{ outlineColor: getSecondaryOrTertiaryColor(currentProject?.color, true) }">
                                 <Transition name="fade" mode="out-in">
                                     <div v-if="activeSection === 'Overview'" key="overview" class="section-content">
                                         <h2>{{ currentProject?.title }}</h2>
@@ -64,12 +64,12 @@
                                             <div class="project-links">
                                                 <a v-if="currentProject?.github" :href="currentProject.github"
                                                     target="_blank" class="project-link"
-                                                    :style="{ borderColor: getProjectColor(currentProject.color) }">
+                                                    :style="{ borderColor: getSecondaryColor(currentProject.color) }">
                                                     GitHub
                                                 </a>
                                                 <a v-if="currentProject?.demo" :href="currentProject.demo"
                                                     target="_blank" class="project-link"
-                                                    :style="{ borderColor: getProjectColor(currentProject.color) }">
+                                                    :style="{ borderColor: getSecondaryColor(currentProject.color) }">
                                                     Live Demo
                                                 </a>
                                             </div>
@@ -96,7 +96,7 @@ import AirfoilSimulator from '../components/AirfoilSimulator.vue'
 import PhysicsEngine from '../components/PhysicsEngine.vue'
 import WindTurbineBEM from '../components/WindTurbineBEM.vue'
 import { useElementTracker } from '../composables/usePhysicsEngine.js'
-
+import { getPrimaryColor, getSecondaryColor, getSecondaryOrTertiaryColor} from '../composables/useGetColours'
 import PhysicsDetails from '../components/PhysicsDetails.vue'
 import AirfoilSimulatorDetails from '../components/AirfoilSimulatorDetails.vue'
 import WindTurbineBEMDetails from '../components/WindTurbineBEMDetails.vue'
@@ -140,7 +140,7 @@ const projects = [
         title: 'Physics Engine',
         description: 'A real-time physics engine built in Processing (Java)',
         technologies: ['Processing', 'Java'],
-        github: 'https://github.com/Sparkylc2/PhysicsEngine',
+        github: 'https://github.com/Sparkylc2/PhysicsEngine/tree/main',
         demo: null,
         interactiveComponent: PhysicsEngine,
         detailedDescription: PhysicsDetails,
@@ -151,7 +151,7 @@ const projects = [
         title: 'Wind Turbine BEM',
         description: 'Blade Element Momentum (BEM) theory implementation for wind turbine analysis.',
         technologies: ['C++', 'Python'],
-        github: 'https://github.com/yourusername/turbine-designer',
+        github: 'https://github.com/Sparkylc2/BEM_Turbine',
         demo: null,
         interactiveComponent: WindTurbineBEM,
         detailedDescription: WindTurbineBEMDetails,
@@ -162,7 +162,7 @@ const projects = [
         title: 'Panel Airfoil Simulator',
         description: 'Advanced computational fluid dynamics simulator for airfoil analysis using panel methods.',
         technologies: ['Matlab'],
-        github: 'https://github.com/yourusername/panel-airfoil',
+        github: 'https://github.com/Sparkylc2/PanelAirfoilSimulator',
         demo: null,
         interactiveComponent: AirfoilSimulator,
         detailedDescription: AirfoilSimulatorDetails,
@@ -191,59 +191,11 @@ const toggleProject = (index) => {
     }
 }
 
-const getProjectColor = (color) => {
-    const colors = {
-        red: 'rgb(204, 140, 140)',
-        blue: 'rgb(140, 172, 204)',
-        green: 'rgb(140, 204, 140)',
-        yellow: 'rgb(204, 172, 140)'
-    }
-    return colors[color] || '#e63946'
-}
 
-const getInactiveBorderColor = (color) => {
-    const colors = {
-        red: 'rgba(204, 140, 140, 0.3)',
-        blue: 'rgba(140, 172, 204, 0.3)',
-        green: 'rgba(140, 204, 140, 0.3)',
-        yellow: 'rgba(204, 172, 140, 0.3)',
-    }
-    return colors[color] || 'rgba(230, 57, 70, 0.3)'
-}
 
-const getActiveBorderColor = (color) => {
-    const colors = {
-        red: 'rgb(204, 140, 140)',
-        blue: 'rgb(140, 172, 204)',
-        green: 'rgb(140, 204, 140)',
-        yellow: 'rgb(204, 172, 140)',
-    }
-    return colors[color] || '#e63946'
-}
 
-const getBorderColor = (color, isActive) => {
-    return isActive ? getActiveBorderColor(color) : getInactiveBorderColor(color)
-}
 
-const getProjectIndicatorColor = (color) => {
-    const colors = {
-        red: 'rgb(204, 140, 140)',
-        blue: 'rgb(140, 172, 204)',
-        green: 'rgb(140, 204, 140)',
-        yellow: 'rgb(204, 172, 140)',
-    }
-    return colors[color] || '#e63946'
-}
 
-const getProjectTitleColor = (color) => {
-    const colors = {
-        red: 'rgb(255, 191, 191)',
-        blue: 'rgb(191, 223, 255)',
-        green: 'rgb(191, 255, 191)',
-        yellow: 'rgb(255, 223, 191)',
-    }
-    return colors[color] || '#e63946'
-}
 
 const overviewSection = ref(null)
 const { elementData } = useElementTracker(overviewSection, {
@@ -636,7 +588,7 @@ const { elementData } = useElementTracker(overviewSection, {
         height: 48px;
         background: rgba(0, 0, 0, 0.0);
         border: 1px solid #ccc;
-        border-color: v-bind('getProjectColor(currentProject?.color)');
+        border-color: v-bind('getSecondaryColor(currentProject?.color)');
         border-radius: 0.5rem;
         cursor: pointer;
         z-index: 101;

@@ -3,8 +3,8 @@
         <form class="controls" @submit.prevent>
             <label>
                 Tool:
-                <select v-model="activeTool">
-                    <option v-for="item in toolDropdownItems" :key="item.value" :value="item.value">
+                <select v-model="activeTool" @change="e => {setTimeout(() => e.target.blur());}">
+                    <option v-for="item in toolDropdownItems" :key="item.value" :value="item.value" >
                         {{ item.label }}
                     </option>
                 </select>
@@ -158,12 +158,9 @@ const engine = ref(null)
 const tickerFunction = ref(null)
 const resizeObserver = shallowRef(null)
 
-// Debounce helper for resize observer
 let resizeTimeout = null;
 function scheduleResize() {
     if (resizeTimeout) clearTimeout(resizeTimeout);
-    // Wait 100 ms after the *last* resize observer fire – long enough for
-    // the layout to settle and avoid width/height = 0.
     resizeTimeout = setTimeout(() => {
         resizeTimeout = null;
         canvasOnResize();
@@ -215,9 +212,15 @@ watch(() => props.elementData?.container, (newContainer, oldContainer) => {
     setupResizeObserver()
 }, { deep: true, immediate: true })
 
+
 watch(() => activeTool.value, (tool) => {
     if (engine.value) {
         engine.value.setActiveTool(toolMap[tool])
+
+        const selectElement = simulatorContainer.value?.querySelector('select')
+        if (selectElement) {
+            selectElement.blur()
+        }
     }
 }, { immediate: true })
 
@@ -245,6 +248,7 @@ watch(() => toolProps.value.motor, (props) => {
     }
 }, { deep: true, immediate: true })
 
+
 function overMenu(ev) {
     const target = ev.target
 
@@ -258,6 +262,12 @@ function overMenu(ev) {
     return isControlElement;
 }
 function onPointerDown(ev) {
+    const active = document.activeElement;
+    if (active && (active.tagName === 'SELECT' || active.tagName === 'INPUT')) {
+      console.log('Blur active element:', active.tagName);
+      active.blur();               
+    }
+
     if (overMenu(ev)) return
 
     if (!app.value || !engine.value) return
@@ -279,6 +289,11 @@ function onPointerMove(ev) {
 }
 
 function onPointerUp(ev) {
+    const active = document.activeElement;
+    if (active && (active.tagName === 'SELECT' || active.tagName === 'INPUT')) {
+      active.blur();               
+    }
+
     if (overMenu(ev)) return
     if (!app.value || !engine.value) return
     const { left, top } = app.value.canvas.getBoundingClientRect()
@@ -463,7 +478,6 @@ const canvasOnResize = async () => {
         pixiContainer.value.style.width = `${width}px`
         pixiContainer.value.style.height = `${height}px`
 
-        console.log(width, height, x, y);
         if (app.value?.renderer) {
             app.value.renderer.resize(width, height)
         }
@@ -774,7 +788,7 @@ defineExpose({
 
 .checkbox--selected {
     background-color: rgb(204, 140, 140);
-    border-color: rgb(255, 255, 255);
+    border-color: rgb(204, 140, 140);
 }
 
 .checkbox__text {
@@ -813,25 +827,6 @@ defineExpose({
     font-size: 13px;
 }
 
-kbd {
-    background-color: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 3px;
-    padding: 2px 6px;
-    font-family: monospace;
-    font-size: 12px;
-    color: #fff;
-}
-
-
-.simulation-wrapper {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    width: 100%;
-    max-width: 1000px;
-    height: 100%;
-}
 
 
 .pixi-container {

@@ -333,7 +333,7 @@ watch(
 }
 
 
-@media (min-width: 769px) and (max-width: 1024px) {
+@media (min-width: 769px) and (max-width: 1920px) {
     .navbar {
         top: 0.5rem;
         right: 0.5rem;
@@ -355,7 +355,7 @@ watch(
 }
 
 
-@media (min-width: 1920px) {
+/* @media (min-width: 1920px) {
     .navbar {
         top: 1.5rem;
         right: 1.5rem;
@@ -375,4 +375,5 @@ watch(
         height: 3px;
     }
 }
-</style>
+    */
+</style> 
