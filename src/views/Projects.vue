@@ -138,7 +138,7 @@ watch(expandedProject, (newVal) => {
 const projects = [
     {
         title: 'Physics Engine',
-        description: 'A real-time physics engine built in Processing (Java)',
+        description: 'A real-time physics engine for simulating rigid body dynamics.',
         technologies: ['Processing', 'Java'],
         github: 'https://github.com/Sparkylc2/PhysicsEngine/tree/main',
         demo: null,
@@ -160,7 +160,7 @@ const projects = [
     },
     {
         title: 'Panel Airfoil Simulator',
-        description: 'Advanced computational fluid dynamics simulator for airfoil analysis using panel methods.',
+        description: 'Small simulator for airfoil analysis using panel methods.',
         technologies: ['Matlab'],
         github: 'https://github.com/Sparkylc2/PanelAirfoilSimulator',
         demo: null,
