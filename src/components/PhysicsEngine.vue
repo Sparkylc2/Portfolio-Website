@@ -22,22 +22,6 @@
                     <span class="underline"></span>
                 </label>
                 <label>
-                    Static:
-                    <div class="checkbox-container">
-                        <div
-                            class="checkbox"
-                            :class="{ 'checkbox--selected': toolProps.box.isStatic }"
-                            @click="toolProps.box.isStatic = !toolProps.box.isStatic"
-                        >
-                            <svg v-if="toolProps.box.isStatic" class="checkbox__check" width="12" height="12" viewBox="0 0 16 16">
-                                <path d="M2 8L6 12L14 4" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-                            </svg>
-                        </div>
-                    </div>
-                    <span class="underline"></span>
-                </label>
-
-                <label>
                     Gravity:
                     <div class="checkbox-container">
                         <div
