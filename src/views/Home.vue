@@ -1,80 +1,42 @@
 <template>
   <div class="app-container">
-    <Navbar
-      :tabs="navbarTabs"
-      :activeTab="activeNavbarTab"
-      :indicatorColor="currentProjectColor"
-      @update:activeTab="handleTabChange"
-    />
+    <Navbar :tabs="navbarTabs" :activeTab="activeNavbarTab" :indicatorColor="currentProjectColor"
+      @update:activeTab="handleTabChange" />
 
     <div class="scroll-wrapper" ref="scrollWrapper" @scroll="handleScroll">
       <section class="main-section">
         <div class="content">
-          <Projects
-            v-if="currentTab === 'Projects'"
-            :activeSection="projectSection"
-            :selectedProject="selectedProject"
+          <Projects v-if="currentTab === 'Projects'" :activeSection="projectSection" :selectedProject="selectedProject"
             @update:selectedProject="handleProjectChange"
-            @update:selectedProjectColor="handleProjectPaperColorChange"
-          />
+            @update:selectedProjectColor="handleProjectPaperColorChange" />
 
-          <Papers
-            v-if="currentTab === 'Papers'"
-            :activeSection="paperSection"
-            :selectedPaper="selectedPaper"
-            @update:selectedPaper="handlePaperChange"
-            @update:selectedPaperColor="handleProjectPaperColorChange"
-          />
+          <Papers v-if="currentTab === 'Papers'" :activeSection="paperSection" :selectedPaper="selectedPaper"
+            @update:selectedPaper="handlePaperChange" @update:selectedPaperColor="handleProjectPaperColorChange" />
         </div>
+        <section class="animation-section" ref="animationSectionRef">
+          <div class="animation-wrapper">
+            <F22_Animation :scrollProgress="scrollProgress" />
+          </div>
+        </section>
 
         <Transition name="fade">
-          <div
-            v-if="showScrollIndicator && showHeroSection"
-            class="scroll-indicator"
-            @click="scrollToHero"
-          >
+          <div v-if="showScrollIndicator && showHeroSection" class="scroll-indicator" @click="scrollToHero">
             <span class="scroll-text">About Me</span>
             <div class="scroll-arrow">
-              <svg
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-              >
-                <path
-                  d="M12 5v14M19 12l-7 7-7-7"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                />
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path d="M12 5v14M19 12l-7 7-7-7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
               </svg>
             </div>
           </div>
         </Transition>
       </section>
 
-      <section
-        v-if="showHeroSection"
-        class="hero-section-wrapper"
-        ref="heroSectionRef"
-      >
+      <section v-if="showHeroSection" class="hero-section-wrapper" ref="heroSectionRef">
         <HeroSection :scroll-progress="scrollProgress" />
 
         <div class="scroll-to-top" @click="scrollToTop">
-          <svg
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-          >
-            <path
-              d="M12 19V5M5 12l7-7 7 7"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            />
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path d="M12 19V5M5 12l7-7 7 7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
           </svg>
         </div>
       </section>
@@ -83,11 +45,12 @@
 </template>
 
 <script setup>
-import { computed, ref, watch, nextTick } from "vue";
-import Navbar from "../components/Navbar.vue";
-import Projects from "../views/Projects.vue";
-import Papers from "../views/Papers.vue";
+import { computed, nextTick, ref, watch } from "vue";
+import F22_Animation from "../animations/F22_Animation.vue";
 import HeroSection from "../components/HeroSection.vue";
+import Navbar from "../components/Navbar.vue";
+import Papers from "../views/Papers.vue";
+import Projects from "../views/Projects.vue";
 
 const currentTab = ref("Projects");
 const projectSection = ref("Overview");
@@ -264,6 +227,14 @@ watch(
 </script>
 
 <style scoped>
+.all-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+}
+
 .app-container {
   position: fixed;
   top: 0;
@@ -311,7 +282,7 @@ watch(
   position: relative;
   display: flex;
   flex-direction: row;
-  margin-left: auto;
+  margin-left: 35%;
   align-items: center;
   justify-content: right;
   padding: 2rem;
@@ -371,6 +342,7 @@ watch(
 }
 
 @keyframes bounce {
+
   0%,
   20%,
   50%,
@@ -378,9 +350,11 @@ watch(
   100% {
     transform: translateX(-50%) translateY(0);
   }
+
   40% {
     transform: translateX(-50%) translateY(-10px);
   }
+
   60% {
     transform: translateX(-50%) translateY(-5px);
   }

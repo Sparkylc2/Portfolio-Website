@@ -566,12 +566,16 @@ onMounted(async () => {
 
     await initPixiContainer()
     initListeners()
-    initTicker()
+    setTimeout(() => {
+      initTicker()
+    }, 300)
+
+    
     initPhysicsParams()
 
     if (props.elementData?.container) {
-        canvasOnResize()
         setupResizeObserver()
+        canvasOnResize()
     }
 
 })

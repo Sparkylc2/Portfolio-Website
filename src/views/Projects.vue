@@ -93,13 +93,13 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import AirfoilSimulator from '../components/AirfoilSimulator.vue'
+import AirfoilSimulatorDetails from '../components/AirfoilSimulatorDetails.vue'
+import PhysicsDetails from '../components/PhysicsDetails.vue'
 import PhysicsEngine from '../components/PhysicsEngine.vue'
 import WindTurbineBEM from '../components/WindTurbineBEM.vue'
-import { useElementTracker } from '../composables/usePhysicsEngine.js'
-import { getPrimaryColor, getSecondaryColor, getSecondaryOrTertiaryColor} from '../composables/useGetColours'
-import PhysicsDetails from '../components/PhysicsDetails.vue'
-import AirfoilSimulatorDetails from '../components/AirfoilSimulatorDetails.vue'
 import WindTurbineBEMDetails from '../components/WindTurbineBEMDetails.vue'
+import { getPrimaryColor, getSecondaryColor, getSecondaryOrTertiaryColor } from '../composables/useGetColours'
+import { useElementTracker } from '../composables/usePhysicsEngine.js'
 
 const props = defineProps({
     activeSection: String,

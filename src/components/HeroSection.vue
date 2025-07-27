@@ -1,49 +1,47 @@
 <template>
-  <div class="hero-section" ref="heroRef">
-    <div class="hero-content">
-      <div class="intro-section">
-        <h1 class="hero-title">
-          <span class="greeting">Hello, I'm</span>
-          <span class="name">Lukas Campbell</span>
-        </h1>
-        <p class="tagline">Aeronautical Engineering Student</p>
-        <p class="subtitle">Imperial College London</p>
-      </div>
-
-      <div class="about-section">
-        <p class="bio">
-          Passionate about computational fluid dynamics, aircraft design, and
-          building physics simulations. Currently in my {{ currentYear }} year,
-          exploring the intersection of aerospace engineering and software
-          development.
-        </p>
-      </div>
-
-      <div class="interests-section">
-        <h3>Research Interests</h3>
-        <div class="interest-tags">
-          <span
-            class="interest-tag"
-            v-for="interest in interests"
-            :key="interest"
-          >
-            {{ interest }}
-          </span>
-        </div>
-      </div>
-
-      <!-- <div class="stats-section"> -->
-      <!--   <div class="stat-item" v-for="stat in stats" :key="stat.label"> -->
-      <!--     <span class="stat-value">{{ stat.value }}</span> -->
-      <!--     <span class="stat-label">{{ stat.label }}</span> -->
-      <!--   </div> -->
-      <!-- </div> -->
+  <div class="hero-content">
+    <div class="intro-section">
+      <h1 class="hero-title">
+        <span class="greeting">Hello, I'm</span>
+        <span class="name">Lukas Campbell</span>
+      </h1>
+      <p class="tagline">Aeronautical Engineering Student</p>
+      <p class="subtitle">Imperial College London</p>
     </div>
+
+    <div class="about-section">
+      <p class="bio">
+        Passionate about computational fluid dynamics, aircraft design, and
+        building physics simulations. Currently in my {{ currentYear }} year,
+        exploring the intersection of aerospace engineering and software
+        development.
+      </p>
+    </div>
+
+    <div class="interests-section">
+      <h3>Research Interests</h3>
+      <div class="interest-tags">
+        <span class="interest-tag" v-for="interest in interests" :key="interest">
+          {{ interest }}
+        </span>
+      </div>
+    </div>
+
+    <!-- <div class="stats-section"> -->
+    <!--   <div class="stat-item" v-for="stat in stats" :key="stat.label"> -->
+    <!--     <span class="stat-value">{{ stat.value }}</span> -->
+    <!--     <span class="stat-label">{{ stat.label }}</span> -->
+    <!--   </div> -->
+    <!-- </div> -->
   </div>
+
+
+
 </template>
 
 <script setup>
 import { ref, onMounted, onUnmounted } from "vue";
+import F22_Animation from "../animations/F22_Animation.vue";
 // import AirfoilFlowAnimation from './AirfoilFlowAnimation.vue'
 
 const props = defineProps({
@@ -76,16 +74,22 @@ const stats = ref([
 </script>
 
 <style scoped>
+.all-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+}
+
 .hero-section {
   display: flex;
-  margin-left: auto;
-  margin-right: 10%;
   align-items: center;
   gap: 3rem;
   padding: 2rem;
   min-height: 100%;
   position: relative;
-  width: 80vh;
+  width: 100%;
   height: 100%;
   max-width: 1400px;
 }
@@ -219,6 +223,7 @@ const stats = ref([
 }
 
 .animation-container {
+  position: relative;
   width: 100%;
   max-width: 800px;
   height: 500px;
