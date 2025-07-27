@@ -54,7 +54,7 @@ onMounted(() => {
   const renderTarget = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight, {
     depthTexture,
     depthBuffer: true,
-    samples: 1
+    samples: 3
   });
   composer = new EffectComposer(renderer, renderTarget);
 
