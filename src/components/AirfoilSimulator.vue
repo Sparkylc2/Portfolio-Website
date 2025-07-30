@@ -75,7 +75,7 @@ function matToJs(mat, wasm) {
   return arr
 }
 
-function disposeStreamData(res) {
+async function disposeStreamData(res) {
   if (!res) return
   
   res.mu?.delete()
@@ -97,7 +97,7 @@ function disposeStreamData(res) {
   res.delete?.()
 }
 
-onMounted(() => {
+onMounted(async () => {
     try {
         streamlineChart = echarts.init(streamlinePlot.value, null, { renderer: 'canvas' })
         window.addEventListener('resize', resizeCharts)
@@ -107,9 +107,9 @@ onMounted(() => {
         return
     }
 
-    init().then(mod => {
+    init().then(async mod => {
         wasm.value = mod
-        updatePlot()
+        await updatePlot()
     }).catch(err => {
         console.error('[AirfoilSimulator] Failed to load WASM module:', err)
         error.value = true
@@ -124,7 +124,7 @@ onUnmounted(() => {
 async function updatePlot() {
     if (!wasm.value) return
     try {
-        const res = wasm.value.analyze_airfoil(
+        const res = await wasm.value.analyze_airfoil(
             naca.value,
             uFs.value,
             aoaDeg.value,
@@ -134,20 +134,6 @@ async function updatePlot() {
 
         CL.value = res.cl
 
-        const foil = matToJs(res.airfoil_coords, wasm.value).slice(0, -1) 
-
-        const streamSeries = []
-        const nLines = res.streamlines.size()
-        for (let k = 0; k < nLines; k++) {
-            streamSeries.push({
-            type: 'line',
-            data: matToJs(res.streamlines.get(k), wasm.value),
-            lineStyle: { color: 'rgb(140, 172, 204)', width: 1 },
-            showSymbol: false
-            })
-        }
-
-        disposeStreamData(res)
 
         streamlineChart.setOption({
             tooltip: { show: false },
@@ -172,7 +158,22 @@ async function updatePlot() {
             grid: { show: false },
             animation: false,
             aria: { enabled: true },
-            series: [
+        }, true) 
+
+        const streamSeries = []
+        const nLines = res.streamlines.size()
+        for (let k = 0; k < nLines; k++) {
+            streamSeries.push({
+            type: 'line',
+            data: matToJs(res.streamlines.get(k), wasm.value),
+            lineStyle: { color: 'rgb(140, 172, 204)', width: 1 },
+            showSymbol: false
+            })
+        }
+
+        const foil = matToJs(res.airfoil_coords, wasm.value).slice(0, -1)
+        streamlineChart.setOption({
+          series: [
                 {
                     type: 'line',
                     data: foil,
@@ -181,7 +182,10 @@ async function updatePlot() {
                 },
                 ...streamSeries
             ]
-        }, true)
+        })
+
+        disposeStreamData(res)
+
     } catch (err) {
         error.value = true
         console.error('[AirfoilSimulator] update failed:', err)

@@ -30,7 +30,7 @@ export function getSecondaryColor(k)
     // get project color, get project indicator color
     const c = {
         red: 'rgb(204, 140, 140)',
-        blue: 'rgb(140, 172, 204)',
+        blue: '#8cacccff',
         green: 'rgb(140, 204, 140)',
         yellow: 'rgb(204, 172, 140)'
     }

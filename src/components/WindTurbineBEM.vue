@@ -212,7 +212,7 @@ function resizeCharts() {
     }
 }
 
-function generateBladeGeometry() {
+async function generateBladeGeometry() {
     if (!wasm.value) return { vertices: [], indices: [] }
 
     const rValues = Array.from({ length: numSections.value + 1 }, (_, i) =>
@@ -231,9 +231,9 @@ function generateBladeGeometry() {
     return { vertices: geometry.vertices, indices: geometry.indices }
 }
 
-onMounted(() => {
+onMounted(async () => {
     try {
-        if (bladePlot.value) initThree()
+        if (bladePlot.value) await initThree()
         plotMode.value = 'blade';
         inductionChart = echarts.init(inductionPlot.value, null, { renderer: 'canvas' })
         performanceChart = echarts.init(performancePlot.value, null, { renderer: 'canvas' })
@@ -244,19 +244,17 @@ onMounted(() => {
         return
     }
 
-    init()
-        .then(mod => {
+    init().then(mod => {
             wasm.value = mod
             mod.onAbort = function (what) { error.value = true; }
             runBEM()
             airfoil.value = 'NACA2412'
             runBEM();
-        })
-        .catch(() => (error.value = true))
+        }).catch(() => (error.value = true))
 
 })
 
-onUnmounted(() => {
+onUnmounted(async () => {
     window.removeEventListener('resize', resizeCharts)
     inductionChart?.dispose()
     performanceChart?.dispose()
@@ -298,7 +296,7 @@ async function runBEM() {
 
         results.value = wasm.value.runBEM()
 
-        plotBladeDistribution()
+        await plotBladeDistribution()
     } catch (err) {
         error.value = true
     }
@@ -460,7 +458,7 @@ async function runTSRSweep() {
 
 
 
-function renderInductionFactorsPlot(r, a, aPrime) {
+async function renderInductionFactorsPlot(r, a, aPrime) {
 
     if (!inductionChart && inductionPlot.value) {
         inductionChart = echarts.init(inductionPlot.value, null, { renderer: 'canvas' })
@@ -553,7 +551,7 @@ function renderInductionFactorsPlot(r, a, aPrime) {
     )
 }
 
-function renderPerformanceValuesPlot(r, alpha, cl) {
+async function renderPerformanceValuesPlot(r, alpha, cl) {
     if (!performanceChart && performancePlot.value) {
         performanceChart = echarts.init(performancePlot.value, null, { renderer: 'canvas' })
     }
@@ -646,7 +644,7 @@ function renderPerformanceValuesPlot(r, alpha, cl) {
     )
 }
 
-function plotBladeDistribution() {
+async function plotBladeDistribution() {
     if (!results.value || !inductionChart || !performanceChart) return
 
     const sections = results.value.sections
@@ -665,7 +663,7 @@ function plotBladeDistribution() {
 
 
 
-function initThree() {
+async function initThree() {
     const el = bladePlot.value
     const { clientWidth: w, clientHeight: h } = el
 
@@ -687,7 +685,7 @@ function initThree() {
     threeScene.add(light)
     threeScene.add(new THREE.AmbientLight(0xffffff, 0.3))
 
-    updateBladeGeometry()
+    await updateBladeGeometry()
 
         ; (function animate() {
             requestAnimationFrame(animate)
@@ -696,7 +694,7 @@ function initThree() {
         })()
 }
 
-function buildBladeMesh(vertices, indices) {
+async function buildBladeMesh(vertices, indices) {
     const pos = new Float32Array(vertices.flat())
     const index = new Uint32Array(indices.flat())
 
@@ -709,16 +707,16 @@ function buildBladeMesh(vertices, indices) {
     return new THREE.Mesh(geo, mat)
 }
 
-function updateBladeGeometry() {
+async function updateBladeGeometry() {
     if (!threeScene) return
-    const { vertices, indices } = generateBladeGeometry()
+    const { vertices, indices } = await generateBladeGeometry()
     if (!vertices.length) return
 
     if (bladeMesh) {
         threeScene.remove(bladeMesh)
         bladeMesh.geometry.dispose()
     }
-    bladeMesh = buildBladeMesh(vertices, indices)
+    bladeMesh = await buildBladeMesh(vertices, indices)
     threeScene.add(bladeMesh)
 }
 
@@ -759,6 +757,7 @@ function formatWithDynamicUnit(value, baseUnit) {
 }
 
 .controls-container {
+  width: 100%;
     margin-bottom: 1.5rem;
 }
 
@@ -769,7 +768,8 @@ function formatWithDynamicUnit(value, baseUnit) {
     padding: 1.5rem;
     background-color: rgb(36, 36, 36);
     border-radius: 8px;
-    width: 100%;
+    width: auto;
+    /* max-width: 95%; */
 }
 
 .tabs-header {
@@ -824,7 +824,7 @@ function formatWithDynamicUnit(value, baseUnit) {
     padding: 1.5rem;
     background-color: rgb(36, 36, 36);
     border-radius: 8px;
-    width: 100%;
+    width: 95;
 }
 
 .control-group {

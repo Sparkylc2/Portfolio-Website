@@ -41,19 +41,8 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted } from "vue";
-import F22_Animation from "../animations/F22_Animation.vue";
+import F22_Animation from "../animations/HeroAnimation.vue";
 // import AirfoilFlowAnimation from './AirfoilFlowAnimation.vue'
-
-const props = defineProps({
-  scrollProgress: {
-    type: Number,
-    default: 0,
-  },
-});
-
-const heroRef = ref(null);
-const animationContainer = ref(null);
-const showAnimation = ref(false);
 
 const currentYear = ref("2nd");
 
@@ -76,22 +65,25 @@ const stats = ref([
 <style scoped>
 .all-wrapper {
   display: flex;
+  position: relative;
   flex-direction: column;
   align-items: center;
   width: 100%;
   height: 100%;
+
 }
 
 .hero-section {
   display: flex;
+  position: relative;
   align-items: center;
   gap: 3rem;
   padding: 2rem;
-  min-height: 100%;
+  /* min-height: 100%; */
   position: relative;
   width: 100%;
   height: 100%;
-  max-width: 1400px;
+  /* max-width: 1400px; */
 }
 
 .hero-section {
@@ -102,14 +94,14 @@ const stats = ref([
 
 .hero-content {
   flex: 1;
-  max-width: 600px;
+  /* max-width: 600px; */
 }
 
 .hero-content {
   display: flex;
   flex-direction: column;
   gap: 2.5rem;
-  max-width: 600px;
+  /* max-width: 600px; */
   height: 100%;
   margin: 0 auto;
   z-index: 2;

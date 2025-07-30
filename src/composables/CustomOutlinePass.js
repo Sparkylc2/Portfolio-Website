@@ -8,12 +8,13 @@ import {
 // Follows the structure of
 // 		https://github.com/mrdoob/three.js/blob/master/examples/jsm/postprocessing/OutlinePass.js
 class CustomOutlinePass extends Pass {
-  constructor(resolution, scene, camera) {
+  constructor(resolution, scene, camera, color) {
     super();
 
     this.renderScene = scene;
     this.renderCamera = camera;
     this.resolution = new THREE.Vector2(resolution.x, resolution.y);
+    this.color = color || new THREE.Color(0x000000);
 
     this.fsQuad = new FullScreenQuad(null);
     this.fsQuad.material = this.createOutlinePostProcessMaterial();
@@ -205,7 +206,8 @@ class CustomOutlinePass extends Pass {
         sceneColorBuffer: {},
         depthBuffer: {},
         surfaceBuffer: {},
-        outlineColor: { value: new THREE.Color() },
+        // outlineColor: { value: new THREE.Color() },
+        outlineColor: { value: this.color },
         //4 scalar values packed in one uniform:
         //  depth multiplier, depth bias
         multiplierParameters: {

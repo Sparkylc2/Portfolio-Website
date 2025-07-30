@@ -3,7 +3,6 @@
     <Navbar :tabs="navbarTabs" :activeTab="activeNavbarTab" :indicatorColor="currentProjectColor"
       @update:activeTab="handleTabChange" />
 
-    <div class="scroll-wrapper" ref="scrollWrapper" @scroll="handleScroll">
       <section class="main-section">
         <div class="content">
           <Projects v-if="currentTab === 'Projects'" :activeSection="projectSection" :selectedProject="selectedProject"
@@ -13,41 +12,12 @@
           <Papers v-if="currentTab === 'Papers'" :activeSection="paperSection" :selectedPaper="selectedPaper"
             @update:selectedPaper="handlePaperChange" @update:selectedPaperColor="handleProjectPaperColorChange" />
         </div>
-        <section class="animation-section" ref="animationSectionRef">
-          <div class="animation-wrapper">
-            <F22_Animation :scrollProgress="scrollProgress" />
-          </div>
-        </section>
-
-        <Transition name="fade">
-          <div v-if="showScrollIndicator && showHeroSection" class="scroll-indicator" @click="scrollToHero">
-            <span class="scroll-text">About Me</span>
-            <div class="scroll-arrow">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                <path d="M12 5v14M19 12l-7 7-7-7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-              </svg>
-            </div>
-          </div>
-        </Transition>
-      </section>
-
-      <section v-if="showHeroSection" class="hero-section-wrapper" ref="heroSectionRef">
-        <HeroSection :scroll-progress="scrollProgress" />
-
-        <div class="scroll-to-top" @click="scrollToTop">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path d="M12 19V5M5 12l7-7 7 7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-          </svg>
-        </div>
       </section>
     </div>
-  </div>
 </template>
 
 <script setup>
-import { computed, nextTick, ref, watch } from "vue";
-import F22_Animation from "../animations/F22_Animation.vue";
-import HeroSection from "../components/HeroSection.vue";
+import { computed, ref, watch } from "vue";
 import Navbar from "../components/Navbar.vue";
 import Papers from "../views/Papers.vue";
 import Projects from "../views/Projects.vue";
@@ -147,12 +117,6 @@ const activeNavbarTab = computed(() => {
   return currentTab.value;
 });
 
-const showHeroSection = computed(() => {
-  const nothingSelected =
-    (currentTab.value === "Projects" && selectedProject.value === null) ||
-    (currentTab.value === "Papers" && selectedPaper.value === null);
-  return nothingSelected;
-});
 
 function handleTabChange(key) {
   if (["Projects", "Papers", "GitHub"].includes(key)) {
@@ -186,44 +150,6 @@ function handlePaperChange(idx) {
     paperSection.value = ALL_TABS.find((t) => t.parent === "Papers").key;
 }
 
-const handleScroll = () => {
-  if (!scrollWrapper.value) return;
-
-  const scrollTop = scrollWrapper.value.scrollTop;
-  const scrollHeight =
-    scrollWrapper.value.scrollHeight - scrollWrapper.value.clientHeight;
-
-  scrollProgress.value = scrollHeight > 0 ? scrollTop / scrollHeight : 0;
-
-  showScrollIndicator.value = scrollTop < 100;
-};
-
-const scrollToHero = () => {
-  if (heroSectionRef.value) {
-    heroSectionRef.value.scrollIntoView({ behavior: "smooth" });
-  }
-};
-
-const scrollToTop = () => {
-  if (scrollWrapper.value) {
-    scrollWrapper.value.scrollTo({ top: 0, behavior: "smooth" });
-  }
-};
-
-watch(
-  [
-    () => currentTab.value,
-    () => selectedProject.value,
-    () => selectedPaper.value,
-  ],
-  () => {
-    nextTick(() => {
-      if (scrollWrapper.value) {
-        scrollWrapper.value.scrollTo({ top: 0, behavior: "instant" });
-      }
-    });
-  },
-);
 </script>
 
 <style scoped>
@@ -246,22 +172,6 @@ watch(
   overflow: hidden;
 }
 
-.scroll-wrapper {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100vh;
-  overflow-y: auto;
-  overflow-x: hidden;
-  scroll-behavior: smooth;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-
-.scroll-wrapper::-webkit-scrollbar {
-  display: none;
-}
 
 .main-section {
   position: relative;
@@ -277,121 +187,6 @@ watch(
   overflow: hidden;
 }
 
-.hero-section-wrapper {
-  min-height: 100vh;
-  position: relative;
-  display: flex;
-  flex-direction: row;
-  margin-left: 35%;
-  align-items: center;
-  justify-content: right;
-  padding: 2rem;
-  /* background: linear-gradient(to bottom, rgb(36, 36, 36), rgb(28, 28, 28)); */
-}
-
-.scroll-indicator {
-  position: absolute;
-  bottom: 2rem;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.5rem;
-  cursor: pointer;
-  z-index: 10;
-  animation: bounce 2s infinite;
-  transition: opacity 0.3s ease;
-}
-
-.scroll-indicator:hover {
-  animation-play-state: paused;
-}
-
-.scroll-text {
-  font-size: 0.9rem;
-  color: #999;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  font-weight: 500;
-}
-
-.scroll-arrow {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  border: 2px solid rgba(255, 255, 255, 0.2);
-  border-radius: 50%;
-  transition: all 0.3s ease;
-}
-
-.scroll-indicator:hover .scroll-arrow {
-  border-color: rgba(140, 172, 204, 0.5);
-  transform: translateY(3px);
-}
-
-.scroll-arrow svg {
-  color: rgba(255, 255, 255, 0.6);
-  transition: color 0.3s ease;
-}
-
-.scroll-indicator:hover .scroll-arrow svg {
-  color: rgb(140, 172, 204);
-}
-
-@keyframes bounce {
-
-  0%,
-  20%,
-  50%,
-  80%,
-  100% {
-    transform: translateX(-50%) translateY(0);
-  }
-
-  40% {
-    transform: translateX(-50%) translateY(-10px);
-  }
-
-  60% {
-    transform: translateX(-50%) translateY(-5px);
-  }
-}
-
-.scroll-to-top {
-  position: absolute;
-  top: 2rem;
-  right: 2rem;
-  width: 48px;
-  height: 48px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(36, 36, 36, 0.9);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 50%;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  z-index: 10;
-}
-
-.scroll-to-top:hover {
-  background: rgb(36, 36, 36);
-  border-color: rgb(140, 172, 204);
-  transform: translateY(-2px);
-}
-
-.scroll-to-top svg {
-  color: rgba(255, 255, 255, 0.6);
-  transition: color 0.3s ease;
-}
-
-.scroll-to-top:hover svg {
-  color: rgb(140, 172, 204);
-}
-
 .fade-enter-active,
 .fade-leave-active {
   transition: opacity 0.3s ease;
@@ -401,38 +196,4 @@ watch(
 .fade-leave-to {
   opacity: 0;
 }
-
-@media (max-width: 768px) {
-  .scroll-indicator {
-    bottom: 1rem;
-  }
-
-  .scroll-text {
-    font-size: 0.8rem;
-  }
-
-  .scroll-arrow {
-    width: 36px;
-    height: 36px;
-  }
-
-  .hero-section-wrapper {
-    padding: 1rem;
-    padding-top: 4rem;
-  }
-
-  .scroll-to-top {
-    top: 1rem;
-    right: 1rem;
-    width: 40px;
-    height: 40px;
-  }
-}
-
-@supports (-webkit-overflow-scrolling: touch) {
-  .scroll-wrapper {
-    -webkit-overflow-scrolling: touch;
-  }
-}
 </style>
-/style>
