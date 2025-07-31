@@ -36,7 +36,7 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
 import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
 import { mergeVertices } from "three/examples/jsm/utils/BufferGeometryUtils.js";
-import { onBeforeUnmount, onMounted, ref, computed } from "vue";
+import { onBeforeUnmount, onMounted, ref } from "vue";
 import { CustomOutlinePass } from "../composables/CustomOutlinePass.js";
 import FindSurfaces from "../composables/FindSurfaces.js";
 
@@ -83,6 +83,10 @@ const loadingState = {
 };
 
 
+
+const emits = defineEmits(['loaded']);
+
+
 const f22_timeline = gsap.timeline({ paused: true });
 const ingenuity_model_timeline = gsap.timeline({ paused: true });
 const jamesWebb_model_timeline = gsap.timeline({ paused: true });
@@ -98,10 +102,9 @@ const jamesWebbUnderline = ref(null);
 
 const progressProxy = { value: 0 };
 const goToProgress = (target, section) => {
-  // duration scales with distance *and* section stickiness
   const dist = Math.abs(target - progressProxy.value);
-  const baseDur = 0.25 + dist * 0.35;          // tweak to taste
-  const dur     = baseDur * section.stickiness; // heavier section = slower
+  const baseDur = 0.25 + dist * 0.35;
+  const dur = baseDur * section.stickiness;
 
   gsap.to(progressProxy, {
     value: target,
@@ -120,25 +123,25 @@ const scrollState = {
 };
 
 const sections = [
-  { 
-    start: 0, 
-    end: 0.33, 
+  {
+    start: 0,
+    end: 0.33,
     easeIn: 0.15,
     easeOut: 0.15,
     stickiness: 0.9,
     speedMultiplier: 1.2
   },
-  { 
-    start: 0.33, 
-    end: 0.74, 
+  {
+    start: 0.33,
+    end: 0.74,
     easeIn: 0.1,
     easeOut: 0.1,
     stickiness: 0.9,
     speedMultiplier: 1
   },
-  { 
-    start: 0.74, 
-    end: 1, 
+  {
+    start: 0.74,
+    end: 1,
     easeIn: 0.12,
     easeOut: 0.12,
     stickiness: 0.9,
@@ -169,11 +172,11 @@ function getWorldSpaceDimensions() {
 }
 function initializeAllTimelines() {
   if (!f22_model || !ingenuity_model || !jamesWebb_model) return;
-  
+
   initF22Timeline();
   initIngenuityTimeline();
   initJamesWebbTimeline();
-  
+
   const introTimeline = gsap.timeline();
   introTimeline
     .to(f22_model.scale, {
@@ -257,7 +260,7 @@ function initIngenuityTimeline() {
   const rotorDuration = ingenuity_model_animation.duration;
   const rotorOffset = 0;
   const worldSpace = getWorldSpaceDimensions();
-  
+
   ingenuity_model.scale.setScalar(1);
   const worldBox = new THREE.Box3().setFromObject(ingenuity_model);
   ingenuity_model.scale.setScalar(0);
@@ -422,10 +425,12 @@ async function loadAllModels() {
     loadIngenuityModel(),
     loadJamesWebbModel()
   ];
-  
+
   await Promise.all(loadPromises);
-  
+
   loadingState.allLoaded = true;
+  emits('loaded');
+
   initializeAllTimelines();
 }
 
@@ -638,9 +643,9 @@ onMounted(async () => {
     if (!loadingState.allLoaded) return;
 
     scrollState.targetProgress = props.scrollProgress;
-    const section = getCurrentSection(props.scrollProgress);  
-    goToProgress(props.scrollProgress, section);   
-    const smoothedProgress = progressProxy.value;  
+    const section = getCurrentSection(props.scrollProgress);
+    goToProgress(props.scrollProgress, section);
+    const smoothedProgress = progressProxy.value;
 
     let newViewOffset = currentViewOffset;
     const timelineConfig = getTimelineConfig();
@@ -688,11 +693,11 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   window.removeEventListener("resize", resizeHandler);
-  
+
   if (animationFrame) {
     cancelAnimationFrame(animationFrame);
   }
-  
+
   gsap.killTweensOf([
     f22_model?.scale,
     f22_model?.position,
@@ -710,7 +715,7 @@ onBeforeUnmount(() => {
     ingenuityUnderline.value,
     jamesWebbUnderline.value
   ]);
-  
+
   composer?.dispose?.();
   renderer?.dispose?.();
   scene?.traverse((child) => {
@@ -733,15 +738,16 @@ canvas {
   height: 100%;
   display: block;
   background-color: rgb(36, 36, 36);
-  border-radius: 4px;
   background: rgb(36, 36, 36);
-  mask-image: linear-gradient(to top, transparent 0%, black 15%, black 85%, transparent 100%),
-                linear-gradient(to left, transparent 0%, black 15%, black 85%, transparent 100%);
+  mask-image: linear-gradient(to top, transparent 0%, black 4%, black 96%, transparent 100%),
+                linear-gradient(to left, transparent 0%, black 4%, black 96%, transparent 100%);
   mask-composite: intersect;
-  -webkit-mask-image: linear-gradient(to top, transparent 0%, black 15%, black 85%, transparent 100%),
-                      linear-gradient(to left, transparent 0%, black 15%, black 85%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to top, transparent 0%, black 4%, black 96%, transparent 100%),
+                      linear-gradient(to left, transparent 0%, black 4%, black 96%, transparent 100%);
   -webkit-mask-composite: source-in;
 }
+
+
 
 .text-overlay {
   position: absolute;

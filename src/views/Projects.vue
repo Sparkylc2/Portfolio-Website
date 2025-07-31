@@ -84,7 +84,7 @@
         <div v-else class="scroll-wrapper" ref="scrollWrapper">
           <section v-if="showHeroSection" class="animation-section" ref="animationSectionRef">
             <div class="animation-wrapper">
-              <HeroAnimation :scrollProgress="progress" />
+              <HeroAnimation :scrollProgress="progress" @loaded="() => animLoaded = true" />
             </div>
           </section>
 
@@ -183,6 +183,7 @@ const showHeroSection = computed(() => expandedProject.value === null && !isMobi
 
 
 const capturing = ref(true);
+const animLoaded = ref(false);
 const progress = ref(0);
 const progressTarget = ref(0)
 const threshold = 1;
@@ -199,15 +200,17 @@ function updateDisplay() {
 
 }
 
+
 onMounted(() => {
   updateDisplay();
   window.addEventListener('resize', updateDisplay)
-
+  window.addEventListener('wheel', (e) => { if (!animLoaded.value) e.preventDefault() });
   takeScrollControl();
 
   const el = scrollWrapper.value;
   if (!el) return;
   el.addEventListener("wheel", onWheel, { passive: false });
+
   stepInertia();
 })
 
@@ -215,7 +218,8 @@ onMounted(() => {
 
 onUnmounted(() => {
   window.removeEventListener('resize', updateDisplay)
-  // scrollWrapper.value.removeEventListener('scroll', handleScroll);
+  window.removeEventListener('wheel', (e) => { if (!animLoaded.value) e.preventDefault() });
+
   const el = scrollWrapper.value;
   if (el) {
     el.removeEventListener("wheel", onWheel);
@@ -268,15 +272,6 @@ const { elementData } = useElementTracker(overviewSection, {
 
 
 
-//   if (!scrollWrapper.value) return;
-//   const scrollTop = scrollWrapper.value.scrollTop;
-//   capturingScroll.value = scrollTop < 1000;
-
-//   if (capturingScroll.value) e.preventDefault();
-
-//   const scrollHeight =
-//     scrollWrapper.value.scrollHeight - scrollWrapper.value.clientHeight;
-
 
 
 
@@ -290,6 +285,7 @@ const EXP_DECAY = 8;
 let lastWheelDir = 0;
 
 function onWheel(e) {
+
   lastWheelDir = Math.sign(e.deltaY);
   if (capturing.value) {
     if ((progress.value <= 0.001 && lastWheelDir < 0) ||
@@ -309,13 +305,18 @@ function onWheel(e) {
   const el = scrollWrapper.value;
   if (!el) return;
 
-const thresholdPx = 120;
+  const thresholdPx = 120;
   if (lastWheelDir < 0) {
     const animTop = animationSectionRef.value?.offsetTop ?? 0;
     if (el.scrollTop <= animTop + thresholdPx) {
+      const cameFromBottom =
+        progress.value > 0.5 ||   
+        progressTarget.value > 0.5;
+      const startPos = cameFromBottom ? 1 : 0;
+      progress.value = startPos;
+      progressTarget.value = startPos;
       takeScrollControl();
-      progress.value = 1;
-      progressTarget.value = 1;
+
     }
   }
 }
@@ -349,22 +350,6 @@ function releaseScrollControl() {
   capturing.value = false;
   document.body.style.overflow = "";
 }
-
-
-// const handleScroll = (e) => {
-//   if (!scrollWrapper.value) return;
-//   const scrollTop = scrollWrapper.value.scrollTop;
-//   capturingScroll.value = scrollTop < 1000;
-
-//   if (capturingScroll.value) e.preventDefault();
-
-//   const scrollHeight =
-//     scrollWrapper.value.scrollHeight - scrollWrapper.value.clientHeight;
-
-//   scrollProgress.value = scrollHeight > 0 ? scrollTop / scrollHeight : 0;
-
-//   showScrollIndicator.value = scrollTop < 100;
-// };
 
 
 
