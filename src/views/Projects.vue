@@ -55,7 +55,7 @@
                           <h3>Tech Stack</h3>
                           <div class="tech-tags">
                             <span v-for="tech in currentProject?.technologies" :key="tech" class="tech-tag">{{ tech
-                            }}</span>
+                              }}</span>
                           </div>
                         </div>
                       </div>
@@ -81,8 +81,8 @@
             </div>
           </div>
         </div>
-        <div v-else class="scroll-wrapper" ref="scrollWrapper" >
-          <section class="animation-section" ref="animationSectionRef">
+        <div v-else class="scroll-wrapper" ref="scrollWrapper">
+          <section v-if="showHeroSection" class="animation-section" ref="animationSectionRef">
             <div class="animation-wrapper">
               <HeroAnimation :scrollProgress="progress" />
             </div>
@@ -100,7 +100,7 @@
           </Transition>
 
           <section v-if="showHeroSection" class="hero-section-wrapper" ref="heroSectionRef">
-            <HeroSection/>
+            <HeroSection />
             <div class="scroll-to-top" @click="scrollToTop">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                 <path d="M12 19V5M5 12l7-7 7 7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
@@ -179,13 +179,15 @@ const isTablet = ref(false)
 const scrollWrapper = ref(null);
 const heroSectionRef = ref(null);
 const showScrollIndicator = ref(true);
-const showHeroSection = computed(() => expandedProject.value === null);
+const showHeroSection = computed(() => expandedProject.value === null && !isMobile.value && !isTablet.value);
 
 
-const capturing = ref(true);            
-const progress = ref(0);                
-const threshold = 1;                    
-const sensitivity = 0.0007;             
+const capturing = ref(true);
+const progress = ref(0);
+const progressTarget = ref(0)
+const threshold = 1;
+const sensitivity = 0.0007;
+const animationSectionRef = ref(null);
 
 
 
@@ -206,7 +208,10 @@ onMounted(() => {
   const el = scrollWrapper.value;
   if (!el) return;
   el.addEventListener("wheel", onWheel, { passive: false });
+  stepInertia();
 })
+
+
 
 onUnmounted(() => {
   window.removeEventListener('resize', updateDisplay)
@@ -272,26 +277,69 @@ const { elementData } = useElementTracker(overviewSection, {
 //   const scrollHeight =
 //     scrollWrapper.value.scrollHeight - scrollWrapper.value.clientHeight;
 
-  
 
-//   showScrollIndicator.value = scrollTop < 100;
+
+
+
+
+const INERTIA = 0.88;
+const MAX_SPEED = 0.008;
+const EXP_DECAY = 8;
+
+
+let lastWheelDir = 0;
+
 function onWheel(e) {
-  console
-  if (capturing.value) e.preventDefault();
+  lastWheelDir = Math.sign(e.deltaY);
+  if (capturing.value) {
+    if ((progress.value <= 0.001 && lastWheelDir < 0) ||
+      (progress.value >= 0.999 && lastWheelDir > 0)) {
+      releaseScrollControl();
+      return;
+    }
 
-  const scrollTop = scrollWrapper.value.scrollTop;
-  showScrollIndicator.value = scrollTop < 100;
-  const dy = e.deltaY;
-  const clamp01 = (x) =>  Math.max(0, Math.min(1, x));
-  progress.value = clamp01(progress.value + dy * sensitivity);
+    e.preventDefault();
 
-  if (!capturing.value && progress.value < threshold) takeScrollControl();
-  if (progress.value >= threshold) releaseScrollControl();
+    const raw = e.deltaY * sensitivity;
+    const clamp01 = v => Math.min(Math.max(v, 0), 1);
+    progressTarget.value = clamp01(progressTarget.value + raw);
+    return;
+  }
+
+  const el = scrollWrapper.value;
+  if (!el) return;
+
+const thresholdPx = 120;
+  if (lastWheelDir < 0) {
+    const animTop = animationSectionRef.value?.offsetTop ?? 0;
+    if (el.scrollTop <= animTop + thresholdPx) {
+      takeScrollControl();
+      progress.value = 1;
+      progressTarget.value = 1;
+    }
+  }
 }
+
+const stepInertia = () => {
+  requestAnimationFrame(stepInertia);
+
+  const diff = progressTarget.value - progress.value;
+
+  const cap = MAX_SPEED * (1 - Math.exp(-Math.abs(diff) * EXP_DECAY));
+
+  let delta = diff * INERTIA;
+  if (Math.abs(delta) > cap) {
+    delta = Math.sign(delta) * cap;
+  }
+
+  if (Math.abs(delta) < 1e-7) return;
+
+  progress.value = Math.min(Math.max(progress.value + delta, 0), 1);
+};
 
 function takeScrollControl() {
   capturing.value = true;
-    if (scrollWrapper.value) {
+  if (scrollWrapper.value) {
     scrollWrapper.value.scrollTop = 0;
   }
   document.body.style.overflow = "hidden";
