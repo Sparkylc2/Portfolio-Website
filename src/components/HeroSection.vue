@@ -2,7 +2,7 @@
   <div class="hero-content">
     <div class="intro-section">
       <h1 class="hero-title">
-        <span class="greeting">Hello, I'm</span>
+        <!-- <span class="greeting">Hello, I'm</span> -->
         <span class="name">Lukas Campbell</span>
       </h1>
       <p class="tagline">Aeronautical Engineering Student</p>

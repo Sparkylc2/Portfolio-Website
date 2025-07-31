@@ -5,7 +5,7 @@
   <div class="text-overlay">
     <div class="text-container right-side" ref="f22Text">
       <h2 class="model-title">
-        — Air
+        <span class="text-content">—&nbsp;&nbsp;Aircraft</span>
         <div class="underline" ref="f22Underline"></div>
       </h2>
       <p class="model-subtitle">F22 Stealth Fighter</p>
@@ -13,7 +13,7 @@
 
     <div class="text-container left-side" ref="ingenuityText">
       <h2 class="model-title">
-        Rotor —
+        <span class="text-content">Rotorcraft &nbsp;&nbsp;—</span>
         <div class="underline" ref="ingenuityUnderline"></div>
       </h2>
       <p class="model-subtitle">Ingenuity Mars Helicopter</p>
@@ -21,7 +21,7 @@
 
     <div class="text-container right-side" ref="jamesWebbText">
       <h2 class="model-title">
-        — Space
+        <span class="text-content">—&nbsp;&nbsp;Spacecraft</span>
         <div class="underline" ref="jamesWebbUnderline"></div>
       </h2>
       <p class="model-subtitle">James Webb Telescope</p>
@@ -36,10 +36,9 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
 import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
 import { mergeVertices } from "three/examples/jsm/utils/BufferGeometryUtils.js";
-import { onBeforeUnmount, onMounted, ref } from "vue";
+import { onBeforeUnmount, onMounted, ref, computed } from "vue";
 import { CustomOutlinePass } from "../composables/CustomOutlinePass.js";
 import FindSurfaces from "../composables/FindSurfaces.js";
-
 
 const props = defineProps({
   scrollProgress: {
@@ -52,10 +51,10 @@ const canvas = ref(null);
 const canvasWrap = ref(null);
 
 let scene, camera, renderer, composer;
-let fullWidth, fullHeight
+let fullWidth, fullHeight;
 let customOutline;
 let resizeHandler;
-
+let animationFrame;
 
 const surfaceFinder = new FindSurfaces();
 const loader = new GLTFLoader();
@@ -73,23 +72,21 @@ let ingenuity_model_action = null;
 let ingenuity_mixer = null;
 let ingenuityBaseScale = 1;
 
-
 let jamesWebb_model = null;
 let jamesWebbBaseScale = 1;
 
-let loadComplete = false;
+const loadingState = {
+  f22: false,
+  ingenuity: false,
+  jamesWebb: false,
+  allLoaded: false
+};
 
 
 const f22_timeline = gsap.timeline({ paused: true });
 const ingenuity_model_timeline = gsap.timeline({ paused: true });
 const jamesWebb_model_timeline = gsap.timeline({ paused: true });
 
-const timelineConfig = [
-  { timeline: f22_timeline, start: 0, end: 0.33, offset: fullWidth / 4 },
-  { timeline: ingenuity_model_timeline, start: 0.33, end: 0.66 + 0.08, offset: -fullWidth / 4 },
-  { timeline: jamesWebb_model_timeline, start: 0.66 + 0.08, end: 1, offset: -fullWidth / 4 }
-
-];
 
 const f22Text = ref(null);
 const ingenuityText = ref(null);
@@ -98,29 +95,116 @@ const f22Underline = ref(null);
 const ingenuityUnderline = ref(null);
 const jamesWebbUnderline = ref(null);
 
-function getWorldSpaceDimensions() {
 
-  const distance = camera.position.z;
-  const vFOV = THREE.MathUtils.degToRad(camera.fov);
+const progressProxy = { value: 0 };
+const goToProgress = (target, section) => {
+  // duration scales with distance *and* section stickiness
+  const dist = Math.abs(target - progressProxy.value);
+  const baseDur = 0.25 + dist * 0.35;          // tweak to taste
+  const dur     = baseDur * section.stickiness; // heavier section = slower
 
-  const visibleHeight = 2 * Math.tan(vFOV / 2) * distance;
-  const visibleWidth = visibleHeight * camera.aspect;
+  gsap.to(progressProxy, {
+    value: target,
+    duration: dur,
+    ease: "power3.out",
+    overwrite: "auto"
+  });
+};
 
-  return { width: visibleWidth, height: visibleHeight };
+const scrollState = {
+  currentProgress: 0,
+  targetProgress: 0,
+  velocity: 0,
+  isScrolling: false,
+  lastScrollTime: 0
+};
+
+const sections = [
+  { 
+    start: 0, 
+    end: 0.33, 
+    easeIn: 0.15,
+    easeOut: 0.15,
+    stickiness: 0.9,
+    speedMultiplier: 1.2
+  },
+  { 
+    start: 0.33, 
+    end: 0.74, 
+    easeIn: 0.1,
+    easeOut: 0.1,
+    stickiness: 0.9,
+    speedMultiplier: 1
+  },
+  { 
+    start: 0.74, 
+    end: 1, 
+    easeIn: 0.12,
+    easeOut: 0.12,
+    stickiness: 0.9,
+    speedMultiplier: 1
+  }
+];
+
+function getCurrentSection(progress) {
+  return sections.find(s => progress >= s.start && progress <= s.end) || sections[0];
 }
 
+
+const getTimelineConfig = () => {
+  if (!fullWidth) return [];
+  return [
+    { timeline: f22_timeline, start: 0, end: 0.33, offset: fullWidth / 4 },
+    { timeline: ingenuity_model_timeline, start: 0.33, end: 0.74, offset: -fullWidth / 4 },
+    { timeline: jamesWebb_model_timeline, start: 0.74, end: 1, offset: fullWidth / 4 }
+  ];
+};
+
+function getWorldSpaceDimensions() {
+  const distance = camera.position.z;
+  const vFOV = THREE.MathUtils.degToRad(camera.fov);
+  const visibleHeight = 2 * Math.tan(vFOV / 2) * distance;
+  const visibleWidth = visibleHeight * camera.aspect;
+  return { width: visibleWidth, height: visibleHeight };
+}
+function initializeAllTimelines() {
+  if (!f22_model || !ingenuity_model || !jamesWebb_model) return;
+  
+  initF22Timeline();
+  initIngenuityTimeline();
+  initJamesWebbTimeline();
+  
+  const introTimeline = gsap.timeline();
+  introTimeline
+    .to(f22_model.scale, {
+      x: f22BaseScale,
+      y: f22BaseScale,
+      z: f22BaseScale,
+      duration: 1.2,
+      ease: "power2.out"
+    }, 0)
+    .to(f22Underline.value, {
+      scaleX: 1,
+      duration: 1.2,
+      ease: "power2.out"
+    }, 0)
+    .to(f22Text.value, {
+      y: "0%",
+      opacity: 1,
+      duration: 1.2,
+      ease: "power2.out"
+    }, 0);
+}
 
 function initF22Timeline() {
   const animation_duration = f22_model_animation.duration;
   const animationOffset = 16;
-
   const worldSpace = getWorldSpaceDimensions();
   const modelTargetSize = 2;
-
   const offScreenDistance = worldSpace.width * 1.2;
   const elevationDistance = modelTargetSize * 0.4;
 
-
+  f22_timeline.clear();
   f22_timeline
     .to(f22_model.rotation, {
       y: Math.PI / 2,
@@ -172,22 +256,17 @@ function initF22Timeline() {
 function initIngenuityTimeline() {
   const rotorDuration = ingenuity_model_animation.duration;
   const rotorOffset = 0;
-
+  const worldSpace = getWorldSpaceDimensions();
+  
   ingenuity_model.scale.setScalar(1);
   const worldBox = new THREE.Box3().setFromObject(ingenuity_model);
   ingenuity_model.scale.setScalar(0);
-
-  const zoomInY = (p) => worldBox.min.y + (worldBox.max.y - worldBox.min.y) * p;
-  const zoomInZ = (p) => worldBox.min.z + (worldBox.max.z - worldBox.min.z) * p;
-
-  const worldSpace = getWorldSpaceDimensions();
   ingenuity_model.position.set(worldSpace.width * 1.2, 0, 0);
 
-
   const flyOutDuration = 2;
-
   gsap.set(ingenuityUnderline.value, { scaleX: 0, transformOrigin: "left center" });
 
+  ingenuity_model_timeline.clear();
   ingenuity_model_timeline
     .fromTo(ingenuityText.value, {
       x: "-50%",
@@ -282,16 +361,14 @@ function initIngenuityTimeline() {
       duration: 0.001,
       ease: "power2.out"
     }, "end");
-
 }
 
 function initJamesWebbTimeline() {
-
   const worldSpace = getWorldSpaceDimensions();
   jamesWebb_model.position.set(0, 0, 0);
   jamesWebb_model.rotation.set(0, Math.PI / 2, 0);
 
-
+  jamesWebb_model_timeline.clear();
   jamesWebb_model_timeline
     .fromTo(jamesWebbText.value, {
       x: "100%",
@@ -336,248 +413,148 @@ function initJamesWebbTimeline() {
       scaleX: 0,
       duration: 0.37,
       ease: "power2.in"
-    }, 0.63)
+    }, 0.63);
 }
 
-
-
-async function loadJamesWebbModel() {
-  loader.load("/models/JamesWebb.glb",
-    (gltf) => {
-      jamesWebb_model = gltf.scene;
-
-      jamesWebb_model.traverse((node) => {
-        if (node.isMesh) {
-          node.castShadow = true;
-          node.receiveShadow = true;
-          node.material.opacity = 0;
-          node.material.transparent = true;
-        }
-      });
-
-      const box = new THREE.Box3().setFromObject(jamesWebb_model);
-      const center = box.getCenter(new THREE.Vector3());
-      jamesWebb_model.position.sub(center);
-      const size = box.getSize(new THREE.Vector3());
-      const maxDim = Math.max(size.x, size.y, size.z);
-      const scale = 2 / maxDim;
-      jamesWebb_model.scale.setScalar(0);
-      jamesWebbBaseScale = scale;
-
-      addSurfaceIdAttributeToScene(jamesWebb_model, surfaceFinder);
-      customOutline.updateMaxSurfaceId(surfaceFinder.surfaceId + 1);
-
-      scene.add(jamesWebb_model);
-      initJamesWebbTimeline();
-    }
-  )
-}
-async function loadIngenuityModel() {
-  loader.load(
-    "/models/HelicopterRotorRiggedAnimated1.glb",
-    (gltf) => {
-      ingenuity_model = gltf.scene;
-      ingenuity_mixer = new THREE.AnimationMixer(ingenuity_model);
-      ingenuity_model_animation = gltf.animations[0];
-      ingenuity_model_action = ingenuity_mixer.clipAction(ingenuity_model_animation);
-      ingenuity_model_action.play();
-      ingenuity_model_action.paused = true;
-
-
-
-
-      ingenuity_model.traverse((node) => {
-        if (node.isMesh) {
-          node.castShadow = true;
-          node.receiveShadow = true;
-          node.material.opacity = 0;
-          node.material.transparent = true;
-        }
-      });
-
-
-
-
-
-      const box = new THREE.Box3().setFromObject(ingenuity_model);
-      const center = box.getCenter(new THREE.Vector3());
-
-      // ingenuity_model.position.sub(center);
-
-      const size = box.getSize(new THREE.Vector3());
-      const maxDim = Math.max(size.x, size.y, size.z);
-      const scale = 2 / maxDim;
-      ingenuityBaseScale = scale;
-      ingenuity_model.scale.setScalar(0);
-      ingenuity_model.position.set(0, 0, 0);
-      ingenuity_model.rotation.set(Math.PI / 2, 0, 0);
-
-
-
-      addSurfaceIdAttributeToScene(ingenuity_model, surfaceFinder);
-      customOutline.updateMaxSurfaceId(surfaceFinder.surfaceId + 1);
-
-      scene.add(ingenuity_model);
-
-      initIngenuityTimeline();
-    },
-    undefined,
-    (err) => console.error("GLTF load error:", err)
-  );
+async function loadAllModels() {
+  const loadPromises = [
+    loadF22Model(),
+    loadIngenuityModel(),
+    loadJamesWebbModel()
+  ];
+  
+  await Promise.all(loadPromises);
+  
+  loadingState.allLoaded = true;
+  initializeAllTimelines();
 }
 
 async function loadF22Model() {
-  loader.load(
-    "/models/F22-Raptor-Backup.glb",
-    (gltf) => {
-      f22_model = gltf.scene;
-      f22_mixer = new THREE.AnimationMixer(f22_model);
-      f22_model_animation = gltf.animations[0];
-      f22_model_action = f22_mixer.clipAction(f22_model_animation);
-      f22_model_action.play();
-      f22_model_action.paused = true;
+  return new Promise((resolve, reject) => {
+    loader.load(
+      "/models/F22-Raptor-Backup.glb",
+      (gltf) => {
+        f22_model = gltf.scene;
+        f22_mixer = new THREE.AnimationMixer(f22_model);
+        f22_model_animation = gltf.animations[0];
+        f22_model_action = f22_mixer.clipAction(f22_model_animation);
+        f22_model_action.play();
+        f22_model_action.paused = true;
 
-      f22_model.traverse((node) => {
-        if (node.isMesh) {
-          node.castShadow = true;
-          node.receiveShadow = true;
-          node.material.opacity = 0;
-          node.material.transparent = true;
-        }
-      });
-
-      const box = new THREE.Box3().setFromObject(f22_model);
-      const center = box.getCenter(new THREE.Vector3());
-      f22_model.position.sub(center);
-
-      const size = box.getSize(new THREE.Vector3());
-      const maxDim = Math.max(size.x, size.y, size.z);
-      const scale = 2 / maxDim;
-      f22BaseScale = scale;
-      f22_model.scale.setScalar(0);
-
-
-      addSurfaceIdAttributeToScene(f22_model, surfaceFinder);
-      customOutline.updateMaxSurfaceId(surfaceFinder.surfaceId + 1);
-
-      scene.add(f22_model);
-
-      const timeline = gsap.timeline({ paused: true });
-      timeline.to(f22_model.scale, {
-        x: f22BaseScale,
-        y: f22BaseScale,
-        z: f22BaseScale,
-        duration: 1.2,
-        ease: "power2.out"
-      }, 0)
-        .to(f22Underline.value, {
-          scaleX: 1,
-          duration: 1.2,
-          ease: "power2.out"
-        }, 0)
-        .to(f22Text.value, {
-          y: "50%",
-          opacity: 1,
-          duration: 1.2,
-          ease: "power2.out",
-          onComplete: () => {
-            loadComplete = true;
+        f22_model.traverse((node) => {
+          if (node.isMesh) {
+            node.castShadow = true;
+            node.receiveShadow = true;
+            node.material.opacity = 0;
+            node.material.transparent = true;
           }
-        }, 0)
+        });
 
-      timeline.play();
-      initF22Timeline();
+        const box = new THREE.Box3().setFromObject(f22_model);
+        const center = box.getCenter(new THREE.Vector3());
+        f22_model.position.sub(center);
 
-    },
-    undefined,
-    (err) => console.error("GLTF load error:", err)
-  );
+        const size = box.getSize(new THREE.Vector3());
+        const maxDim = Math.max(size.x, size.y, size.z);
+        const scale = 2 / maxDim;
+        f22BaseScale = scale;
+        f22_model.scale.setScalar(0);
+
+        addSurfaceIdAttributeToScene(f22_model, surfaceFinder);
+        customOutline.updateMaxSurfaceId(surfaceFinder.surfaceId + 1);
+
+        scene.add(f22_model);
+        loadingState.f22 = true;
+        resolve();
+      },
+      undefined,
+      reject
+    );
+  });
 }
 
+async function loadIngenuityModel() {
+  return new Promise((resolve, reject) => {
+    loader.load(
+      "/models/HelicopterRotorRiggedAnimated1.glb",
+      (gltf) => {
+        ingenuity_model = gltf.scene;
+        ingenuity_mixer = new THREE.AnimationMixer(ingenuity_model);
+        ingenuity_model_animation = gltf.animations[0];
+        ingenuity_model_action = ingenuity_mixer.clipAction(ingenuity_model_animation);
+        ingenuity_model_action.play();
+        ingenuity_model_action.paused = true;
 
-onMounted(async () => {
+        ingenuity_model.traverse((node) => {
+          if (node.isMesh) {
+            node.castShadow = true;
+            node.receiveShadow = true;
+            node.material.opacity = 0;
+            node.material.transparent = true;
+          }
+        });
 
-  gsap.set(f22Text.value, { y: "-100%", opacity: 0 });
-  gsap.set(ingenuityText.value, { x: "-100%", opacity: 0 });
-  gsap.set(jamesWebbText.value, { x: "100%", opacity: 0 });
+        const box = new THREE.Box3().setFromObject(ingenuity_model);
+        const center = box.getCenter(new THREE.Vector3());
+        const size = box.getSize(new THREE.Vector3());
+        const maxDim = Math.max(size.x, size.y, size.z);
+        const scale = 2 / maxDim;
+        ingenuityBaseScale = scale;
+        ingenuity_model.scale.setScalar(0);
+        ingenuity_model.position.set(0, 0, 0);
+        ingenuity_model.rotation.set(Math.PI / 2, 0, 0);
 
-  gsap.set(f22Underline.value, { scaleX: 0, transformOrigin: "right center" });
-  gsap.set(ingenuityUnderline.value, { scaleX: 0, transformOrigin: "left center" });
-  gsap.set(jamesWebbUnderline.value, { scaleX: 0, transformOrigin: "right center" });
+        addSurfaceIdAttributeToScene(ingenuity_model, surfaceFinder);
+        customOutline.updateMaxSurfaceId(surfaceFinder.surfaceId + 1);
 
+        scene.add(ingenuity_model);
+        loadingState.ingenuity = true;
+        resolve();
+      },
+      undefined,
+      reject
+    );
+  });
+}
 
-  await initThree();
+async function loadJamesWebbModel() {
+  return new Promise((resolve, reject) => {
+    loader.load("/models/JamesWebb.glb",
+      (gltf) => {
+        jamesWebb_model = gltf.scene;
 
-  loadF22Model();
-  loadIngenuityModel();
-  loadJamesWebbModel();
+        jamesWebb_model.traverse((node) => {
+          if (node.isMesh) {
+            node.castShadow = true;
+            node.receiveShadow = true;
+            node.material.opacity = 0;
+            node.material.transparent = true;
+          }
+        });
 
+        const box = new THREE.Box3().setFromObject(jamesWebb_model);
+        const center = box.getCenter(new THREE.Vector3());
+        jamesWebb_model.position.sub(center);
+        const size = box.getSize(new THREE.Vector3());
+        const maxDim = Math.max(size.x, size.y, size.z);
+        const scale = 2 / maxDim;
+        jamesWebb_model.scale.setScalar(0);
+        jamesWebbBaseScale = scale;
 
+        addSurfaceIdAttributeToScene(jamesWebb_model, surfaceFinder);
+        customOutline.updateMaxSurfaceId(surfaceFinder.surfaceId + 1);
 
-  let currentViewOffset = fullWidth / 4;
-
-  const tick = () => {
-    requestAnimationFrame(tick);
-
-    let newViewOffset = currentViewOffset;
-
-    timelineConfig.forEach(({ timeline, start, end }, index) => {
-      if (!timeline) return;
-      if (!loadComplete) return;
-
-      let progress = 0;
-
-      if (props.scrollProgress >= start && props.scrollProgress <= end) {
-        progress = (props.scrollProgress - start) / (end - start);
-        progress = Math.max(0, Math.min(1, progress));
-
-        if (index === 0) newViewOffset = fullWidth / 4;
-        else if (index === 1) newViewOffset = -fullWidth / 4;
-        else if (index === 2) newViewOffset = fullWidth / 4;
-      } else if (props.scrollProgress > end) {
-        progress = 1;
-      } else {
-        progress = 0;
-      }
-
-      timeline.progress(progress);
-    });
-
-
-    if (newViewOffset !== currentViewOffset) {
-      currentViewOffset = newViewOffset;
-      camera.setViewOffset(fullWidth, fullHeight, currentViewOffset, 0, fullWidth, fullHeight);
-    }
-    composer.render();
-    // renderer.render(scene, camera);
-  };
-  tick();
-
-
-  resizeHandler = () => {
-    const w = canvasWrap.value.clientWidth;
-    const h = canvasWrap.value.clientHeight;
-    camera.aspect = w / h;
-    camera.updateProjectionMatrix();
-
-    renderer.setSize(w, h);
-    composer.setSize(w, h);
-    customOutline.setSize(w, h);
-  };
-  window.addEventListener("resize", resizeHandler);
-
-});
-
-onBeforeUnmount(() => {
-  window.removeEventListener("resize", resizeHandler);
-  composer?.dispose?.();
-  renderer?.dispose?.();
-});
-
+        scene.add(jamesWebb_model);
+        loadingState.jamesWebb = true;
+        resolve();
+      },
+      undefined,
+      reject
+    );
+  });
+}
 
 function addSurfaceIdAttributeToScene(root, surfaceFinder) {
-  // surfaceFinder.surfaceId = 0;
-
   root.traverse((node) => {
     if (node.isMesh && node.geometry) {
       if (!node.geometry.index) {
@@ -589,14 +566,10 @@ function addSurfaceIdAttributeToScene(root, surfaceFinder) {
   });
 }
 
-
-
 async function initThree() {
   scene = new THREE.Scene();
   scene.background = null;
 
-
-  // camera = new THREE.OrthographicCamera
   camera = new THREE.PerspectiveCamera(50, canvasWrap.value.clientWidth / canvasWrap.value.clientHeight, 0.1, 100);
   camera.position.set(1, 1, 1);
   camera.up.set(0, 1, 0);
@@ -608,20 +581,11 @@ async function initThree() {
   renderer = new THREE.WebGLRenderer({ canvas: canvas.value, antialias: true, alpha: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.setSize(canvasWrap.value.clientWidth, canvasWrap.value.clientHeight);
-
-
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  // renderer.toneMapping = THREE.NoToneMapping;
   renderer.toneMappingExposure = 1.0;
-
-
-  renderer.physicallyCorrectLights = true;
-
-
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-
   renderer.setClearAlpha(0);
 
   setupLights(scene);
@@ -649,51 +613,117 @@ async function initThree() {
   composer.addPass(customOutline);
 }
 
-
 function setupLights(scene) {
-
   const magMult = 5;
-
   const ambient = new THREE.AmbientLight(0xffffff, 0.2 * magMult);
   scene.add(ambient);
-
-  // const hemi = new THREE.HemisphereLight(0xb0c4ff, 0x242424, 0.7 * magMult);
-  // scene.add(hemi);
-  // const key = new THREE.DirectionalLight(0xffffff, 2.0 * magMult);
-  // key.position.set(3, 4, 2);
-  // key.castShadow = true;
-  // key.shadow.mapSize.set(2048, 2048);
-  // key.shadow.normalBias = 0.02;
-  // key.shadow.bias = -0.0002;
-  // key.shadow.camera.near = 0.1;
-  // key.shadow.camera.far = 20;
-  // key.shadow.camera.left = -5;
-  // key.shadow.camera.right = 5;
-  // key.shadow.camera.top = 5;
-  // key.shadow.camera.bottom = -5;
-  // scene.add(key);
-
-  // const rim = new THREE.DirectionalLight(0xffffff, 1.2 * magMult);
-  // rim.position.set(-3, 2, -2);
-  // rim.castShadow = false; // usually no need
-  // scene.add(rim);
-
-  // const fill = new THREE.DirectionalLight(0xffffff, 0.5 * magMult);
-  // fill.position.set(0, -1, 1);
-  // scene.add(fill);
-
-  // return { hemi, key, rim };
 }
 
+onMounted(async () => {
+  gsap.set(f22Text.value, { y: "-50%", opacity: 0 });
+  gsap.set(ingenuityText.value, { x: "-100%", opacity: 0 });
+  gsap.set(jamesWebbText.value, { x: "100%", opacity: 0 });
+  gsap.set(f22Underline.value, { scaleX: 0, transformOrigin: "right center" });
+  gsap.set(ingenuityUnderline.value, { scaleX: 0, transformOrigin: "left center" });
+  gsap.set(jamesWebbUnderline.value, { scaleX: 0, transformOrigin: "right center" });
 
+  await initThree();
+  await loadAllModels();
 
+  let currentViewOffset = fullWidth / 4;
 
-const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
-function mapScrollToProgress(scroll, start = 0.2, end = 0.8) {
-  const clamped = clamp((scroll - start) / (end - start), 0, 1);
-  return clamped;
-}
+  const tick = () => {
+    animationFrame = requestAnimationFrame(tick);
 
+    if (!loadingState.allLoaded) return;
+
+    scrollState.targetProgress = props.scrollProgress;
+    const section = getCurrentSection(props.scrollProgress);  
+    goToProgress(props.scrollProgress, section);   
+    const smoothedProgress = progressProxy.value;  
+
+    let newViewOffset = currentViewOffset;
+    const timelineConfig = getTimelineConfig();
+
+    timelineConfig.forEach(({ timeline, start, end, offset }, index) => {
+      if (!timeline) return;
+
+      let progress = 0;
+
+      if (smoothedProgress >= start && smoothedProgress <= end) {
+        progress = (smoothedProgress - start) / (end - start);
+        progress = Math.max(0, Math.min(1, progress));
+        newViewOffset = offset;
+      } else if (smoothedProgress > end) {
+        progress = 1;
+      } else {
+        progress = 0;
+      }
+
+      timeline.progress(progress);
+    });
+
+    if (newViewOffset !== currentViewOffset) {
+      currentViewOffset = newViewOffset;
+      camera.setViewOffset(fullWidth, fullHeight, currentViewOffset, 0, fullWidth, fullHeight);
+    }
+
+    composer.render();
+  };
+  tick();
+
+  resizeHandler = () => {
+    const w = canvasWrap.value.clientWidth;
+    const h = canvasWrap.value.clientHeight;
+    fullWidth = w;
+    fullHeight = h;
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+    renderer.setSize(w, h);
+    composer.setSize(w, h);
+    customOutline.setSize(w, h);
+  };
+  window.addEventListener("resize", resizeHandler);
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener("resize", resizeHandler);
+  
+  if (animationFrame) {
+    cancelAnimationFrame(animationFrame);
+  }
+  
+  gsap.killTweensOf([
+    f22_model?.scale,
+    f22_model?.position,
+    f22_model?.rotation,
+    ingenuity_model?.scale,
+    ingenuity_model?.position,
+    ingenuity_model?.rotation,
+    jamesWebb_model?.scale,
+    jamesWebb_model?.position,
+    jamesWebb_model?.rotation,
+    f22Text.value,
+    ingenuityText.value,
+    jamesWebbText.value,
+    f22Underline.value,
+    ingenuityUnderline.value,
+    jamesWebbUnderline.value
+  ]);
+  
+  composer?.dispose?.();
+  renderer?.dispose?.();
+  scene?.traverse((child) => {
+    if (child.geometry) child.geometry.dispose();
+    if (child.material) {
+      if (Array.isArray(child.material)) {
+        child.material.forEach(mat => mat.dispose());
+      } else {
+        child.material.dispose();
+      }
+    }
+  });
+});
 </script>
 
 <style scoped>
@@ -703,6 +733,14 @@ canvas {
   height: 100%;
   display: block;
   background-color: rgb(36, 36, 36);
+  border-radius: 4px;
+  background: rgb(36, 36, 36);
+  mask-image: linear-gradient(to top, transparent 0%, black 15%, black 85%, transparent 100%),
+                linear-gradient(to left, transparent 0%, black 15%, black 85%, transparent 100%);
+  mask-composite: intersect;
+  -webkit-mask-image: linear-gradient(to top, transparent 0%, black 15%, black 85%, transparent 100%),
+                      linear-gradient(to left, transparent 0%, black 15%, black 85%, transparent 100%);
+  -webkit-mask-composite: source-in;
 }
 
 .text-overlay {
@@ -721,7 +759,6 @@ canvas {
   transform: translateY(-50%);
   padding: 2rem;
   color: white;
-  font-family: 'Arial', sans-serif;
 }
 
 .right-side {
@@ -736,12 +773,16 @@ canvas {
 
 .model-title {
   font-size: 3rem;
-  font-weight: bold;
+  font-weight: 600;
   margin: 0 0 0.5rem 0;
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
-  letter-spacing: 2px;
+  letter-spacing: -0.02em;
   position: relative;
   display: inline-block;
+}
+
+.text-content {
+  display: inline-block;
+  text-shadow: 0 2px 20px rgba(0, 0, 0, 0.5);
 }
 
 .underline {
@@ -750,9 +791,17 @@ canvas {
   left: 0;
   width: 100%;
   height: 2px;
-  background-color: white;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 4px;
+  /* background: linear-gradient(90deg, 
+    transparent 0%, 
+    rgba(255, 255, 255, 0.8) 20%, 
+    rgba(255, 255, 255, 1) 50%, 
+    rgba(255, 255, 255, 0.8) 80%, 
+    transparent 100%
+  ); */
   transform-origin: left center;
-  box-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
+  /* box-shadow: 0 0 12px rgba(255, 255, 255, 0.4); */
 }
 
 .right-side .underline {
@@ -762,9 +811,10 @@ canvas {
 .model-subtitle {
   font-size: 1.2rem;
   margin: 0;
-  opacity: 0.8;
-  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.6);
+  opacity: 0.7;
   font-weight: 300;
+  letter-spacing: 0.05em;
+  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.4);
 }
 
 @media (max-width: 768px) {
