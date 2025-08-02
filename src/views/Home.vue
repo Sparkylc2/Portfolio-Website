@@ -29,10 +29,6 @@ const selectedProject = ref(null);
 const selectedPaper = ref(null);
 const activeColor = ref("#e63946");
 
-const scrollWrapper = ref(null);
-const heroSectionRef = ref(null);
-const showScrollIndicator = ref(true);
-const scrollProgress = ref(0);
 
 function getProjectColour(color) {
   const map = {
@@ -73,7 +69,7 @@ const ALL_TABS = [
   { key: "Overview", label: "Overview", parent: "Projects" },
   { key: "Details", label: "Details", parent: "Projects" },
   { key: "Paper", label: "Paper", parent: "Papers" },
-  { key: "Abstract", label: "Abstract", parent: "Papers" },
+  // { key: "Abstract", label: "Abstract", parent: "Papers" },
   { key: "_DIVIDER", divider: true },
   { key: "Projects", label: "Projects" },
   { key: "Papers", label: "Papers" },

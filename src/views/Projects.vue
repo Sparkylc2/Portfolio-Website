@@ -169,6 +169,7 @@
             <div class="animation-wrapper">
               <HeroAnimation
                 :scrollProgress="progress"
+                :section="currentSection"
                 @loaded="() => (animLoaded = true)"
               />
             </div>
@@ -397,7 +398,7 @@ function onWheel(e) {
   if (capturing.value) {
     if (
       (progress.value <= 0.001 && lastWheelDir < 0) ||
-      (progress.value >= 0.9 && lastWheelDir > 0)
+      (progress.value >= 0.93 && lastWheelDir > 0)
     ) {
       //     const raw = e.deltaY * sensitivity;
       // const clamp01 = v => Math.min(Math.max(v, 0), 1);
@@ -408,7 +409,7 @@ function onWheel(e) {
 
     e.preventDefault();
 
-    const raw = e.deltaY * sensitivity;
+    const raw = e.deltaY * sensitivity * currentSection.value.speedMultiplier;
     const clamp01 = (v) => Math.min(Math.max(v, 0), 1);
     progressTarget.value = clamp01(progressTarget.value + raw);
     return;
@@ -486,6 +487,40 @@ watch(
     });
   },
 );
+
+
+const sections = [
+  {
+    start: 0,
+    end: 0.33,
+    easeIn: 0.15,
+    easeOut: 0.15,
+    stickiness: 0.9,
+    speedMultiplier: 1.1
+  },
+  {
+    start: 0.33,
+    end: 0.74,
+    easeIn: 0.1,
+    easeOut: 0.1,
+    stickiness: 0.9,
+    speedMultiplier: 0.5
+  },
+  {
+    start: 0.74,
+    end: 1,
+    easeIn: 0.12,
+    easeOut: 0.12,
+    stickiness: 0.9,
+    speedMultiplier: 1
+  }
+];
+
+const currentSection = computed(() => {
+  return sections.find(s => progress.value >= s.start && progress.value <= s.end) || sections[0];
+});
+
+
 </script>
 
 <style scoped>

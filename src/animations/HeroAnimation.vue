@@ -44,6 +44,13 @@ const props = defineProps({
   scrollProgress: {
     type: Number,
     default: 0,
+  },
+  expandedProject: {
+    default: null,
+  },
+  section: {
+    type: Object,
+    default: {},
   }
 });
 
@@ -101,10 +108,10 @@ const jamesWebbUnderline = ref(null);
 
 
 const progressProxy = { value: 0 };
-const goToProgress = (target, section) => {
+const goToProgress = (target) => {
   const dist = Math.abs(target - progressProxy.value);
   const baseDur = 0.25 + dist * 0.35;
-  const dur = baseDur * section.stickiness;
+  const dur = baseDur * props.section.stickiness;
 
   gsap.to(progressProxy, {
     value: target,
@@ -122,36 +129,6 @@ const scrollState = {
   lastScrollTime: 0
 };
 
-const sections = [
-  {
-    start: 0,
-    end: 0.33,
-    easeIn: 0.15,
-    easeOut: 0.15,
-    stickiness: 0.9,
-    speedMultiplier: 1.2
-  },
-  {
-    start: 0.33,
-    end: 0.74,
-    easeIn: 0.1,
-    easeOut: 0.1,
-    stickiness: 0.9,
-    speedMultiplier: 0.8
-  },
-  {
-    start: 0.74,
-    end: 1,
-    easeIn: 0.12,
-    easeOut: 0.12,
-    stickiness: 0.9,
-    speedMultiplier: 1
-  }
-];
-
-function getCurrentSection(progress) {
-  return sections.find(s => progress >= s.start && progress <= s.end) || sections[0];
-}
 
 
 const getTimelineConfig = () => {
@@ -643,8 +620,7 @@ onMounted(async () => {
     if (!loadingState.allLoaded) return;
 
     scrollState.targetProgress = props.scrollProgress;
-    const section = getCurrentSection(props.scrollProgress);
-    goToProgress(props.scrollProgress, section);
+    goToProgress(props.scrollProgress);
     const smoothedProgress = progressProxy.value;
 
     let newViewOffset = currentViewOffset;
@@ -740,10 +716,10 @@ canvas {
   background-color: rgb(36, 36, 36);
   background: rgb(36, 36, 36);
   mask-image: linear-gradient(to top, transparent 0%, black 4%, black 96%, transparent 100%),
-                linear-gradient(to left, transparent 0%, black 4%, black 96%, transparent 100%);
+    linear-gradient(to left, transparent 0%, black 4%, black 96%, transparent 100%);
   mask-composite: intersect;
   -webkit-mask-image: linear-gradient(to top, transparent 0%, black 4%, black 96%, transparent 100%),
-                      linear-gradient(to left, transparent 0%, black 4%, black 96%, transparent 100%);
+    linear-gradient(to left, transparent 0%, black 4%, black 96%, transparent 100%);
   -webkit-mask-composite: source-in;
 }
 
