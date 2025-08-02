@@ -1,24 +1,50 @@
 <template>
   <div class="projects-container">
     <h1 class="page-title">Projects</h1>
-    <div class="content-layout" :class="{ 'has-expanded': expandedProject !== null }">
+    <div
+      class="content-layout"
+      :class="{ 'has-expanded': expandedProject !== null }"
+    >
       <div class="projects-grid-wrapper">
-        <div class="projects-grid" :class="{ 'has-active': expandedProject !== null }">
-          <div v-for="(project, index) in projects" :key="index" class="project-card" :class="{
-            'active': expandedProject === index,
-            'inactive': expandedProject !== null && expandedProject !== index
-          }" @click="toggleProject(index)" :style="{
-            borderColor: getSecondaryOrTertiaryColor(project.color, expandedProject === index),
-            '--project-date-hover': getPrimaryColor(project.color)
-          }">
+        <div
+          class="projects-grid"
+          :class="{ 'has-active': expandedProject !== null }"
+        >
+          <div
+            v-for="(project, index) in projects"
+            :key="index"
+            class="project-card"
+            :class="{
+              active: expandedProject === index,
+              inactive: expandedProject !== null && expandedProject !== index,
+            }"
+            @click="toggleProject(index)"
+            :style="{
+              borderColor: getSecondaryOrTertiaryColor(
+                project.color,
+                expandedProject === index,
+              ),
+              '--project-date-hover': getPrimaryColor(project.color),
+            }"
+          >
             <div class="project-content">
-              <h2 :style="{ color: getPrimaryColor(project.color) }">{{ project.title }}</h2>
+              <h2 :style="{ color: getPrimaryColor(project.color) }">
+                {{ project.title }}
+              </h2>
               <p>{{ project.description }}</p>
               <div class="date">
-                <span :style="{ '--project-date-hover': getPrimaryColor(project.color) }">{{
-                  project.dateRange }}</span>
+                :VueCreateInjections
+                <span
+                  :style="{
+                    '--project-date-hover': getPrimaryColor(project.color),
+                  }"
+                  >{{ project.dateRange }}</span
+                >
               </div>
-              <div class="project-indicator" :style="{ backgroundColor: getSecondaryColor(project.color) }"></div>
+              <div
+                class="project-indicator"
+                :style="{ backgroundColor: getSecondaryColor(project.color) }"
+              ></div>
             </div>
           </div>
         </div>
@@ -26,23 +52,47 @@
 
       <Transition name="slide-fade">
         <div v-if="expandedProject !== null" class="project-details-section">
-          <button class="close-details-mobile" @click="closeProject" v-if="isMobile">
+          <button
+            class="close-details-mobile"
+            @click="closeProject"
+            v-if="isMobile"
+          >
             <span>&times;</span>
           </button>
           <div class="project-details-content">
             <div class="project-sections">
-              <div class="section" ref="overviewSection"
-                :style="{ outlineColor: getSecondaryOrTertiaryColor(currentProject?.color, true) }">
+              <div
+                class="section"
+                ref="overviewSection"
+                :style="{
+                  outlineColor: getSecondaryOrTertiaryColor(
+                    currentProject?.color,
+                    true,
+                  ),
+                }"
+              >
                 <Transition name="fade" mode="out-in">
-                  <div v-if="activeSection === 'Overview'" key="overview" class="section-content">
+                  <div
+                    v-if="activeSection === 'Overview'"
+                    key="overview"
+                    class="section-content"
+                  >
                     <h2>{{ currentProject?.title }}</h2>
                     <p>{{ currentProject?.description }}</p>
 
-                    <component :is="currentProject?.interactiveComponent"
-                      v-if="currentProject?.interactiveComponent && !isMobile" class="interactive-demo"
-                      :element-data="elementData" :project-color="currentProject?.color" />
-                    <div v-else-if="currentProject?.interactiveComponent && isMobile"
-                      class="demo-placeholder mobile-notice">
+                    <component
+                      :is="currentProject?.interactiveComponent"
+                      v-if="currentProject?.interactiveComponent && !isMobile"
+                      class="interactive-demo"
+                      :element-data="elementData"
+                      :project-color="currentProject?.color"
+                    />
+                    <div
+                      v-else-if="
+                        currentProject?.interactiveComponent && isMobile
+                      "
+                      class="demo-placeholder mobile-notice"
+                    >
                       <p>Interactive demo available on desktop</p>
                     </div>
                     <div v-else class="demo-placeholder">
@@ -54,27 +104,56 @@
                         <div>
                           <h3>Tech Stack</h3>
                           <div class="tech-tags">
-                            <span v-for="tech in currentProject?.technologies" :key="tech" class="tech-tag">{{ tech
-                              }}</span>
+                            <span
+                              v-for="tech in currentProject?.technologies"
+                              :key="tech"
+                              class="tech-tag"
+                              >{{ tech }}</span
+                            >
                           </div>
                         </div>
                       </div>
                       <div class="project-links">
-                        <a v-if="currentProject?.github" :href="currentProject.github" target="_blank"
-                          class="project-link" :style="{ borderColor: getSecondaryColor(currentProject.color) }">
+                        <a
+                          v-if="currentProject?.github"
+                          :href="currentProject.github"
+                          target="_blank"
+                          class="project-link"
+                          :style="{
+                            borderColor: getSecondaryColor(
+                              currentProject.color,
+                            ),
+                          }"
+                        >
                           GitHub
                         </a>
-                        <a v-if="currentProject?.demo" :href="currentProject.demo" target="_blank" class="project-link"
-                          :style="{ borderColor: getSecondaryColor(currentProject.color) }">
+                        <a
+                          v-if="currentProject?.demo"
+                          :href="currentProject.demo"
+                          target="_blank"
+                          class="project-link"
+                          :style="{
+                            borderColor: getSecondaryColor(
+                              currentProject.color,
+                            ),
+                          }"
+                        >
                           Live Demo
                         </a>
                       </div>
                     </div>
                   </div>
-                  <div v-else-if="activeSection === 'Details'" key="details" class="section-content">
+                  <div
+                    v-else-if="activeSection === 'Details'"
+                    key="details"
+                    class="section-content"
+                  >
                     <!-- <div class="project-details" v-html="currentProject?.detailedDescription"></div> -->
-                    <component :is="currentProject?.detailedDescription" v-if="currentProject?.detailedDescription"
-                      class="project-details" />
+                    <component
+                      :is="currentProject?.detailedDescription"
+                      v-if="currentProject?.detailedDescription"
+                      class="project-details"
+                    />
                   </div>
                 </Transition>
               </div>
@@ -82,28 +161,65 @@
           </div>
         </div>
         <div v-else class="scroll-wrapper" ref="scrollWrapper">
-          <section v-if="showHeroSection" class="animation-section" ref="animationSectionRef">
+          <section
+            v-if="showHeroSection"
+            class="animation-section"
+            ref="animationSectionRef"
+          >
             <div class="animation-wrapper">
-              <HeroAnimation :scrollProgress="progress" @loaded="() => animLoaded = true" />
+              <HeroAnimation
+                :scrollProgress="progress"
+                @loaded="() => (animLoaded = true)"
+              />
             </div>
           </section>
 
           <Transition name="fade">
-            <div v-if="showScrollIndicator && showHeroSection" class="scroll-indicator" @click="scrollToHero">
+            <div
+              v-if="showScrollIndicator && showHeroSection"
+              class="scroll-indicator"
+              @click="scrollToHero"
+            >
               <span class="scroll-text">About Me</span>
               <div class="scroll-arrow">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                  <path d="M12 5v14M19 12l-7 7-7-7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                >
+                  <path
+                    d="M12 5v14M19 12l-7 7-7-7"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
                 </svg>
               </div>
             </div>
           </Transition>
 
-          <section v-if="showHeroSection" class="hero-section-wrapper" ref="heroSectionRef">
+          <section
+            v-if="showHeroSection"
+            class="hero-section-wrapper"
+            ref="heroSectionRef"
+          >
             <HeroSection />
             <div class="scroll-to-top" @click="scrollToTop">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                <path d="M12 19V5M5 12l7-7 7 7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+              >
+                <path
+                  d="M12 19V5M5 12l7-7 7 7"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
               </svg>
             </div>
           </section>
@@ -114,97 +230,99 @@
 </template>
 
 <script setup>
-import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
-import HeroAnimation from '../animations/HeroAnimation.vue'
-import AirfoilSimulator from '../components/AirfoilSimulator.vue'
-import AirfoilSimulatorDetails from '../components/AirfoilSimulatorDetails.vue'
-import HeroSection from '../components/HeroSection.vue'
-import PhysicsDetails from '../components/PhysicsDetails.vue'
-import PhysicsEngine from '../components/PhysicsEngine.vue'
-import WindTurbineBEM from '../components/WindTurbineBEM.vue'
-import WindTurbineBEMDetails from '../components/WindTurbineBEMDetails.vue'
-import { getPrimaryColor, getSecondaryColor, getSecondaryOrTertiaryColor } from '../composables/useGetColours'
-import { useElementTracker } from '../composables/usePhysicsEngine.js'
-
-
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
+import HeroAnimation from "../animations/HeroAnimation.vue";
+import AirfoilSimulator from "../components/AirfoilSimulator.vue";
+import AirfoilSimulatorDetails from "../components/AirfoilSimulatorDetails.vue";
+import HeroSection from "../components/HeroSection.vue";
+import PhysicsDetails from "../components/PhysicsDetails.vue";
+import PhysicsEngine from "../components/PhysicsEngine.vue";
+import WindTurbineBEM from "../components/WindTurbineBEM.vue";
+import WindTurbineBEMDetails from "../components/WindTurbineBEMDetails.vue";
+import {
+  getPrimaryColor,
+  getSecondaryColor,
+  getSecondaryOrTertiaryColor,
+} from "../composables/useGetColours";
+import { useElementTracker } from "../composables/usePhysicsEngine.js";
 
 const projects = [
   {
-    title: 'Physics Engine',
-    description: 'A real-time physics engine for simulating rigid body dynamics.',
-    technologies: ['Processing', 'Java'],
-    github: 'https://github.com/Sparkylc2/PhysicsEngine/tree/main',
+    title: "Physics Engine",
+    description:
+      "A real-time physics engine for simulating rigid body dynamics.",
+    technologies: ["Processing", "Java"],
+    github: "https://github.com/Sparkylc2/PhysicsEngine/tree/main",
     demo: null,
     interactiveComponent: PhysicsEngine,
     detailedDescription: PhysicsDetails,
-    color: 'red',
-    dateRange: 'December 2023 - March 2024'
+    color: "red",
+    dateRange: "December 2023 - March 2024",
   },
   {
-    title: 'Wind Turbine BEM',
-    description: 'Blade Element Momentum (BEM) theory implementation for wind turbine analysis.',
-    technologies: ['C++', 'Python'],
-    github: 'https://github.com/Sparkylc2/BEM_Turbine',
+    title: "Wind Turbine BEM",
+    description:
+      "Blade Element Momentum (BEM) theory implementation for wind turbine analysis.",
+    technologies: ["C++", "Python"],
+    github: "https://github.com/Sparkylc2/BEM_Turbine",
     demo: null,
     interactiveComponent: WindTurbineBEM,
     detailedDescription: WindTurbineBEMDetails,
-    color: 'blue',
-    dateRange: 'May 2025 - June 2025'
+    color: "blue",
+    dateRange: "May 2025 - June 2025",
   },
   {
-    title: 'Panel Airfoil Simulator',
-    description: 'Small simulator for airfoil analysis using panel methods.',
-    technologies: ['Matlab'],
-    github: 'https://github.com/Sparkylc2/PanelAirfoilSimulator',
+    title: "Panel Airfoil Simulator",
+    description: "Small simulator for airfoil analysis using panel methods.",
+    technologies: ["Matlab"],
+    github: "https://github.com/Sparkylc2/PanelAirfoilSimulator",
     demo: null,
     interactiveComponent: AirfoilSimulator,
     detailedDescription: AirfoilSimulatorDetails,
-    color: 'blue',
-    dateRange: 'February 2025 - March 2025'
-  }
-]
-
-
+    color: "blue",
+    dateRange: "February 2025 - March 2025",
+  },
+];
 
 const props = defineProps({
   activeSection: String,
-  selectedProject: Number
-})
+  selectedProject: Number,
+});
 
-const emit = defineEmits(['update:selectedProject', 'update:selectedProjectColor'])
+const emit = defineEmits([
+  "update:selectedProject",
+  "update:selectedProjectColor",
+]);
 
-const expandedProject = ref(null)
-const isMobile = ref(false)
-const isTablet = ref(false)
+const expandedProject = ref(null);
+const isMobile = ref(false);
+const isTablet = ref(false);
 const scrollWrapper = ref(null);
 const heroSectionRef = ref(null);
 const showScrollIndicator = ref(true);
-const showHeroSection = computed(() => expandedProject.value === null && !isMobile.value && !isTablet.value);
-
+const showHeroSection = computed(
+  () => expandedProject.value === null && !isMobile.value && !isTablet.value,
+);
 
 const capturing = ref(true);
 const animLoaded = ref(false);
 const progress = ref(0);
-const progressTarget = ref(0)
+const progressTarget = ref(0);
 const threshold = 1;
 const sensitivity = 0.0007;
 const animationSectionRef = ref(null);
 
-
-
-
-
 function updateDisplay() {
   isMobile.value = window.innerWidth <= 768;
   isTablet.value = window.innerWidth > 768 && window.innerWidth <= 1024;
-
 }
-
 
 onMounted(() => {
   updateDisplay();
-  window.addEventListener('resize', updateDisplay)
-  window.addEventListener('wheel', (e) => { if (!animLoaded.value) e.preventDefault() });
+  window.addEventListener("resize", updateDisplay);
+  window.addEventListener("wheel", (e) => {
+    if (!animLoaded.value) e.preventDefault();
+  });
   takeScrollControl();
 
   const el = scrollWrapper.value;
@@ -212,84 +330,78 @@ onMounted(() => {
   el.addEventListener("wheel", onWheel, { passive: false });
 
   stepInertia();
-})
-
-
+});
 
 onUnmounted(() => {
-  window.removeEventListener('resize', updateDisplay)
-  window.removeEventListener('wheel', (e) => { if (!animLoaded.value) e.preventDefault() });
+  window.removeEventListener("resize", updateDisplay);
+  window.removeEventListener("wheel", (e) => {
+    if (!animLoaded.value) e.preventDefault();
+  });
 
   const el = scrollWrapper.value;
   if (el) {
     el.removeEventListener("wheel", onWheel);
   }
-})
+});
 
-watch(() => props.selectedProject, (newVal) => {
-  expandedProject.value = newVal
-}, { immediate: true })
+watch(
+  () => props.selectedProject,
+  (newVal) => {
+    expandedProject.value = newVal;
+  },
+  { immediate: true },
+);
 
 watch(expandedProject, (newVal) => {
-  emit('update:selectedProject', newVal)
+  emit("update:selectedProject", newVal);
   if (newVal !== null) {
-    emit('update:selectedProjectColor', projects[newVal]?.color)
+    emit("update:selectedProjectColor", projects[newVal]?.color);
   }
-})
-
-
+});
 
 const currentProject = computed(() =>
-  expandedProject.value !== null ? projects[expandedProject.value] : null
-)
+  expandedProject.value !== null ? projects[expandedProject.value] : null,
+);
 
 const openProject = (index) => {
-  expandedProject.value = index
-}
+  expandedProject.value = index;
+};
 
 const closeProject = () => {
-  expandedProject.value = null
-}
+  expandedProject.value = null;
+};
 
 const toggleProject = (index) => {
   if (expandedProject.value === index) {
-    closeProject()
+    closeProject();
   } else {
-    openProject(index)
+    openProject(index);
   }
-}
+};
 
-
-
-
-const overviewSection = ref(null)
+const overviewSection = ref(null);
 const { elementData } = useElementTracker(overviewSection, {
-  excludeClasses: ['interactive-demo', 'demo-placeholder'],
+  excludeClasses: ["interactive-demo", "demo-placeholder"],
   includeContainer: true,
-  relative: true
-})
-
-
-
-
-
-
-
-
+  relative: true,
+});
 
 const INERTIA = 0.88;
 const MAX_SPEED = 0.008;
 const EXP_DECAY = 8;
 
-
 let lastWheelDir = 0;
 
 function onWheel(e) {
-
   lastWheelDir = Math.sign(e.deltaY);
   if (capturing.value) {
-    if ((progress.value <= 0.001 && lastWheelDir < 0) ||
-      (progress.value >= 0.999 && lastWheelDir > 0)) {
+    if (
+      (progress.value <= 0.001 && lastWheelDir < 0) ||
+      (progress.value >= 0.9 && lastWheelDir > 0)
+    ) {
+      //     const raw = e.deltaY * sensitivity;
+      // const clamp01 = v => Math.min(Math.max(v, 0), 1);
+      // progressTarget.value = clamp01(progressTarget.value + raw);
       releaseScrollControl();
       return;
     }
@@ -297,7 +409,7 @@ function onWheel(e) {
     e.preventDefault();
 
     const raw = e.deltaY * sensitivity;
-    const clamp01 = v => Math.min(Math.max(v, 0), 1);
+    const clamp01 = (v) => Math.min(Math.max(v, 0), 1);
     progressTarget.value = clamp01(progressTarget.value + raw);
     return;
   }
@@ -309,14 +421,11 @@ function onWheel(e) {
   if (lastWheelDir < 0) {
     const animTop = animationSectionRef.value?.offsetTop ?? 0;
     if (el.scrollTop <= animTop + thresholdPx) {
-      const cameFromBottom =
-        progress.value > 0.5 ||   
-        progressTarget.value > 0.5;
+      const cameFromBottom = progress.value > 0.5 || progressTarget.value > 0.5;
       const startPos = cameFromBottom ? 1 : 0;
       progress.value = startPos;
       progressTarget.value = startPos;
       takeScrollControl();
-
     }
   }
 }
@@ -351,8 +460,6 @@ function releaseScrollControl() {
   document.body.style.overflow = "";
 }
 
-
-
 const scrollToHero = () => {
   if (heroSectionRef.value) {
     heroSectionRef.value.scrollIntoView({ behavior: "smooth" });
@@ -379,16 +486,12 @@ watch(
     });
   },
 );
-
-
-
 </script>
 
 <style scoped>
 * {
   box-sizing: border-box;
 }
-
 
 .animation-section {
   position: relative;
@@ -481,7 +584,6 @@ watch(
 }
 
 @keyframes bounce {
-
   0%,
   20%,
   50%,
@@ -530,9 +632,6 @@ watch(
 .scroll-to-top:hover svg {
   color: rgb(140, 172, 204);
 }
-
-
-
 
 .projects-container,
 .projects-grid-wrapper,
@@ -636,7 +735,10 @@ watch(
   overflow: visible;
   transform: scale(1);
   opacity: 1;
-  transition: transform 0.3s ease, opacity 0.3s ease, border-color 0.3s ease;
+  transition:
+    transform 0.3s ease,
+    opacity 0.3s ease,
+    border-color 0.3s ease;
 }
 
 .project-card.active {
@@ -912,9 +1014,9 @@ watch(
     left: 1rem;
     width: 48px;
     height: 48px;
-    background: rgba(0, 0, 0, 0.0);
+    background: rgba(0, 0, 0, 0);
     border: 1px solid #ccc;
-    border-color: v-bind('getSecondaryColor(currentProject?.color)');
+    border-color: v-bind("getSecondaryColor(currentProject?.color)");
     border-radius: 0.5rem;
     cursor: pointer;
     z-index: 101;
@@ -1045,7 +1147,6 @@ watch(
   }
 }
 
-
 @media (min-width: 2560px) {
   .page-title {
     font-size: 4rem;
@@ -1070,7 +1171,6 @@ watch(
     min-width: 600px;
   }
 }
-
 
 @media (max-width: 768px) {
   .scroll-indicator {

@@ -137,7 +137,7 @@ const sections = [
     easeIn: 0.1,
     easeOut: 0.1,
     stickiness: 0.9,
-    speedMultiplier: 1
+    speedMultiplier: 0.8
   },
   {
     start: 0.74,

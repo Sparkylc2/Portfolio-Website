@@ -1,55 +1,115 @@
 <template>
   <div class="papers-container">
     <h1 class="page-title">Papers</h1>
-    <div class="content-layout" :class="{ 'has-expanded': expandedPaper !== null }">
-      <button v-if="expandedPaper !== null && isMobile" class="mobile-back-button-wrapper" @click="closePaper">
-        <div class="mobile-back-button">
-          <span>←</span> Back
-        </div>
+    <div
+      class="content-layout"
+      :class="{ 'has-expanded': expandedPaper !== null }"
+    >
+      <button
+        v-if="expandedPaper !== null && isMobile"
+        class="mobile-back-button-wrapper"
+        @click="closePaper"
+      >
+        <div class="mobile-back-button"><span>←</span> Back</div>
       </button>
 
-      <div class="papers-grid-wrapper" :class="{ 'is-hidden': isMobile && expandedPaper !== null }">
-        <div class="papers-grid" :class="{ 'has-active': expandedPaper !== null }">
-          <div v-for="(paper, index) in papers" :key="index" class="paper-card" :class="{
-            'active': expandedPaper === index,
-            'inactive': expandedPaper !== null && expandedPaper !== index
-          }" :style="{
-                      borderColor: getSecondaryOrTertiaryColor(paper.color, expandedPaper === index),
-                      '--paper-date-hover': getPrimaryColor(paper.color)
-                    }" @click="togglePaper(index)">
+      <div
+        class="papers-grid-wrapper"
+        :class="{ 'is-hidden': isMobile && expandedPaper !== null }"
+      >
+        <div
+          class="papers-grid"
+          :class="{ 'has-active': expandedPaper !== null }"
+        >
+          <div
+            v-for="(paper, index) in papers"
+            :key="index"
+            class="paper-card"
+            :class="{
+              active: expandedPaper === index,
+              inactive: expandedPaper !== null && expandedPaper !== index,
+            }"
+            :style="{
+              borderColor: getSecondaryOrTertiaryColor(
+                paper.color,
+                expandedPaper === index,
+              ),
+              '--paper-date-hover': getPrimaryColor(paper.color),
+            }"
+            @click="togglePaper(index)"
+          >
             <div class="paper-content">
-              <h2 :style="{ color: getPrimaryColor(paper.color) }">{{ paper.title }}</h2>
+              <h2 :style="{ color: getPrimaryColor(paper.color) }">
+                {{ paper.title }}
+              </h2>
               <p class="authors">{{ paper.authors }}</p>
               <p class="venue line-clamp-2">{{ paper.venue }}</p>
               <p class="description line-clamp-3">{{ paper.description }}</p>
               <div class="date">
                 <span>{{ paper.dateRange }}</span>
               </div>
-              <div class="paper-indicator" :style="{ backgroundColor: getSecondaryColor(paper.color) }"></div>
+              <div
+                class="paper-indicator"
+                :style="{ backgroundColor: getSecondaryColor(paper.color) }"
+              ></div>
             </div>
           </div>
         </div>
       </div>
 
-      <div v-if="expandedPaper !== null && (!isMobile || expandedPaper !== null)" class="paper-details-section"
-        :class="{ 'mobile-fullscreen': isMobile }" id="paperDetailsSection">
+      <div
+        v-if="expandedPaper !== null && (!isMobile || expandedPaper !== null)"
+        class="paper-details-section"
+        :class="{ 'mobile-fullscreen': isMobile }"
+        id="paperDetailsSection"
+      >
         <div class="paper-details-content">
           <div class="paper-sections">
-            <div class="section" :style="{ outlineColor: getSecondaryOrTertiaryColor(currentPaper?.color, true) }">
+            <div
+              class="section"
+              :style="{
+                outlineColor: getSecondaryOrTertiaryColor(
+                  currentPaper?.color,
+                  true,
+                ),
+              }"
+            >
               <Transition name="fade" mode="out-in">
-                <div v-if="activeSection === 'Paper'" key="paper" class="section-content" ref="parentScroll"
-                  id="sectionContent">
-                  <div v-if="!isMobile && currentPaper?.pdf" class="pdf-viewer" ref="pdfWrapper">
-                    <PDFViewer :pdfFileName="currentPaper.pdf" :accentColor="getSecondaryColor(currentPaper?.color)"
-                      :key="currentPaper?.pdf + currentPaper?.color" />
+                <div
+                  v-if="activeSection === 'Paper'"
+                  key="paper"
+                  class="section-content"
+                  ref="parentScroll"
+                  id="sectionContent"
+                >
+                  <div
+                    v-if="!isMobile && currentPaper?.pdf"
+                    class="pdf-viewer"
+                    ref="pdfWrapper"
+                  >
+                    <PDFViewer
+                      :pdfFileName="currentPaper.pdf"
+                      :accentColor="getSecondaryColor(currentPaper?.color)"
+                      :key="currentPaper?.pdf + currentPaper?.color"
+                    />
                   </div>
                   <div v-else>
-                    <PDFViewer :pdfFileName="currentPaper.pdf" :accentColor="getSecondaryColor(currentPaper?.color)"
-                      :key="currentPaper?.pdf + currentPaper?.color" />
+                    <PDFViewer
+                      :pdfFileName="currentPaper.pdf"
+                      :accentColor="getSecondaryColor(currentPaper?.color)"
+                      :key="currentPaper?.pdf + currentPaper?.color"
+                    />
                   </div>
                 </div>
-                <div v-else-if="activeSection === 'Abstract'" key="abstract" class="section-content">
-                  <div class="paper-details" v-html="currentPaper?.detailedDescription"></div>
+                <div
+                  v-else-if="activeSection === 'Abstract'"
+                  key="abstract"
+                  class="section-content"
+                >
+                  <div
+                    class="paper-details"
+                    v-html="currentPaper?.detailedDescription"
+                  ></div>
                 </div>
               </Transition>
             </div>
@@ -61,108 +121,121 @@
 </template>
 
 <script setup>
-import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
-import PDFViewer from '../components/PDFViewer.vue'
-import { getPrimaryColor, getSecondaryColor, getSecondaryOrTertiaryColor } from '../composables/useGetColours'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
+import PDFViewer from "../components/PDFViewer.vue";
+import {
+  getPrimaryColor,
+  getSecondaryColor,
+  getSecondaryOrTertiaryColor,
+} from "../composables/useGetColours";
 
 const props = defineProps({
   activeSection: String,
-  selectedPaper: Number
-})
+  selectedPaper: Number,
+});
 
-const emit = defineEmits(['update:selectedPaper', 'update:selectedPaperColor'])
+const emit = defineEmits(["update:selectedPaper", "update:selectedPaperColor"]);
 
-const expandedPaper = ref(null)
-const pdfWrapper = ref(null)
-const parentScroll = ref(null)
-const isMobile = ref(false)
-const isTablet = ref(false)
+const expandedPaper = ref(null);
+const pdfWrapper = ref(null);
+const parentScroll = ref(null);
+const isMobile = ref(false);
+const isTablet = ref(false);
 
 const checkScreenSize = () => {
-  isMobile.value = window.innerWidth <= 768
-  isTablet.value = window.innerWidth > 768 && window.innerWidth <= 1024
-}
+  isMobile.value = window.innerWidth <= 768;
+  isTablet.value = window.innerWidth > 768 && window.innerWidth <= 1024;
+};
 
 onMounted(() => {
-  checkScreenSize()
-  window.addEventListener('resize', checkScreenSize)
-})
+  checkScreenSize();
+  window.addEventListener("resize", checkScreenSize);
+});
 
 onUnmounted(() => {
-  window.removeEventListener('resize', checkScreenSize)
-})
+  window.removeEventListener("resize", checkScreenSize);
+});
 
-watch(() => props.selectedPaper, (newVal) => {
-  expandedPaper.value = newVal
-}, { immediate: true })
+watch(
+  () => props.selectedPaper,
+  (newVal) => {
+    expandedPaper.value = newVal;
+  },
+  { immediate: true },
+);
 
 watch(expandedPaper, (newVal) => {
-  emit('update:selectedPaper', newVal)
+  emit("update:selectedPaper", newVal);
   if (newVal !== null) {
-    emit('update:selectedPaperColor', papers[newVal]?.color)
+    emit("update:selectedPaperColor", papers[newVal]?.color);
   }
-})
+});
 
 const papers = [
   {
-    title: 'Theoretical, Computational, and Experimental Approaches to Pipe Flow꞉ A Comparative Study',
-    authors: 'Lukas Campbell',
-    venue: 'Imperial College London, Department of Aeronautics',
-    description: 'A comprehensive study on the analysis of pipe flow using theoretical, computational, and experimental methods.',
-    keywords: ['Physics Simulation', 'Verlet Integration', 'Real-time', 'Constraints'],
-    pdf: 'PipeFlowLabReport.pdf',
-    arxiv: 'https://arxiv.org/abs/2024.12345',
-    doi: 'https://doi.org/10.1145/1234567',
+    title:
+      "Theoretical, Computational, and Experimental Approaches to Pipe Flow꞉ A Comparative Study",
+    authors: "Lukas Campbell",
+    venue: "Imperial College London, Department of Aeronautics",
+    description:
+      "A comprehensive study on the analysis of pipe flow using theoretical, computational, and experimental methods.",
+    keywords: [
+      "Physics Simulation",
+      "Verlet Integration",
+      "Real-time",
+      "Constraints",
+    ],
+    pdf: "PipeFlowLabReport.pdf",
+    arxiv: "https://arxiv.org/abs/2024.12345",
+    doi: "https://doi.org/10.1145/1234567",
     detailedDescription: `<h3>WIP</h3>
         `,
-    color: 'red',
-    dateRange: '2024-01-15 to 2024-02-15'
+    color: "red",
+    dateRange: "2024-01-15 to 2024-02-15",
   },
   {
-    title: 'Theoretical, Computational, and Experimental Approaches to Indeterminate Beams꞉ A Comparative Study',
-    authors: 'Lukas Campbell',
-    venue: 'Imperial College London, Department of Aeronautics',
-    description: 'A comprehensive study on the analysis of indeterminate beams using theoretical, computational, and experimental methods.',
-    keywords: ['Wind Energy', 'Machine Learning', 'Optimization', 'BEM Theory'],
-    pdf: 'SimpleBeamsLabReport.pdf',
-    arxiv: 'https://arxiv.org/abs/2024.23456',
-    doi: 'https://doi.org/10.1016/j.renene.2024.01.123',
+    title:
+      "Theoretical, Computational, and Experimental Approaches to Indeterminate Beams꞉ A Comparative Study",
+    authors: "Lukas Campbell",
+    venue: "Imperial College London, Department of Aeronautics",
+    description:
+      "A comprehensive study on the analysis of indeterminate beams using theoretical, computational, and experimental methods.",
+    keywords: ["Wind Energy", "Machine Learning", "Optimization", "BEM Theory"],
+    pdf: "SimpleBeamsLabReport.pdf",
+    arxiv: "https://arxiv.org/abs/2024.23456",
+    doi: "https://doi.org/10.1016/j.renene.2024.01.123",
     detailedDescription: `
-        <h3>WIP</h3>`
-    ,
-    color: 'blue',
-    dateRange: '2024-01-15 to 2024-02-15'
-  }
-]
+        <h3>WIP</h3>`,
+    color: "blue",
+    dateRange: "2024-01-15 to 2024-02-15",
+  },
+];
 
 const currentPaper = computed(() =>
-  expandedPaper.value !== null ? papers[expandedPaper.value] : null
-)
+  expandedPaper.value !== null ? papers[expandedPaper.value] : null,
+);
 
 const openPaper = (index) => {
-  expandedPaper.value = index
-}
+  expandedPaper.value = index;
+};
 
 const closePaper = () => {
-  expandedPaper.value = null
-}
+  expandedPaper.value = null;
+};
 
 const togglePaper = (index) => {
   if (expandedPaper.value !== index) {
-    openPaper(index)
+    openPaper(index);
   }
-}
-
-
-
+};
 
 onMounted(async () => {
-  await nextTick()
+  await nextTick();
 
   if (!isMobile.value) {
     openPaper(0);
   }
-})
+});
 </script>
 
 <style scoped>
@@ -204,7 +277,6 @@ onMounted(async () => {
   right: 0;
   bottom: 0;
   overflow: hidden;
-
 }
 
 .paper-sections {
@@ -258,7 +330,7 @@ onMounted(async () => {
   transition: all 0.3s ease;
   border-radius: 0.25rem;
   padding: 0.5rem;
-  border: 0.1rem solid v-bind('getSecondaryColor(currentPaper?.color)');
+  border: 0.1rem solid v-bind("getSecondaryColor(currentPaper?.color)");
 }
 
 .mobile-back-button:hover {
@@ -415,7 +487,7 @@ onMounted(async () => {
   max-height: calc(100vh - 12rem);
   background: rgb(36, 36, 36);
   border-radius: 0.5rem;
-  outline: 1px solid v-bind('getSecondaryColor(currentPaper?.color)');
+  outline: 1px solid v-bind("getSecondaryColor(currentPaper?.color)");
   outline-offset: 1px;
   overflow: hidden;
   flex-grow: 1;
@@ -457,9 +529,8 @@ onMounted(async () => {
 }
 
 .is-hidden {
-  visibility: hidden;  
+  visibility: hidden;
 }
-
 
 .pdf-viewer {
   width: 100%;
@@ -474,7 +545,6 @@ onMounted(async () => {
   height: 100%;
   min-height: 100%;
 }
-
 
 .mobile-pdf-section {
   margin: 2rem 0;
@@ -583,7 +653,6 @@ onMounted(async () => {
   filter: brightness(1.2);
 }
 
-
 .paper-details h3 {
   font-size: clamp(1.2rem, 2.5vw, 1.5rem);
   margin-top: 2rem;
@@ -596,7 +665,6 @@ onMounted(async () => {
   line-height: 1.6;
 }
 
-
 .fade-enter-active,
 .fade-leave-active {
   transition: opacity 0.2s ease;
@@ -606,7 +674,6 @@ onMounted(async () => {
 .fade-leave-to {
   opacity: 0;
 }
-
 
 @media (max-width: 768px) {
   .page-title {
@@ -737,7 +804,7 @@ onMounted(async () => {
     overflow-y: auto;
     padding-bottom: 0;
     background: rgb(36, 36, 36);
-    animation: slideUp .25s ease;
+    animation: slideUp 0.25s ease;
   }
 
   @keyframes slideUp {
