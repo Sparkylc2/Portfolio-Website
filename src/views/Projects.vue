@@ -33,7 +33,6 @@
               </h2>
               <p>{{ project.description }}</p>
               <div class="date">
-                :VueCreateInjections
                 <span
                   :style="{
                     '--project-date-hover': getPrimaryColor(project.color),
