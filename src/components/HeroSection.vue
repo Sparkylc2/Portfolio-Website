@@ -21,7 +21,11 @@
     <div class="interests-section">
       <h3>Research Interests</h3>
       <div class="interest-tags">
-        <span class="interest-tag" v-for="interest in interests" :key="interest">
+        <span
+          class="interest-tag"
+          v-for="interest in interests"
+          :key="interest"
+        >
           {{ interest }}
         </span>
       </div>
@@ -34,9 +38,6 @@
     <!--   </div> -->
     <!-- </div> -->
   </div>
-
-
-
 </template>
 
 <script setup>
@@ -48,11 +49,12 @@ const currentYear = ref("2nd");
 
 const interests = ref([
   "CFD",
-  "Aerodynamics",
+  "Avionics",
   "Flight Dynamics",
+  "Aerodynamics",
+  "Control Systems",
   "Propulsion",
   "Structural Analysis",
-  "Control Systems",
 ]);
 
 const stats = ref([
@@ -70,7 +72,6 @@ const stats = ref([
   align-items: center;
   width: 100%;
   height: 100%;
-
 }
 
 .hero-section {
