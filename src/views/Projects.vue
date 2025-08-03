@@ -49,8 +49,17 @@
         </div>
       </div>
 
-      <Transition name="slide-fade">
-        <div v-if="expandedProject !== null" class="project-details-section">
+      <Transition
+        name="slide-fade"
+        mode="out-in"
+        @after-leave="onViewGone"
+        @after-enter="onViewReady"
+      >
+        <div
+          v-if="expandedProject !== null"
+          key="panel"
+          class="project-details-section"
+        >
           <button
             class="close-details-mobile"
             @click="closeProject"
@@ -159,7 +168,7 @@
             </div>
           </div>
         </div>
-        <div v-else class="scroll-wrapper" ref="scrollWrapper">
+        <div v-else key="canvas" ref="scrollWrapper" class="scroll-wrapper">
           <section
             v-if="showHeroSection"
             class="animation-section"
@@ -167,6 +176,7 @@
           >
             <div class="animation-wrapper">
               <HeroAnimation
+                ref="heroAnimRef"
                 :scrollProgress="progress"
                 :section="currentSection"
                 @loaded="() => (animLoaded = true)"
@@ -311,6 +321,39 @@ const progressTarget = ref(0);
 const threshold = 1;
 const sensitivity = 0.0007;
 const animationSectionRef = ref(null);
+const heroAnimRef = ref(null);
+
+const onViewGone = () => {
+  if (expandedProject.value !== null) {
+    detachWheel();
+    releaseScrollControl();
+  }
+};
+
+const onViewReady = () => {
+  if (expandedProject.value === null) {
+    attachWheel();
+    takeScrollControl();
+  }
+};
+let currentScrollEl = null;
+
+function attachWheel() {
+  if (scrollWrapper.value && scrollWrapper.value !== currentScrollEl) {
+    if (currentScrollEl) {
+      currentScrollEl.removeEventListener("wheel", onWheel);
+    }
+    scrollWrapper.value.addEventListener("wheel", onWheel, { passive: false });
+    currentScrollEl = scrollWrapper.value;
+  }
+}
+
+function detachWheel() {
+  if (currentScrollEl) {
+    currentScrollEl.removeEventListener("wheel", onWheel);
+    currentScrollEl = null;
+  }
+}
 
 function updateDisplay() {
   isMobile.value = window.innerWidth <= 768;
@@ -392,6 +435,9 @@ const EXP_DECAY = 8;
 
 let lastWheelDir = 0;
 
+watch(capturing, (n) => {
+  console.log("capturing");
+});
 function onWheel(e) {
   lastWheelDir = Math.sign(e.deltaY);
   if (capturing.value) {
@@ -399,9 +445,6 @@ function onWheel(e) {
       (progress.value <= 0.001 && lastWheelDir < 0) ||
       (progress.value >= 0.93 && lastWheelDir > 0)
     ) {
-      //     const raw = e.deltaY * sensitivity;
-      // const clamp01 = v => Math.min(Math.max(v, 0), 1);
-      // progressTarget.value = clamp01(progressTarget.value + raw);
       releaseScrollControl();
       return;
     }
@@ -487,7 +530,6 @@ watch(
   },
 );
 
-
 const sections = [
   {
     start: 0,
@@ -495,7 +537,7 @@ const sections = [
     easeIn: 0.15,
     easeOut: 0.15,
     stickiness: 0.9,
-    speedMultiplier: 1.1
+    speedMultiplier: 1.1,
   },
   {
     start: 0.33,
@@ -503,7 +545,7 @@ const sections = [
     easeIn: 0.1,
     easeOut: 0.1,
     stickiness: 0.9,
-    speedMultiplier: 0.5
+    speedMultiplier: 0.5,
   },
   {
     start: 0.74,
@@ -511,15 +553,17 @@ const sections = [
     easeIn: 0.12,
     easeOut: 0.12,
     stickiness: 0.9,
-    speedMultiplier: 1
-  }
+    speedMultiplier: 1,
+  },
 ];
 
 const currentSection = computed(() => {
-  return sections.find(s => progress.value >= s.start && progress.value <= s.end) || sections[0];
+  return (
+    sections.find(
+      (s) => progress.value >= s.start && progress.value <= s.end,
+    ) || sections[0]
+  );
 });
-
-
 </script>
 
 <style scoped>
