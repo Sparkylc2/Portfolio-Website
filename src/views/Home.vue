@@ -3,24 +3,25 @@
     <Navbar :tabs="navbarTabs" :activeTab="activeNavbarTab" :indicatorColor="currentProjectColor"
       @update:activeTab="handleTabChange" />
 
-      <section class="main-section">
-        <div class="content">
-          <Projects v-if="currentTab === 'Projects'" :activeSection="projectSection" :selectedProject="selectedProject"
-            @update:selectedProject="handleProjectChange"
-            @update:selectedProjectColor="handleProjectPaperColorChange" />
+    <section class="main-section">
+      <div class="content">
+        <Projects v-if="currentTab === 'Projects'" :activeSection="projectSection" :selectedProject="selectedProject"
+          @update:selectedProject="handleProjectChange" @update:selectedProjectColor="handleProjectPaperColorChange" />
 
-          <Papers v-if="currentTab === 'Papers'" :activeSection="paperSection" :selectedPaper="selectedPaper"
-            @update:selectedPaper="handlePaperChange" @update:selectedPaperColor="handleProjectPaperColorChange" />
-        </div>
-      </section>
-    </div>
+        <Papers v-if="currentTab === 'Papers'" :activeSection="paperSection" :selectedPaper="selectedPaper"
+          @update:selectedPaper="handlePaperChange" @update:selectedPaperColor="handleProjectPaperColorChange" />
+      </div>
+    </section>
+  </div>
 </template>
 
 <script setup>
-import { computed, ref, watch } from "vue";
+
+import { computed, onMounted, ref, watch } from "vue";
 import Navbar from "../components/Navbar.vue";
 import Papers from "../views/Papers.vue";
 import Projects from "../views/Projects.vue";
+import { useHead } from "@unhead/vue";
 
 const currentTab = ref("Projects");
 const projectSection = ref("Overview");
@@ -28,6 +29,10 @@ const paperSection = ref("Paper");
 const selectedProject = ref(null);
 const selectedPaper = ref(null);
 const activeColor = ref("#e63946");
+
+
+
+
 
 
 function getProjectColour(color) {
@@ -43,6 +48,7 @@ function getProjectColour(color) {
 const handleProjectPaperColorChange = (color) => {
   activeColor.value = color;
 };
+
 
 const currentProjectColor = computed(() => {
   if (activeColor.value !== null && currentTab.value === "Projects") {
@@ -64,6 +70,7 @@ watch(selectedPaper, (newVal) => {
     activeColor.value = null;
   }
 });
+
 
 const ALL_TABS = [
   { key: "Overview", label: "Overview", parent: "Projects" },
@@ -145,6 +152,8 @@ function handlePaperChange(idx) {
   if (idx !== null)
     paperSection.value = ALL_TABS.find((t) => t.parent === "Papers").key;
 }
+
+
 
 </script>
 

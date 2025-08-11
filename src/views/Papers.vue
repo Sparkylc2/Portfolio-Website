@@ -1,43 +1,23 @@
 <template>
   <div class="papers-container">
     <h1 class="page-title">Papers</h1>
-    <div
-      class="content-layout"
-      :class="{ 'has-expanded': expandedPaper !== null }"
-    >
-      <button
-        v-if="expandedPaper !== null && isMobile"
-        class="mobile-back-button-wrapper"
-        @click="closePaper"
-      >
+    <div class="content-layout" :class="{ 'has-expanded': expandedPaper !== null }">
+      <button v-if="expandedPaper !== null && isMobile" class="mobile-back-button-wrapper" @click="closePaper">
         <div class="mobile-back-button"><span>←</span> Back</div>
       </button>
 
-      <div
-        class="papers-grid-wrapper"
-        :class="{ 'is-hidden': isMobile && expandedPaper !== null }"
-      >
-        <div
-          class="papers-grid"
-          :class="{ 'has-active': expandedPaper !== null }"
-        >
-          <div
-            v-for="(paper, index) in papers"
-            :key="index"
-            class="paper-card"
-            :class="{
-              active: expandedPaper === index,
-              inactive: expandedPaper !== null && expandedPaper !== index,
-            }"
-            :style="{
-              borderColor: getSecondaryOrTertiaryColor(
-                paper.color,
-                expandedPaper === index,
-              ),
-              '--paper-date-hover': getPrimaryColor(paper.color),
-            }"
-            @click="togglePaper(index)"
-          >
+      <div class="papers-grid-wrapper" :class="{ 'is-hidden': isMobile && expandedPaper !== null }">
+        <div class="papers-grid" :class="{ 'has-active': expandedPaper !== null }">
+          <div v-for="(paper, index) in papers" :key="index" class="paper-card" :class="{
+            active: expandedPaper === index,
+            inactive: expandedPaper !== null && expandedPaper !== index,
+          }" :style="{
+            borderColor: getSecondaryOrTertiaryColor(
+              paper.color,
+              expandedPaper === index,
+            ),
+            '--paper-date-hover': getPrimaryColor(paper.color),
+          }" @click="togglePaper(index)">
             <div class="paper-content">
               <h2 :style="{ color: getPrimaryColor(paper.color) }">
                 {{ paper.title }}
@@ -48,68 +28,32 @@
               <div class="date">
                 <span>{{ paper.dateRange }}</span>
               </div>
-              <div
-                class="paper-indicator"
-                :style="{ backgroundColor: getSecondaryColor(paper.color) }"
-              ></div>
+              <div class="paper-indicator" :style="{ backgroundColor: getSecondaryColor(paper.color) }"></div>
             </div>
           </div>
         </div>
       </div>
 
-      <div
-        v-if="expandedPaper !== null && (!isMobile || expandedPaper !== null)"
-        class="paper-details-section"
-        :class="{ 'mobile-fullscreen': isMobile }"
-        id="paperDetailsSection"
-      >
+      <div v-if="expandedPaper !== null && (!isMobile || expandedPaper !== null)" class="paper-details-section"
+        :class="{ 'mobile-fullscreen': isMobile }" id="paperDetailsSection">
         <div class="paper-details-content">
           <div class="paper-sections">
-            <div
-              class="section"
-              :style="{
-                outlineColor: getSecondaryOrTertiaryColor(
-                  currentPaper?.color,
-                  true,
-                ),
-              }"
-            >
+            <div class="section" :style="{
+              outlineColor: getSecondaryOrTertiaryColor(
+                currentPaper?.color,
+                true,
+              ),
+            }">
               <Transition name="fade" mode="out-in">
-                <div
-                  v-if="activeSection === 'Paper'"
-                  key="paper"
-                  class="section-content"
-                  ref="parentScroll"
-                  id="sectionContent"
-                >
-                  <div
-                    v-if="!isMobile && currentPaper?.pdf"
-                    class="pdf-viewer"
-                    ref="pdfWrapper"
-                  >
-                    <PDFViewer
-                      :pdfFileName="currentPaper.pdf"
-                      :accentColor="getSecondaryColor(currentPaper?.color)"
-                      :key="currentPaper?.pdf + currentPaper?.color"
-                    />
-                  </div>
-                  <div v-else>
-                    <PDFViewer
-                      :pdfFileName="currentPaper.pdf"
-                      :accentColor="getSecondaryColor(currentPaper?.color)"
-                      :key="currentPaper?.pdf + currentPaper?.color"
-                    />
+                <div v-if="activeSection === 'Paper'" key="paper" class="section-content" ref="parentScroll"
+                  id="sectionContent">
+                  <div class="pdf-viewer" ref="pdfWrapper">
+                    <PDFViewer :pdfFileName="currentPaper.pdf" :accentColor="getSecondaryColor(currentPaper?.color)"
+                      :key="currentPaper?.pdf + currentPaper?.color" />
                   </div>
                 </div>
-                <div
-                  v-else-if="activeSection === 'Abstract'"
-                  key="abstract"
-                  class="section-content"
-                >
-                  <div
-                    class="paper-details"
-                    v-html="currentPaper?.detailedDescription"
-                  ></div>
+                <div v-else-if="activeSection === 'Abstract'" key="abstract" class="section-content">
+                  <div class="paper-details" v-html="currentPaper?.detailedDescription"></div>
                 </div>
               </Transition>
             </div>
@@ -128,6 +72,7 @@ import {
   getSecondaryColor,
   getSecondaryOrTertiaryColor,
 } from "../composables/useGetColours";
+import { useHead } from "@unhead/vue";
 
 const props = defineProps({
   activeSection: String,
@@ -141,7 +86,6 @@ const pdfWrapper = ref(null);
 const parentScroll = ref(null);
 const isMobile = ref(false);
 const isTablet = ref(false);
-
 const checkScreenSize = () => {
   isMobile.value = window.innerWidth <= 768;
   isTablet.value = window.innerWidth > 768 && window.innerWidth <= 1024;
@@ -211,6 +155,8 @@ const papers = [
   },
 ];
 
+
+
 const currentPaper = computed(() =>
   expandedPaper.value !== null ? papers[expandedPaper.value] : null,
 );
@@ -236,6 +182,55 @@ onMounted(async () => {
     openPaper(0);
   }
 });
+
+
+
+const headData = computed(() => {
+  let data;
+
+  if (expandedPaper.value !== null) {
+    const paper = papers[expandedPaper.value];
+    if (paper) {
+      data = {
+        title: `${paper.title} — ${props.activeSection || 'Paper'}`,
+        description: paper.description,
+        meta: [
+          { name: 'description', content: paper.description },
+          { property: 'og:title', content: `${paper.title} — ${props.activeSection || 'Paper'}` },
+          { property: 'og:description', content: paper.description },
+        ],
+      };
+    } else {
+      data = {
+        title: "Papers — Lukas Campbell",
+        description: "Engineering papers and coursework.",
+        meta: [
+          { name: 'description', content: 'Engineering papers and coursework.' },
+          { property: 'og:title', content: 'Papers — Lukas Campbell' },
+          { property: 'og:description', content: 'Engineering papers and coursework.' },
+        ],
+      };
+    }
+  } else {
+    data = {
+      title: "Papers — Lukas Campbell",
+      description: "Engineering papers and coursework.",
+      meta: [
+        { name: 'description', content: 'Engineering papers and coursework.' },
+        { property: 'og:title', content: 'Papers — Lukas Campbell' },
+        { property: 'og:description', content: 'Engineering papers and coursework.' },
+      ],
+    };
+  }
+
+  return {
+    ...data,
+    link: [{ rel: 'canonical', href: 'https://lukascampbell.com/' }],
+  };
+});
+
+
+useHead(headData);
 </script>
 
 <style scoped>

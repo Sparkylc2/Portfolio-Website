@@ -54,6 +54,7 @@ body::-webkit-scrollbar {
     z-index: 100;
     scrollbar-width: none !important;
     -ms-overflow-style: none !important;
+    display: flex;
 }
 
 #sidebarContainer * {
@@ -78,6 +79,8 @@ body::-webkit-scrollbar {
     background: transparent !important;
     scrollbar-width: none !important;
     -ms-overflow-style: none !important;
+    display: none !important;
+    visibility: hidden !important;
 }
 
 #sidebarContent::-webkit-scrollbar {
@@ -100,11 +103,10 @@ body::-webkit-scrollbar {
     overflow: hidden !important;
     padding: 1rem;
     height: auto !important;
-    background: rgb(36, 36, 36) !important;
+    background: transparent !important;
     scrollbar-width: none !important;
     -ms-overflow-style: none !important;
 }
-
 
 #outlineView::-webkit-scrollbar {
     display: none !important;
@@ -196,7 +198,6 @@ body::-webkit-scrollbar {
     scrollbar-width: none !important;
     -ms-overflow-style: none !important;
 }
-
 
 #viewerContainer::-webkit-scrollbar {
     display: none !important;

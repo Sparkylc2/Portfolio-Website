@@ -1,5 +1,4 @@
 #include <iostream>
-#include <fstream>
 #include <vector>
 #include <cmath>
 #include <algorithm>
@@ -211,7 +210,7 @@ public:
     BladeSection(double r, double c, double twist, double dr, AirfoilPolar *p, double rotor_radius)
         : radial_position(r), chord_length(c), twist_angle(twist),
           differential_radius(dr), polar(p), a(1.0 / 3.0), a_prime(0.0),
-          extrapolator(nullptr)  
+          extrapolator(nullptr)
     {
         try {
             if (rotor_radius <= 0) {
@@ -221,13 +220,13 @@ public:
             }
 
             double cr75 = chord_length / (rotor_radius * 0.75);
-            
+
             if (std::isnan(cr75) || std::isinf(cr75)) {
                 if (DEBUG_POLARS)
                     std::cout << "Invalid cr75 value: " << cr75 << std::endl;
                 return;
             }
-            
+
             if (polar && !polar->data.empty())
             {
                 extrapolator = new ViternaExtrapolator(*polar, cr75);

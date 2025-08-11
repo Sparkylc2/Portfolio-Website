@@ -1,9 +1,8 @@
-RUST_DIR = wasm-src/rust/physics_engine
 CPP_DIR = wasm-src/cpp/physics_engine
 
 .PHONY: all clean rust cpp
 
-all: rust cpp
+all: cpp
 
 rust:
 	$(MAKE) -C $(RUST_DIR)
