@@ -216,7 +216,7 @@ const showHeroSection = computed(
   () => expandedProject.value === null && !props.isMobile
 );
 
-const isDesktop = computed(() => !props.isMobile && !props.isTablet)
+const isDesktop = computed(() => !props.isMobile)
 
 const capturing = ref(true);
 const animLoaded = ref(false);
@@ -225,7 +225,8 @@ const progressTarget = ref(0);
 const sensitivity = 0.0007;
 const animationSectionRef = ref(null);
 const heroAnimRef = ref(null);
-
+let activeTouchId = null;
+let lastTouchY = 0;
 
 
 const headData = computed(() => {
@@ -292,6 +293,101 @@ const onViewReady = () => {
 };
 let currentScrollEl = null;
 
+
+
+function onTouchStart(e) {
+
+  if (!showHeroSection.value) return;
+
+  const t = e.changedTouches[0];
+  activeTouchId = t.identifier;
+  lastTouchY = t.clientY;
+
+  if (capturing.value) {
+    e.preventDefault();
+    if (scrollWrapper.value) scrollWrapper.value.scrollTop = 0;
+  }
+}
+
+function onTouchMove(e) {
+
+  if (!showHeroSection.value || activeTouchId === null) return;
+  const t = Array.from(e.changedTouches).find(
+    (x) => x.identifier === activeTouchId
+  );
+  if (!t) return;
+
+  const dy = lastTouchY - t.clientY;
+  lastTouchY = t.clientY;
+
+  lastWheelDir = Math.sign(dy || 0);
+
+  if (capturing.value) {
+    if (
+      (progress.value <= 0.001 && lastWheelDir < 0) ||
+      (progress.value >= 0.93 && lastWheelDir > 0)
+    ) {
+      releaseScrollControl();
+      return;
+    }
+
+    e.preventDefault();
+
+    const raw =
+      dy * sensitivity * currentSection.value.speedMultiplier;
+    const clamp01 = (v) => Math.min(Math.max(v, 0), 1);
+    progressTarget.value = clamp01(progressTarget.value + raw);
+    return;
+  }
+
+  const el = scrollWrapper.value;
+  if (!el) return;
+
+  const thresholdPx = 120;
+  if (lastWheelDir < 0) {
+    const animTop = animationSectionRef.value?.offsetTop ?? 0;
+    if (el.scrollTop <= animTop + thresholdPx) {
+      const cameFromBottom =
+        progress.value > 0.5 || progressTarget.value > 0.5;
+      const startPos = cameFromBottom ? 1 : 0;
+      progress.value = startPos;
+      progressTarget.value = startPos;
+      takeScrollControl();
+      e.preventDefault();
+    }
+  }
+}
+
+function onTouchEnd(e) {
+  if (!showHeroSection.value) return;
+
+  const ended = Array.from(e.changedTouches).some(
+    (x) => x.identifier === activeTouchId
+  );
+  if (ended) {
+    activeTouchId = null;
+  }
+}
+
+
+function attachTouch() {
+  if (scrollWrapper.value && scrollWrapper.value !== currentScrollEl) {
+    detachTouch();
+  }
+  const el = scrollWrapper.value;
+  if (!el) return;
+  el.addEventListener("touchstart", onTouchStart, { passive: false });
+  el.addEventListener("touchmove", onTouchMove, { passive: false });
+  el.addEventListener("touchend", onTouchEnd, { passive: false });
+}
+
+function detachTouch() {
+  const el = scrollWrapper.value || currentScrollEl;
+  if (!el) return;
+  el.removeEventListener("touchstart", onTouchStart);
+  el.removeEventListener("touchmove", onTouchMove);
+  el.removeEventListener("touchend", onTouchEnd);
+}
 function attachWheel() {
   if (scrollWrapper.value && scrollWrapper.value !== currentScrollEl) {
     if (currentScrollEl) {
@@ -299,6 +395,8 @@ function attachWheel() {
     }
     scrollWrapper.value.addEventListener("wheel", onWheel, { passive: false });
     currentScrollEl = scrollWrapper.value;
+
+    attachTouch();
   }
 }
 
@@ -307,10 +405,12 @@ function detachWheel() {
     currentScrollEl.removeEventListener("wheel", onWheel);
     currentScrollEl = null;
   }
+
+  detachTouch();
 }
 
 function updateDisplay() {
-  if (isDesktop) {
+  if (isDesktop.value) {
     releaseScrollControl();
     detachWheel();
   } else if (isDesktop && expandedProject.value === null) {
@@ -331,6 +431,7 @@ onMounted(() => {
     const el = scrollWrapper.value;
     if (el) {
       el.addEventListener("wheel", onWheel, { passive: false });
+      attachTouch()
     }
   }
 
@@ -345,6 +446,7 @@ onUnmounted(() => {
 
   releaseScrollControl();
   detachWheel();
+
 });
 
 watch(showHeroSection, (newVal, oldVal) => {
@@ -547,6 +649,7 @@ const currentSection = computed(() => {
   position: relative;
   width: 100%;
   height: 100%;
+  touch-action: none;
 }
 
 .animation-wrapper {
