@@ -48,7 +48,7 @@ function sanitizeLatex(latex) {
         cmd += latex[i++]
       }
 
-      if (cmd === '\\text') {
+      if (cmd === '\\textbf') {
         result += cmd
         let braceDepth = 0
         while (i < n) {
@@ -75,7 +75,7 @@ function sanitizeLatex(latex) {
         run += latex[i++]
       }
       if (run) {
-        result += `\\text{${run}}`
+        result += `\\textbf{${run}}`
       }
     }
   }

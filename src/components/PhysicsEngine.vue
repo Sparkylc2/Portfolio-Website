@@ -1,101 +1,64 @@
 <template>
   <div class="physics-simulator" ref="simulatorContainer">
     <form class="controls" @submit.prevent>
-      <label>
-        Tool:
-        <select v-model="activeTool">
-          <option v-for="item in toolDropdownItems" :key="item.value" :value="item.value">
-            {{ item.label }}
-          </option>
-        </select>
-      </label>
+      <BaseSelect v-model="activeTool" :options="toolDropdownItems" label="Tool" color-key="red" :baseUnderline="true"
+        class="control-element" />
+      <!-- <label> -->
+      <!--   Tool: -->
+      <!--   <select v-model="activeTool"> -->
+      <!--     <option v-for="item in toolDropdownItems" :key="item.value" :value="item.value"> -->
+      <!--       {{ item.label }} -->
+      <!--     </option> -->
+      <!--   </select> -->
+      <!-- </label> -->
 
-      <template v-if="activeTool === 'Box'">
-        <label>
-          Width:
-          <input v-model.number="toolProps.box.width" type="number" step="5" min="10" max="200" />
-          <span class="underline"></span>
-        </label>
-        <label>
-          Height:
-          <input v-model.number="toolProps.box.height" type="number" step="5" min="10" max="200" />
-          <span class="underline"></span>
-        </label>
-        <label>
-          Gravity:
-          <div class="checkbox-container">
-            <div class="checkbox" :class="{ 'checkbox--selected': toolProps.box.gravity }"
-              @click="toolProps.box.gravity = !toolProps.box.gravity">
-              <svg v-if="toolProps.box.gravity" class="checkbox__check" width="12" height="12" viewBox="0 0 16 16">
-                <path d="M2 8L6 12L14 4" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"
-                  stroke-linejoin="round" />
-              </svg>
-            </div>
-          </div>
-          <span class="underline"></span>
-        </label>
+      <template v-if="activeTool === 'Box'" class="control-element">
+        <BaseInput v-model.number="toolProps.box.width" type="number" min="1" max="500" label="Width" color-key="red"
+          :dynamicUnderline="true" class="control-element" :showTooltips="false" />
+        <BaseInput v-model.number="toolProps.box.height" type="number" min="1" max="500" label="Height" color-key="red"
+          :dynamicUnderline="true" class="control-element" :showTooltips="false" />
+        <BaseCheckbox v-model="toolProps.box.gravity" label="Gravity" class="control-element" color-key="red" />
       </template>
 
-      <template v-else-if="activeTool === 'Circle'">
-        <label>
-          Radius:
-          <input v-model.number="toolProps.circle.radius" type="number" step="5" min="5" max="100" />
-          <span class="underline"></span>
-        </label>
-        <label>
-          Static:
-          <div class="checkbox-container">
-            <div class="checkbox" :class="{ 'checkbox--selected': toolProps.circle.isStatic }"
-              @click="toolProps.circle.isStatic = !toolProps.circle.isStatic">
-              <svg v-if="toolProps.circle.isStatic" class="checkbox__check" width="12" height="12" viewBox="0 0 16 16">
-                <path d="M2 8L6 12L14 4" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"
-                  stroke-linejoin="round" />
-              </svg>
-            </div>
-          </div>
-          <span class="underline"></span>
-        </label>
-
-        <label>
-          Gravity:
-          <div class="checkbox-container">
-            <div class="checkbox" :class="{ 'checkbox--selected': toolProps.circle.gravity }"
-              @click="toolProps.circle.gravity = !toolProps.circle.gravity">
-              <svg v-if="toolProps.circle.gravity" class="checkbox__check" width="12" height="12" viewBox="0 0 16 16">
-                <path d="M2 8L6 12L14 4" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"
-                  stroke-linejoin="round" />
-              </svg>
-            </div>
-          </div>
-          <span class="underline"></span>
-        </label>
+      <template v-else-if="activeTool === 'Circle'" class="control-element">
+        <BaseInput v-model.number="toolProps.circle.radius" type="number" min="1" max="500" label="Radius"
+          color-key="red" :dynamicUnderline="true" class="control-element" :showTooltips="false" />
+        <BaseCheckbox v-model="toolProps.circle.gravity" label="Gravity" class="control-element" color-key="red" />
       </template>
 
-      <template v-else-if="activeTool === 'Spring'">
-        <label>
-          Stiffness:
-          <input v-model.number="toolProps.spring.stiffness" type="number" step="50" min="50" max="1000" />
-          <span class="underline"></span>
-        </label>
-        <label>
-          Damping:
-          <input v-model.number="toolProps.spring.damping" type="number" step="1" min="0" max="50" />
-          <span class="underline"></span>
-        </label>
+      <template v-else-if="activeTool === 'Spring'" class="control-element">
+        <BaseInput v-model.number="toolProps.spring.stiffness" type="number" min="1" max="10000" label="Stiffness"
+          color-key="red" :dynamicUnderline="true" class="control-element" :showTooltips="false" />
+        <BaseInput v-model.number="toolProps.spring.damping" type="number" min="0" max="100" label="Damping"
+          color-key="red" :dynamicUnderline="true" class="control-element" :showTooltips="false" />
       </template>
-
-      <template v-else-if="activeTool === 'Motor'">
-        <label>
-          Speed:
-          <input v-model.number="toolProps.motor.speed" type="number" step="0.5" min="-20" max="20" />
-          <span class="underline"></span>
-        </label>
+      <template v-else-if="activeTool === 'Motor'" class="control-element">
+        <BaseInput v-model.number="toolProps.motor.speed" type="number" min="-50" max="50" label="Speed" color-key="red"
+          :dynamicUnderline="true" class="control-element" :showTooltips="false" />
       </template>
 
       <div class="controls-info">
-        <span class="info-text">Press <kbd>Space</kbd> to pause/unpause</span>
+        <span class="info-text desktop-only">Press <kbd>Space</kbd> to pause/unpause</span>
+        <span class="info-text touch-only">Tap to add objects • Tap and hold to pause/unpause</span>
       </div>
+      <label class="touch-only-flex control-element">
+        <span class="touch-only-flex">Pause:</span>
+        <div class="checkbox-container touch-only-flex" style="z-index: 0;">
+          <button v-if="engine" @click="togglePause" class="pause-button touch-only" :class="{ 'is-paused': isPaused }">
+            <svg v-if="!isPaused" width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <rect x="6" y="4" width="4" height="16" fill="currentColor" />
+              <rect x="14" y="4" width="4" height="16" fill="currentColor" />
+            </svg>
+            <svg v-else width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <polygon points="8,5 19,12 8,19" fill="currentColor" />
+            </svg>
+          </button>
+        </div>
+      </label>
+
+
     </form>
+
 
 
 
@@ -107,7 +70,9 @@
 import { Application, Graphics } from 'pixi.js'
 import { computed, nextTick, onMounted, onUnmounted, ref, shallowRef, watch } from 'vue'
 import PhysicsEngineModule from '../wasm/physics_engine.js'
-
+import BaseCheckbox from './elements/BaseCheckbox.vue'
+import BaseSelect from './elements/BaseSelect.vue'
+import BaseInput from './elements/BaseInput.vue'
 const toolLabels = {
   None: 'Select',
   Circle: 'Add Circle',
@@ -135,6 +100,8 @@ const engine = ref(null)
 
 const tickerFunction = ref(null)
 const resizeObserver = shallowRef(null)
+
+const isPaused = ref(false)
 
 let resizeTimeout = null;
 function scheduleResize() {
@@ -200,13 +167,13 @@ watch(() => activeTool.value, (tool) => {
 
 watch(() => toolProps.value.box, (props) => {
   if (engine.value) {
-    engine.value.setBoxProperties(props.width, props.height, props.isStatic, props.gravity)
+    engine.value.setBoxProperties(props.width, props.height, false, props.gravity)
   }
 }, { deep: true, immediate: true })
 
 watch(() => toolProps.value.circle, (props) => {
   if (engine.value) {
-    engine.value.setCircleProperties(props.radius, props.isStatic, props.gravity)
+    engine.value.setCircleProperties(props.radius, false, props.gravity)
   }
 }, { deep: true, immediate: true })
 
@@ -226,13 +193,18 @@ watch(() => toolProps.value.motor, (props) => {
 function overMenu(ev) {
   const target = ev.target
 
-  const isControlElement =
-    target.tagName === 'SELECT' ||
-    target.tagName === 'INPUT' ||
-    target.tagName === 'LABEL' ||
-    target.classList.contains('checkbox-container') ||
-    target.classList.contains('checkbox') ||
-    target.classList.contains('checkbox__check')
+  const isControlElement = target.classList.contains('control-element')
+    || target.classList.contains('base-input-text')
+    || target.classList.contains('base-select-option')
+    || target.classList.contains('base-checkbox')
+    || target.classList.contains('base-checkbox-text')
+    || target.classList.contains('base-select-trigger')
+    || target.classList.contains('base-select-option')
+    || target.classList.contains('base-select-trigger__value')
+    || target.classList.contains('pause-button')
+    || target.classList.contains('controls')
+    || target.classList.contains('controls-info')
+    || target.classList.contains('touch-only-flex')
   return isControlElement;
 }
 
@@ -262,26 +234,37 @@ function onPointerDown(ev) {
   engine.value.mouseDown(x, y)
 }
 
+let isDragging = false;
+
 function onTouchStart(ev) {
+  isDragging = false;
   onPointerDown(ev)
+  trackTouch(ev)
 }
 
 function onTouchMove(ev) {
-  if (!overMenu(ev)) {
-    ev.preventDefault()
-  }
+  isDragging = true;
+  if (!overMenu(ev)) ev.preventDefault()
   trackTouch(ev)
 }
 
 function onTouchEnd(ev) {
-  if (!overMenu(ev)) {
-    ev.preventDefault()
+  if (!overMenu(ev)) ev.preventDefault()
+
+  if (isDragging) {
+    onTouchStart(ev);
   }
+
 }
 
 
 
-
+const togglePause = () => {
+  if (engine.value) {
+    engine.value.toggleIsPaused()
+    isPaused.value = !isPaused.value
+  }
+}
 
 function drawSpring(g, xa, ya, xb, yb, segments = 6, offset = 10, opacity) {
   const dx = xb - xa, dy = yb - ya
@@ -423,7 +406,7 @@ function handleKeyDown(evt) {
   } else if (evt.code === 'Space') {
     evt.preventDefault()
     if (engine.value && app.value?.ticker) {
-      engine.value.toggleIsPaused()
+      togglePause()
     }
   }
 }
@@ -452,8 +435,20 @@ const canvasOnResize = async () => {
 
     if (engine.value) {
       const controls = simulatorContainer.value?.querySelector('.controls');
-      const controlsRect = controls.getBoundingClientRect();
-      engine.value.setBounds(width, height, controlsRect.y)
+
+      if (controls) {
+        const controlsRect = controls.getBoundingClientRect();
+        const pixiRect = pixiContainer.value.getBoundingClientRect();
+
+
+        let offset = controlsRect.y + pixiRect.height * 0.05
+        if (offset < 0) offset = 0;
+        if (offset > height) offset = height;
+
+        engine.value.setBounds(width, height, offset);
+      } else {
+        engine.value.setBounds(width, height, 0);
+      }
     }
   } catch (err) {
     console.error('[PhysicsEngine] Error resizing canvas:', err)
@@ -461,31 +456,33 @@ const canvasOnResize = async () => {
 }
 
 function initListeners() {
-  if (pixiContainer.value) {
-    window.addEventListener('click', onPointerDown)
+  if (simulatorContainer.value) {
 
-    window.addEventListener('mousemove', trackMouse)
+    simulatorContainer.value.addEventListener('click', onPointerDown)
 
-    pixiContainer.value.addEventListener('touchstart', onTouchStart, { passive: false })
-    pixiContainer.value.addEventListener('touchmove', onTouchMove, { passive: false })
-    pixiContainer.value.addEventListener('touchend', onTouchEnd, { passive: false })
+    simulatorContainer.value.addEventListener('mousemove', trackMouse)
 
-    pixiContainer.value.addEventListener('contextmenu', (e) => e.preventDefault())
+    simulatorContainer.value.addEventListener('touchstart', onTouchStart, { passive: false })
+
+    simulatorContainer.value.addEventListener('touchmove', onTouchMove, { passive: false })
+    simulatorContainer.value.addEventListener('touchend', onTouchEnd, { passive: false })
+
+    simulatorContainer.value.addEventListener('contextmenu', (e) => e.preventDefault())
   }
   window.addEventListener('keydown', handleKeyDown)
 }
 
 function removeListeners() {
-  if (pixiContainer.value) {
-    window.removeEventListener('click', onPointerDown)
-    window.removeEventListener('mousemove', trackMouse)
+  if (simulatorContainer.value) {
+    simulatorContainer.value.removeEventListener('click', onPointerDown)
+    simulatorContainer.value.removeEventListener('mousemove', trackMouse)
 
-    pixiContainer.value.removeEventListener('touchstart', onTouchStart)
-    pixiContainer.value.removeEventListener('touchmove', onTouchMove)
-    pixiContainer.value.removeEventListener('touchend', onTouchEnd)
-    pixiContainer.value.removeEventListener('contextmenu', (e) => e.preventDefault())
+    simulatorContainer.value.removeEventListener('touchstart', onTouchStart)
+    simulatorContainer.value.removeEventListener('touchmove', onTouchMove)
+    simulatorContainer.value.removeEventListener('touchend', onTouchEnd)
+    simulatorContainer.value.removeEventListener('contextmenu', (e) => e.preventDefault())
 
-    pixiContainer.value.removeEventListener('contextmenu', (e) => e.preventDefault())
+    simulatorContainer.value.removeEventListener('contextmenu', (e) => e.preventDefault())
   }
   window.removeEventListener('keydown', handleKeyDown)
 }
@@ -630,6 +627,13 @@ defineExpose({
 </script>
 
 <style scoped>
+svg {
+  user-select: none;
+  -webkit-user-select: none;
+  -ms-user-select: none;
+  pointer-events: none;
+}
+
 .physics-simulator {
   width: 100%;
   max-width: 1400px;
@@ -643,119 +647,36 @@ defineExpose({
   overscroll-behavior: contain;
 }
 
+.physics-simulator {
+  overflow: visible !important;
+}
+
 .controls {
   display: flex;
-  justify-content: center;
+  justify-content: flex-start;
   flex-wrap: nowrap;
+  position: relative;
   align-items: center;
   gap: 1.5rem;
   margin-bottom: 1.5rem;
-  padding: 1rem 1.5rem;
+  padding-inline: 0;
   background-color: rgb(36, 36, 36);
   border-radius: 8px;
   overflow-x: auto;
   flex-shrink: 0;
+  overflow-y: visible;
+
 
   touch-action: pan-x;
   -webkit-overflow-scrolling: touch;
 }
 
-.controls label {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  font-weight: 600;
-  font-size: 14px;
-  color: #ccc;
-  white-space: nowrap;
-  cursor: text;
+.controls::before,
+.controls::after {
+  content: "";
+  flex: 0 0 1.5rem;
 }
 
-.controls select {
-  all: unset;
-  font-size: 14px;
-  padding: 0.3rem 0;
-  color: #fff;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-  transition: border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  width: 10rem;
-  appearance: none;
-  background-color: transparent;
-  cursor: pointer;
-  position: relative;
-  display: flex;
-  align-items: center;
-}
-
-.controls label:has(select)::after {
-  content: '▼';
-  position: absolute;
-  right: 0;
-  bottom: 8px;
-  font-size: 10px;
-  color: #ccc;
-  pointer-events: none;
-}
-
-.controls select option {
-  background-color: rgb(50, 50, 50);
-  color: #fff;
-  padding: 0.5rem;
-}
-
-.controls select:hover~.underline,
-.controls select:focus~.underline {
-  width: 100%;
-}
-
-.controls input {
-  all: unset;
-  font-size: 14px;
-  padding: 0.3rem 0;
-  color: #fff;
-  border-bottom: 1px solid transparent;
-  transition: border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  width: 6rem;
-  appearance: textfield;
-}
-
-.controls input[type='number'] {
-  appearance: textfield;
-}
-
-.controls input::-webkit-inner-spin-button,
-.controls input::-webkit-outer-spin-button {
-  appearance: none;
-  margin: 0;
-}
-
-.controls input::placeholder {
-  color: rgba(255, 255, 255, 0.3);
-}
-
-.controls input:focus,
-.controls select:focus {
-  outline: none;
-}
-
-.controls .underline {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  height: 2px;
-  width: 0;
-  background-color: rgb(204, 140, 140);
-  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  border-radius: 9999px;
-}
-
-.controls input:hover~.underline {
-  width: 100%;
-}
-
-.controls input:focus~.underline {
-  width: 100%;
-}
 
 .checkbox-wrapper {
   display: flex;
@@ -765,52 +686,8 @@ defineExpose({
   margin-top: 0.25rem;
 }
 
-.checkbox {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 0.9rem;
-  height: 0.9rem;
-  background-color: rgb(50, 50, 50);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 3px;
-  transition: background-color 0.3s, border-color 0.3s;
 
-  min-width: 44px;
-  min-height: 44px;
-  cursor: pointer;
-}
 
-.checkbox--selected {
-  background-color: rgb(204, 140, 140);
-  border-color: rgb(204, 140, 140);
-}
-
-.checkbox__text {
-  font-weight: 600;
-  font-size: 14px;
-  color: #ccc;
-}
-
-.checkbox__check {
-  position: absolute;
-  width: 12px;
-  height: 12px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 2;
-  pointer-events: none;
-}
-
-.checkbox__label {
-  font-weight: 600;
-  font-size: 14px;
-  color: #ccc;
-  user-select: none;
-  min-width: 60px;
-  text-align: right;
-}
 
 .controls-info {
   display: flex;
@@ -837,6 +714,44 @@ defineExpose({
   -webkit-user-select: none;
   -webkit-touch-callout: none;
   -webkit-tap-highlight-color: transparent;
+}
+
+
+
+.pause-button {
+  padding: 0.3rem;
+  width: 46px;
+  height: 46px;
+  background: rgba(36, 36, 36, 0.9);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 1000;
+  transition: all 0.3s ease;
+  color: #fff;
+  backdrop-filter: blur(10px);
+}
+
+.pause-button:focus,
+.pause-button:active,
+.pause-button.selected {
+  background: var(--border-color, #3490dc);
+  color: #fff;
+  outline: none;
+}
+
+.pause-button:hover {
+  background: rgba(36, 36, 36, 1);
+  border-color: rgb(204, 140, 140);
+  transform: scale(1.05);
+}
+
+.pause-button.is-paused {
+  background: rgba(204, 140, 140, 1);
+  border-color: rgb(204, 140, 140);
 }
 
 @keyframes checkIn {
@@ -872,9 +787,7 @@ defineExpose({
     font-size: 13px;
   }
 
-  .controls-info {
-    display: none;
-  }
+
 }
 
 .checkbox-container {
@@ -884,8 +797,18 @@ defineExpose({
   width: 6rem;
   padding: 0.3rem 0;
   border-bottom: 1px solid transparent;
+}
 
-  min-height: 44px;
+.desktop-only {
+  display: inline;
+}
+
+.touch-only {
+  display: none;
+}
+
+.touch-only-flex {
+  display: none;
 }
 
 @media (hover: none) and (pointer: coarse) {
@@ -896,6 +819,24 @@ defineExpose({
 
   .controls label {
     font-size: 15px;
+  }
+
+  .pause-button.touch-only {
+    display: flex;
+  }
+
+  .desktop-only {
+    display: none;
+  }
+
+  .touch-only {
+    display: inline;
+  }
+
+
+  .touch-only-flex {
+    display: flex;
+    align-items: center;
   }
 
   .controls input,
@@ -923,48 +864,6 @@ defineExpose({
     font-size: 16px;
   }
 
-  .info-text {
-    display: none;
-  }
-}
 
-@media (max-width: 768px) {
-  .controls {
-    gap: 1rem;
-    padding: 1rem;
-    justify-content: flex-start;
-    overflow-x: auto;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-  }
-
-  .controls::-webkit-scrollbar {
-    display: none;
-  }
-
-  .controls label {
-    font-size: 14px;
-    flex-shrink: 0;
-  }
-
-  .controls input,
-  .controls select {
-    width: 5rem;
-    font-size: 16px;
-    min-height: 44px;
-  }
-
-  .controls-info {
-    display: none;
-  }
-
-  .checkbox {
-    min-width: 44px;
-    min-height: 44px;
-  }
-
-  .checkbox-container {
-    min-height: 44px;
-  }
 }
 </style>

@@ -107,7 +107,7 @@ watch(expandedPaper, (newVal) => {
 const papers = [
   {
     title:
-      "Theoretical, Computational, and Experimental Approaches to Pipe Flow꞉ A Comparative Study",
+      "Theoretical, Computational, and Experimental Approaches to Pipe Flow: A Comparative Study",
     authors: "Lukas Campbell",
     venue: "Imperial College London, Department of Aeronautics",
     description:
@@ -128,7 +128,7 @@ const papers = [
   },
   {
     title:
-      "Theoretical, Computational, and Experimental Approaches to Indeterminate Beams꞉ A Comparative Study",
+      "Theoretical, Computational, and Experimental Approaches to Indeterminate Beams: A Comparative Study",
     authors: "Lukas Campbell",
     venue: "Imperial College London, Department of Aeronautics",
     description:

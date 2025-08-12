@@ -1,36 +1,25 @@
 <template>
   <div class="airfoil-simulator">
-    <form class="controls" @submit.prevent="updatePlot">
-      <label>
-        NACA Code:
-        <input v-model="naca" pattern="\d{4}" maxlength="4" placeholder="2412" />
-        <span class="underline"></span>
-      </label>
+    <form class="form-controls" @submit.prevent="updatePlot">
+      <BaseInput v-model="naca" label="NACA Code" type="text" pattern="\d{4}" maxlength="4" placeholder="2412"
+        colorKey="blue" :dynamicUnderline="true" />
 
-      <label>
-        AoA (°):
-        <input v-model.number="aoaDeg" type="number" step="0.5" placeholder="10" />
-        <span class="underline"></span>
-      </label>
-
-      <label>
-        Panels:
-        <input v-model.number="nPanels" type="number" min="50" max="500" step="10" placeholder="200" />
-        <span class="underline"></span>
-      </label>
-
-      <label>
-        U (m/s):
-        <input v-model.number="uFs" type="number" step="0.5" min="1" placeholder="15" />
-        <span class="underline"></span>
-      </label>
-
-      <button type="submit">Update&nbsp;Plot</button>
+      <BaseInput v-model.number="aoaDeg" label="AoA (°)" type="number" min="-90" max="90" placeholder="10"
+        colorKey="blue" :dynamicUnderline="true" />
+      <BaseInput v-model.number="nPanels" label="Panels" type="number" min="2" max="1000" placeholder="200"
+        colorKey="blue" :dynamicUnderline="true" />
+      <BaseInput v-model.number="uFs" label="U (m/s)" type="number" min="1" max="100" placeholder="15" colorKey="blue"
+        :dynamicUnderline="true" />
+      <BaseButton type="submit" colorKey="blue" :disabled="isComputing">
+        <template v-if="!isComputing">Update Plot</template>
+        <template v-else>Computing…</template>
+      </BaseButton>
     </form>
+
     <div class="plot-container">
       <div class="plot-wrapper">
-        <div class="plot-title">Streamlines around NACA {{ naca }} | Cₗ = {{ CL.toFixed(3) }}</div>
-        <div v-if="!error" class="plot" ref="streamlinePlot"></div>
+        <div class="plot-title">Streamlines around NACA {{ naca }} | Cₗ = {{ clDisplay }}</div>
+        <div v-if="!error" class="plot extreme-mask" ref="streamlinePlot"></div>
         <div v-else class="plot-error-wrapper" ref="streamlinePlot">
           <h2> An error occured </h2>
         </div>
@@ -41,24 +30,27 @@
 
 <script setup>
 import * as echarts from 'echarts'
-import { onMounted, onUnmounted, ref } from 'vue'
-import init from '../wasm/airfoil_simulator.js'
-
-defineProps({
+import { onMounted, onUnmounted, ref, computed } from 'vue'
+import BaseInput from './elements/BaseInput.vue'
+import BaseButton from './elements/BaseButton.vue'
+const props = defineProps({
   projectColor: {
     type: String,
     default: '#007bff'
   }
 })
 
+
 const error = ref(false)
+const errorMessage = ref('')
+const isComputing = ref(false)
+
 const naca = ref('2412')
 const aoaDeg = ref(0)
 const nPanels = ref(200)
 const uFs = ref(15)
 const CL = ref(0)
-
-const wasm = ref(null)
+const clDisplay = computed(() => (Number.isFinite(CL.value) ? CL.value.toFixed(3) : '—'))
 
 const streamlinePlot = ref(null)
 let streamlineChart = null
@@ -67,128 +59,152 @@ function resizeCharts() {
   streamlineChart?.resize()
 }
 
-function matToJs(mat, wasm) {
-  const r = wasm.matrix_rows(mat), c = wasm.matrix_cols(mat)
-  const arr = Array.from({ length: r }, (_, i) =>
-    Array.from({ length: c }, (_, j) => wasm.matrix_coeff(mat, i, j)))
-  mat.delete()
-  return arr
+
+let worker = null
+function ensureWorker() {
+  if (!worker) {
+    worker = new Worker(new URL('../workers/airfoil.worker.js', import.meta.url), { type: 'module' })
+    worker.addEventListener('message', onWorkerMessage)
+    worker.addEventListener('error', (e) => {
+      error.value = true
+      errorMessage.value = `Worker error: ${e.message || 'unknown'}`
+      isComputing.value = false
+    })
+  }
 }
 
-async function disposeStreamData(res) {
-  if (!res) return
+function disposeWorker() {
+  if (worker) {
+    worker.removeEventListener('message', onWorkerMessage)
+    worker.terminate()
+    worker = null
+  }
+}
 
-  res.mu?.delete()
+function onWorkerMessage(e) {
+  const data = e.data
+  if (!data) return
 
-  res.stream_field?.u?.delete()
-  res.stream_field?.v?.delete()
-
-  res.stream_grid?.x?.delete()
-  res.stream_grid?.z?.delete()
-
-  if (res.streamlines) {
-    const n = res.streamlines.size()
-    for (let i = 0; i < n; i++) {
-      res.streamlines.get(i)?.delete()
-    }
-    res.streamlines.delete()
+  if (data.error) {
+    error.value = true
+    errorMessage.value = data.error
+    isComputing.value = false
+    return
   }
 
-  res.delete?.()
+  try {
+    CL.value = data.cl
+
+    const foil = []
+    for (let i = 0; i < data.foil.length - 2; i += 2) {
+      foil.push([data.foil[i], data.foil[i + 1]])
+    }
+
+    const streamSeries = []
+    for (let k = 0; k < data.nLines; k++) {
+      const buf = new Float32Array(data.streamBuffers[k])
+      const line = []
+      for (let i = 0; i < buf.length; i += 2) {
+        line.push([buf[i], buf[i + 1]])
+      }
+      streamSeries.push({
+        type: 'line',
+        data: line,
+        lineStyle: { color: 'rgb(140, 172, 204)', width: 1 },
+        showSymbol: false,
+        silent: true
+      })
+    }
+
+    streamlineChart.setOption(
+      {
+        tooltip: { show: false },
+        xAxis: {
+          min: -0.2,
+          max: 1.2,
+          name: 'x/c',
+          splitLine: { show: false },
+          axisLine: { onZero: false, lineStyle: { color: 'rgba(0,0,0,0)' } },
+          axisTick: { show: false },
+          axisLabel: { show: false }
+        },
+        yAxis: {
+          min: -0.7,
+          max: 0.7,
+          scale: true,
+          name: 'z/c',
+          splitLine: { show: false },
+          axisLine: { lineStyle: { color: 'rgba(0,0,0,0)' } },
+          axisLabel: { show: false }
+        },
+        grid: { show: false },
+        animation: false,
+        aria: { enabled: true },
+        series: [
+          {
+            type: 'line',
+            data: foil,
+            lineStyle: { color: '#fff', width: 2 },
+            showSymbol: false,
+            silent: true
+          },
+          ...streamSeries
+        ]
+      },
+      { notMerge: true, lazyUpdate: true }
+    )
+  } catch (err) {
+    error.value = true
+    errorMessage.value = String(err)
+  } finally {
+    isComputing.value = false
+  }
 }
 
-onMounted(async () => {
+
+onMounted(() => {
   try {
     streamlineChart = echarts.init(streamlinePlot.value, null, { renderer: 'canvas' })
     window.addEventListener('resize', resizeCharts)
   } catch (err) {
     console.error('[AirfoilSimulator] Failed to initialize ECharts:', err)
     error.value = true
+    errorMessage.value = 'Failed to initialize chart'
     return
   }
 
-  init().then(async mod => {
-    wasm.value = mod
-    await updatePlot()
-  }).catch(err => {
-    console.error('[AirfoilSimulator] Failed to load WASM module:', err)
-    error.value = true
-  })
+  updatePlot()
 })
 
 onUnmounted(() => {
   window.removeEventListener('resize', resizeCharts)
   streamlineChart?.dispose()
+  disposeWorker()
 })
 
+
 async function updatePlot() {
-  if (!wasm.value) return
+  ensureWorker()
+
+  if (isComputing.value) return
+  isComputing.value = true
+  error.value = false
+  errorMessage.value = ''
+
+  const payload = {
+    naca: String(naca.value || ''),
+    uFs: Number(uFs.value || 0),
+    aoaDeg: Number(aoaDeg.value || 0),
+    nPanels: Number(nPanels.value || 0),
+    nStreams: 40
+  }
+
   try {
-    const res = await wasm.value.analyze_airfoil(
-      naca.value,
-      uFs.value,
-      aoaDeg.value,
-      nPanels.value,
-      40
-    )
-
-    CL.value = res.cl
-
-
-    streamlineChart.setOption({
-      tooltip: { show: false },
-      xAxis: {
-        min: -0.2,
-        max: 1.2,
-        name: 'x/c',
-        splitLine: { show: false },
-        axisLine: { onZero: false, lineStyle: { color: 'rgba(0,0,0,0)' } },
-        axisTick: { show: false },
-        axisLabel: { show: false }
-      },
-      yAxis: {
-        min: -0.7,
-        max: 0.7,
-        scale: true,
-        name: 'z/c',
-        splitLine: { show: false },
-        axisLine: { lineStyle: { color: 'rgba(0,0,0,0)' } },
-        axisLabel: { show: false }
-      },
-      grid: { show: false },
-      animation: false,
-      aria: { enabled: true },
-    }, true)
-
-    const streamSeries = []
-    const nLines = res.streamlines.size()
-    for (let k = 0; k < nLines; k++) {
-      streamSeries.push({
-        type: 'line',
-        data: matToJs(res.streamlines.get(k), wasm.value),
-        lineStyle: { color: 'rgb(140, 172, 204)', width: 1 },
-        showSymbol: false
-      })
-    }
-
-    const foil = matToJs(res.airfoil_coords, wasm.value).slice(0, -1)
-    streamlineChart.setOption({
-      series: [
-        {
-          type: 'line',
-          data: foil,
-          lineStyle: { color: '#fff', width: 2 },
-          showSymbol: false
-        },
-        ...streamSeries
-      ]
-    })
-
-    disposeStreamData(res)
-
+    worker.postMessage(payload)
   } catch (err) {
+    isComputing.value = false
     error.value = true
-    console.error('[AirfoilSimulator] update failed:', err)
+    errorMessage.value = `Failed to post to worker: ${String(err)}`
   }
 }
 </script>
@@ -264,10 +280,7 @@ async function updatePlot() {
   border-radius: 9999px;
 }
 
-.controls input:hover~.underline {
-  width: 100%;
-}
-
+.controls input:hover~.underline,
 .controls input:focus~.underline {
   width: 100%;
 }
@@ -288,7 +301,12 @@ button {
   min-width: fit-content;
 }
 
-button:hover {
+button:disabled {
+  opacity: 0.65;
+  cursor: default;
+}
+
+button:hover:enabled {
   border-color: rgb(140, 172, 204);
   transform: translateY(-2px);
   filter: brightness(1.2);

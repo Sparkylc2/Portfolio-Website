@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@cortex-js/compute-engine": "^0.29.1",
+    "@floating-ui/dom": "^1.7.3",
     "@studio-freight/lenis": "^1.0.42",
     "@unhead/vue": "^2.0.14",
     "animejs": "^4.1.1",

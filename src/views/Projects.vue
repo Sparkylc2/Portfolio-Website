@@ -66,7 +66,7 @@
                           <h3>Tech Stack</h3>
                           <div class="tech-tags">
                             <span v-for="tech in currentProject?.technologies" :key="tech" class="tech-tag">{{ tech
-                            }}</span>
+                              }}</span>
                           </div>
                         </div>
                       </div>

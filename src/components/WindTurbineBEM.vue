@@ -1,7 +1,7 @@
 <template>
   <div class="bem-simulator">
     <div class="controls-container">
-      <form class="controls" @submit.prevent="runBEM">
+      <form class="form-controls" @submit.prevent="runBEM">
         <div class="tabs-header">
           <TabBar :tabs="tabs" v-model:activeTab="activeTab" :indicatorColor="getColour('blue')" />
         </div>
@@ -9,58 +9,37 @@
         <div class="tabs-content">
           <div class="tab-panel" v-show="activeTab === 'geometry'">
             <div class="control-group">
-              <label>
-                Radius (m):
-                <input v-model.number="radius" type="number" step="1" placeholder="50" />
-                <span class="underline"></span>
-              </label>
-              <label>
-                Hub Radius (m):
-                <input v-model.number="hubRadius" type="number" step="0.5" placeholder="2.5" />
-                <span class="underline"></span>
-              </label>
-              <label>
-                Blades:
-                <input v-model.number="numBlades" type="number" min="1" max="5" step="1" placeholder="3" />
-                <span class="underline"></span>
-              </label>
+              <BaseInput v-model.number="radius" label="Rotor Radius (m)" type="number" min="0" max="200"
+                placeholder="50" colorKey="blue" :dynamicUnderline="true" :baseUnderline="true" />
+              <BaseInput v-model.number="hubRadius" label="Hub Radius (m)" type="number" min="0" :max="radius - 0.1"
+                placeholder="5" colorKey="blue" :dynamicUnderline="true" :baseUnderline="true" />
+              <BaseInput v-model.number="numBlades" label="Number of Blades" type="number" min="1" step="1" max="5"
+                placeholder="3" colorKey="blue" :dynamicUnderline="true" :baseUnderline="true" />
             </div>
           </div>
 
           <div class="tab-panel" v-show="activeTab === 'profile'">
             <div class="control-group">
-              <label>
-                Chord Distribution:
-                <MathLiveEditor ref="chordField" v-model="chord_distribution_latex" :primaryColorKey="'blue'"
-                  @update:plaintext="val => chord_distribution_raw = val" />
-              </label>
-              <label>
-                Twist Distribution:
-                <MathLiveEditor ref="twistField" v-model="twist_distribution_latex" :primaryColorKey="'blue'"
-                  @update:plaintext="val => twist_distribution_raw = val" />
-              </label>
+
+              <BaseInput v-model="chord_distribution_raw" label="Chord Distribution (m)" type="text"
+                placeholder="3.0 * (1.0 - r/R)" colorKey="blue" :dynamicUnderline="true" :baseUnderline="true" />
+
+              <BaseInput v-model="twist_distribution_raw" label="Twist Distribution (rad)" type="text"
+                placeholder="0.5 * (1.0 - r/R)" colorKey="blue" :dynamicUnderline="true" :baseUnderline="true" />
+
             </div>
           </div>
 
           <div class="tab-panel" v-show="activeTab === 'conditions'">
             <div class="control-group">
-              <label>
-                Wind (m/s):
-                <input v-model.number="windSpeed" type="number" step="0.5" min="1" placeholder="10" />
-                <span class="underline"></span>
-              </label>
-              <label>
-                TSR:
-                <input v-model.number="tsr" type="number" step="0.5" min="0.5" max="15" placeholder="7" />
-                <span class="underline"></span>
-              </label>
-              <label>
-                Airfoil:
-                <select v-model="airfoil">
-                  <option value="NACA2412">NACA 2412</option>
-                  <option value="NACA0012">NACA 0012</option>
-                </select>
-              </label>
+              <BaseInput v-model.number="windSpeed" label="Wind Speed (m/s)" type="number" min="0" placeholder="10"
+                max="50" colorKey="blue" :dynamicUnderline="true" :baseUnderline="true" />
+              <BaseInput v-model.number="tsr" label="Tip Speed Ratio (TSR)" type="number" min="0.1" max="20"
+                placeholder="7" colorKey="blue" :dynamicUnderline="true" :baseUnderline="true" />
+              <BaseSelect v-model="airfoil"
+                :options="[{ value: 'NACA2412', label: 'NACA 2412' }, { value: 'NACA0012', label: 'NACA 0012' }]"
+                label="Airfoil" colorKey="blue" :baseUnderline="true" />
+
             </div>
           </div>
           <div class="tab-panel" v-show="activeTab === 'help'">
@@ -69,7 +48,7 @@
               <p><strong>Expressions (Blade Profile)</strong></p>
               <p>
                 The <em>Chord</em> and <em>Twist</em> fields accept math expressions parsed by ExprTK.
-                You can use these variables and functions:
+                You can use the following functions, however constants are not yet supported (other than <code>r</code>)
               </p>
               <ul class="control-ul">
                 <li><code>r</code>: current section radius (m)</li>
@@ -132,7 +111,7 @@
 
               <div style="border-top:1px solid rgba(255,255,255,0.1); padding-top:0.75rem;"></div>
 
-              <p><strong>Common gotchas</strong></p>
+              <p><strong>Common mistakes</strong></p>
               <ul class="control-ul">
                 <li><em>Twist must be in radians</em> (e.g., use <code>deg*pi/180</code>).</li>
                 <li>Make sure chord stays positive across the span.</li>
@@ -143,8 +122,9 @@
         </div>
 
         <div class="control-actions">
-          <button type="submit" id="run-bem">Run BEM</button>
-          <button type="button" id="run-tsr-sweep" @click="runTSRSweep">TSR Sweep</button>
+
+          <BaseButton type="button" colorKey="blue" @click="runBEM" :disabled="error"> Run BEM </BaseButton>
+          <BaseButton type="button" colorKey="red" @click="runTSRSweep" :disabled="error">Run TSR Sweep</BaseButton>
         </div>
       </form>
     </div>
@@ -224,7 +204,9 @@ import getColour from '../composables/useGetColours.js'
 import init from '../wasm/wind_turbine.js'
 import MathLiveEditor from './MathParsingField.vue'
 import TabBar from './TabBar.vue'
-
+import BaseInput from './elements/BaseInput.vue'
+import BaseSelect from './elements/BaseSelect.vue'
+import BaseButton from './elements/BaseButton.vue'
 
 const error = ref(false)
 const radius = ref(50)
@@ -235,14 +217,10 @@ const tsr = ref(7)
 const numSections = ref(20)
 const airfoil = ref('')
 
-const chord_distribution_latex = ref("3.0 \\cdot (1.0 - \\frac{r}{50})")
-const twist_distribution_latex = ref("0.5 \\cdot (1.0 - \\frac{r}{R})")
 
-const chord_distribution_raw = ref("");
-const twist_distribution_raw = ref("");
+const chord_distribution_raw = ref("3.0 * (1.0 - r/50)");
+const twist_distribution_raw = ref("atan( (2/3) / (7 * (r/50)))");
 
-const chordField = ref(null)
-const twistField = ref(null)
 
 const results = ref(null)
 const plotMode = ref('blade')
@@ -302,13 +280,16 @@ async function generateBladeGeometry() {
     twist_distribution_raw.value
   )
 
-  if (!geometry || !geometry.vertices || !geometry.indices) return { vertices: [], indices: [] }
+  if (!geometry || !geometry.vertices || !geometry.indices) {
+    return { vertices: [], indices: [] }
+  }
 
   return { vertices: geometry.vertices, indices: geometry.indices }
 }
 
 onMounted(async () => {
   try {
+
     if (bladePlot.value) await initThree()
     plotMode.value = 'blade';
     inductionChart = echarts.init(inductionPlot.value, null, { renderer: 'canvas' })
@@ -322,10 +303,11 @@ onMounted(async () => {
 
   init().then(mod => {
     wasm.value = mod
-    mod.onAbort = function (what) { error.value = true; }
+
+    mod.onAbort = () => { error.value = true }
     runBEM()
     airfoil.value = 'NACA2412'
-    runBEM();
+    runBEM()
   }).catch(() => (error.value = true))
 
 })
@@ -339,30 +321,13 @@ onUnmounted(async () => {
     threeRenderer.dispose()
   }
 })
-
-watch([radius, hubRadius, numBlades, airfoil], () => {
-  updateBladeGeometry()
-})
-
-watch([chord_distribution_latex, twist_distribution_latex], () => {
-  updateBladeGeometry()
-})
-
 async function runBEM() {
   if (!wasm.value) return
 
+  updateBladeGeometry()
 
   try {
     plotMode.value = 'blade'
-
-    wasm.value.initializeRotor(
-      radius.value,
-      hubRadius.value,
-      numBlades.value,
-      windSpeed.value,
-      tsr.value
-    )
-
     wasm.value.buildBladeSectionsWithExpressions(
       numSections.value,
       chord_distribution_raw.value,
@@ -384,9 +349,10 @@ async function runTSRSweep() {
   try {
     plotMode.value = 'sweep'
 
+    updateBladeGeometry()
 
-    const tsrMin = 1
-    const tsrMax = 12
+    const tsrMin = 0.5
+    const tsrMax = 20.0
     const tsrStep = 0.5
 
     const tsrValues = []
@@ -517,7 +483,7 @@ async function runTSRSweep() {
             name: 'Thrust (kN)',
             type: 'line',
             yAxisIndex: 1,
-            data: tsrValues.map((x, i) => [x, powerValues[i]]),
+            data: tsrValues.map((x, i) => [x, thrustValues[i] / 1000]),
             smooth: true,
             lineStyle: { color: '#ff7875', width: 2 },
             itemStyle: { color: '#ff7875' }
@@ -785,6 +751,16 @@ async function buildBladeMesh(vertices, indices) {
 
 async function updateBladeGeometry() {
   if (!threeScene) return
+  if (!wasm.value) return
+  wasm.value.initializeRotor(
+    radius.value,
+    hubRadius.value,
+    numBlades.value,
+    windSpeed.value,
+    tsr.value
+  )
+
+
   const { vertices, indices } = await generateBladeGeometry()
   if (!vertices.length) return
 
@@ -927,7 +903,7 @@ function formatWithDynamicUnit(value, baseUnit) {
   width: 100%;
 }
 
-.controls label {
+label {
   position: relative;
   display: flex;
   flex-direction: column;
@@ -962,6 +938,8 @@ function formatWithDynamicUnit(value, baseUnit) {
   color: #ccc;
   pointer-events: none;
 }
+
+
 
 .controls select option {
   background-color: rgb(50, 50, 50);
