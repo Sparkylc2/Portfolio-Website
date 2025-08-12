@@ -872,11 +872,13 @@ function formatWithDynamicUnit(value, baseUnit) {
   width: 100%;
 }
 
+
 .control-ul {
   align-self: flex-start !important;
   padding-left: 5rem;
   margin: 0;
 }
+
 
 .control-actions {
   display: flex;
@@ -1017,6 +1019,7 @@ button {
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
+  min-width: fit-content;
 }
 
 button:hover {

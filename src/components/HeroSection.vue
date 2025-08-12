@@ -21,22 +21,18 @@
     <div class="interests-section">
       <h3>Research Interests</h3>
       <div class="interest-tags">
-        <span
-          class="interest-tag"
-          v-for="interest in interests"
-          :key="interest"
-        >
+        <span class="interest-tag" v-for="interest in interests" :key="interest">
           {{ interest }}
         </span>
       </div>
     </div>
 
-    <!-- <div class="stats-section"> -->
-    <!--   <div class="stat-item" v-for="stat in stats" :key="stat.label"> -->
-    <!--     <span class="stat-value">{{ stat.value }}</span> -->
-    <!--     <span class="stat-label">{{ stat.label }}</span> -->
-    <!--   </div> -->
-    <!-- </div> -->
+    <div class="stats-section">
+      <div class="stat-item" v-for="stat in stats" :key="stat.label">
+        <span class="stat-value">{{ stat.value }}</span>
+        <span class="stat-label">{{ stat.label }}</span>
+      </div>
+    </div>
   </div>
 </template>
 

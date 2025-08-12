@@ -263,6 +263,10 @@ body::-webkit-scrollbar {
 }
 
 @media (max-width: 768px) {
+    .pdfViewer {
+        min-width: 50px !important;
+    }
+
     #sidebarContainer {
         width: 200px;
     }

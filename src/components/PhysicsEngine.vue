@@ -235,14 +235,48 @@ function overMenu(ev) {
     target.classList.contains('checkbox__check')
   return isControlElement;
 }
+
+function getEventCoordinates(ev) {
+  if (ev.touches && ev.touches.length > 0) {
+    return { clientX: ev.touches[0].clientX, clientY: ev.touches[0].clientY }
+  } else if (ev.changedTouches && ev.changedTouches.length > 0) {
+    return { clientX: ev.changedTouches[0].clientX, clientY: ev.changedTouches[0].clientY }
+  }
+  return { clientX: ev.clientX, clientY: ev.clientY }
+}
+
+
 function onPointerDown(ev) {
   if (overMenu(ev)) return
   if (!app.value || !engine.value) return
+
+  if (ev.type === 'touchstart') {
+    ev.preventDefault()
+  }
+
+  const coords = getEventCoordinates(ev)
   const { left, top } = app.value.canvas.getBoundingClientRect()
-  const x = ev.clientX - left
-  const y = ev.clientY - top
+  const x = coords.clientX - left
+  const y = coords.clientY - top
 
   engine.value.mouseDown(x, y)
+}
+
+function onTouchStart(ev) {
+  onPointerDown(ev)
+}
+
+function onTouchMove(ev) {
+  if (!overMenu(ev)) {
+    ev.preventDefault()
+  }
+  trackTouch(ev)
+}
+
+function onTouchEnd(ev) {
+  if (!overMenu(ev)) {
+    ev.preventDefault()
+  }
 }
 
 
@@ -377,6 +411,12 @@ function trackMouse(ev) {
   mousePos.value = { x: ev.clientX, y: ev.clientY }
 }
 
+function trackTouch(ev) {
+  if (ev.touches && ev.touches.length > 0) {
+    mousePos.value = { x: ev.touches[0].clientX, y: ev.touches[0].clientY }
+  }
+}
+
 function handleKeyDown(evt) {
   if (evt.code === 'Escape') {
     return;
@@ -423,16 +463,30 @@ const canvasOnResize = async () => {
 function initListeners() {
   if (pixiContainer.value) {
     window.addEventListener('click', onPointerDown)
+
+    window.addEventListener('mousemove', trackMouse)
+
+    pixiContainer.value.addEventListener('touchstart', onTouchStart, { passive: false })
+    pixiContainer.value.addEventListener('touchmove', onTouchMove, { passive: false })
+    pixiContainer.value.addEventListener('touchend', onTouchEnd, { passive: false })
+
+    pixiContainer.value.addEventListener('contextmenu', (e) => e.preventDefault())
   }
-  window.addEventListener('mousemove', trackMouse)
   window.addEventListener('keydown', handleKeyDown)
 }
 
 function removeListeners() {
   if (pixiContainer.value) {
     window.removeEventListener('click', onPointerDown)
+    window.removeEventListener('mousemove', trackMouse)
+
+    pixiContainer.value.removeEventListener('touchstart', onTouchStart)
+    pixiContainer.value.removeEventListener('touchmove', onTouchMove)
+    pixiContainer.value.removeEventListener('touchend', onTouchEnd)
+    pixiContainer.value.removeEventListener('contextmenu', (e) => e.preventDefault())
+
+    pixiContainer.value.removeEventListener('contextmenu', (e) => e.preventDefault())
   }
-  window.removeEventListener('mousemove', trackMouse)
   window.removeEventListener('keydown', handleKeyDown)
 }
 
@@ -584,6 +638,9 @@ defineExpose({
   display: flex;
   flex-direction: column;
   position: relative;
+
+  touch-action: pan-x pan-y;
+  overscroll-behavior: contain;
 }
 
 .controls {
@@ -598,6 +655,9 @@ defineExpose({
   border-radius: 8px;
   overflow-x: auto;
   flex-shrink: 0;
+
+  touch-action: pan-x;
+  -webkit-overflow-scrolling: touch;
 }
 
 .controls label {
@@ -623,6 +683,8 @@ defineExpose({
   background-color: transparent;
   cursor: pointer;
   position: relative;
+  display: flex;
+  align-items: center;
 }
 
 .controls label:has(select)::after {
@@ -714,6 +776,10 @@ defineExpose({
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 3px;
   transition: background-color 0.3s, border-color 0.3s;
+
+  min-width: 44px;
+  min-height: 44px;
+  cursor: pointer;
 }
 
 .checkbox--selected {
@@ -765,6 +831,12 @@ defineExpose({
   border-radius: 8px;
   pointer-events: none;
   z-index: 0;
+
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 @keyframes checkIn {
@@ -812,5 +884,87 @@ defineExpose({
   width: 6rem;
   padding: 0.3rem 0;
   border-bottom: 1px solid transparent;
+
+  min-height: 44px;
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .controls {
+    gap: 1.2rem;
+    padding: 1.2rem;
+  }
+
+  .controls label {
+    font-size: 15px;
+  }
+
+  .controls input,
+  .controls select {
+    padding: 0.5rem 0;
+    font-size: 16px;
+    min-height: 44px;
+  }
+
+  .checkbox {
+    width: 1.2rem;
+    height: 1.2rem;
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) and (hover: none) {
+  .controls {
+    gap: 1.8rem;
+    padding: 1.5rem;
+  }
+
+  .controls label {
+    font-size: 16px;
+  }
+
+  .info-text {
+    display: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .controls {
+    gap: 1rem;
+    padding: 1rem;
+    justify-content: flex-start;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .controls::-webkit-scrollbar {
+    display: none;
+  }
+
+  .controls label {
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+
+  .controls input,
+  .controls select {
+    width: 5rem;
+    font-size: 16px;
+    min-height: 44px;
+  }
+
+  .controls-info {
+    display: none;
+  }
+
+  .checkbox {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .checkbox-container {
+    min-height: 44px;
+  }
 }
 </style>

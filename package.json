@@ -26,6 +26,7 @@
     "meshline": "^3.3.1",
     "pixi.js": "^8.9.2",
     "plotly.js-dist-min": "^3.0.1",
+    "tailwind": "^4.0.0",
     "three": "^0.177.0",
     "vue": "^3.5.13",
     "vue-pdf-embed": "^2.1.2",

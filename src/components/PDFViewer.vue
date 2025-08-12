@@ -16,31 +16,20 @@ const props = defineProps({
     type: String,
     default: 'rgb(140, 172, 204)'
   },
-});
-
-
-const isMobile = ref(false);
-const isTablet = ref(false);
-
-
-const checkScreenSize = () => {
-  isMobile.value = window.innerWidth <= 768;
-  isTablet.value = window.innerWidth > 768 && window.innerWidth <= 1024;
-};
-
-onMounted(() => {
-  checkScreenSize();
-  window.addEventListener("resize", checkScreenSize);
-});
-
-onUnmounted(() => {
-  window.removeEventListener("resize", checkScreenSize);
+  isMobile: {
+    type: Boolean,
+    default: false
+  },
+  isTablet: {
+    type: Boolean,
+    default: false
+  }
 });
 
 
 
 const pdfViewerUrl = computed(() => {
-  const baseUrl = !(isMobile.value || isTablet.value) ? '/pdfjs/web/viewer.html?file=/docs/' : '/pdfjs/web/viewerNoBar.html?file=/docs/'
+  const baseUrl = !(props.isMobile || props.isTablet) ? '/pdfjs/web/viewer.html?file=/docs/' : '/pdfjs/web/viewerNoBar.html?file=/docs/'
   return `${baseUrl}${props.pdfFileName}#zoom=page-fit`;
 });
 

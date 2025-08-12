@@ -202,7 +202,7 @@ async function updatePlot() {
 
 .controls {
   display: flex;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   justify-content: center;
   gap: 2rem;
   align-items: center;
@@ -285,6 +285,7 @@ button {
   background-color: transparent;
   border-radius: 0.4rem;
   border: 0.15rem solid rgb(140, 172, 204);
+  min-width: fit-content;
 }
 
 button:hover {

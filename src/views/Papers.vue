@@ -49,7 +49,7 @@
                   id="sectionContent">
                   <div class="pdf-viewer" ref="pdfWrapper">
                     <PDFViewer :pdfFileName="currentPaper.pdf" :accentColor="getSecondaryColor(currentPaper?.color)"
-                      :key="currentPaper?.pdf + currentPaper?.color" />
+                      :key="currentPaper?.pdf + currentPaper?.color" :isMobile="isMobile" :isTablet="isTablet" />
                   </div>
                 </div>
                 <div v-else-if="activeSection === 'Abstract'" key="abstract" class="section-content">
@@ -77,6 +77,8 @@ import { useHead } from "@unhead/vue";
 const props = defineProps({
   activeSection: String,
   selectedPaper: Number,
+  isMobile: Boolean,
+  isTablet: Boolean,
 });
 
 const emit = defineEmits(["update:selectedPaper", "update:selectedPaperColor"]);
@@ -84,21 +86,8 @@ const emit = defineEmits(["update:selectedPaper", "update:selectedPaperColor"]);
 const expandedPaper = ref(null);
 const pdfWrapper = ref(null);
 const parentScroll = ref(null);
-const isMobile = ref(false);
-const isTablet = ref(false);
-const checkScreenSize = () => {
-  isMobile.value = window.innerWidth <= 768;
-  isTablet.value = window.innerWidth > 768 && window.innerWidth <= 1024;
-};
 
-onMounted(() => {
-  checkScreenSize();
-  window.addEventListener("resize", checkScreenSize);
-});
 
-onUnmounted(() => {
-  window.removeEventListener("resize", checkScreenSize);
-});
 
 watch(
   () => props.selectedPaper,
@@ -178,7 +167,7 @@ const togglePaper = (index) => {
 onMounted(async () => {
   await nextTick();
 
-  if (!isMobile.value) {
+  if (!props.isMobile) {
     openPaper(0);
   }
 });
@@ -291,7 +280,7 @@ useHead(headData);
 .content-layout {
   display: flex;
   gap: 2rem;
-  padding: 6rem 2rem 2rem;
+  padding: 6rem 2rem 0;
   height: 100vh;
   min-height: 100vh;
   justify-content: center;

@@ -1,7 +1,7 @@
 <template>
   <div class="tab-bar">
     <ul class="tab-links" ref="navRef">
-      <li v-for="tab in tabs" :key="tab.id">
+      <li v-for="tab in tabs" :key="tab.id" class="tab-item">
         <a href="#" :data-key="tab.id" :class="{ active: activeTab === tab.id }"
           @click.prevent="setActive(tab.id, $event)">
           {{ tab.label }}
@@ -30,6 +30,7 @@ function moveBarTo(el) {
   const navBox = navRef.value.getBoundingClientRect()
   const box = el.getBoundingClientRect()
   barRef.value.style.left = `${box.left - navBox.left}px`
+  barRef.value.style.top = `${box.bottom - navBox.top}px`
   barRef.value.style.width = `${box.width}px`
   barRef.value.style.backgroundColor = props.indicatorColor
 }
@@ -73,6 +74,12 @@ watch(
   margin: 0;
   padding-bottom: 4px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  flex-wrap: wrap;
+}
+
+.tab-item {
+  display: flex;
+  align-items: center;
 }
 
 .tab-links a {

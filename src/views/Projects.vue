@@ -193,6 +193,8 @@ const props = defineProps({
   activeSection: String,
   selectedProject: Number,
   activeSubtab: String,
+  isMobile: Boolean,
+  isTablet: Boolean
 
 });
 
@@ -202,14 +204,19 @@ const emit = defineEmits([
 ]);
 
 const expandedProject = ref(null);
-const isMobile = ref(false);
-const isTablet = ref(false);
 const scrollWrapper = ref(null);
 const heroSectionRef = ref(null);
 const showScrollIndicator = ref(true);
+// const showHeroSection = computed(
+//   () => expandedProject.value === null && !props.isMobile && !props.isTablet,
+// );
+// const isDesktop = computed(() => !props.isMobile&& !props.isTablet);
+
 const showHeroSection = computed(
-  () => expandedProject.value === null && !isMobile.value && !isTablet.value,
+  () => expandedProject.value === null && !props.isMobile
 );
+
+const isDesktop = computed(() => !props.isMobile && !props.isTablet)
 
 const capturing = ref(true);
 const animLoaded = ref(false);
@@ -271,12 +278,14 @@ useHead(headData);
 const onViewGone = () => {
   if (expandedProject.value !== null) {
     detachWheel();
-    releaseScrollControl();
+    if (showHeroSection.value) {
+      releaseScrollControl();
+    }
   }
 };
 
 const onViewReady = () => {
-  if (expandedProject.value === null) {
+  if (expandedProject.value === null && showHeroSection.value) {
     attachWheel();
     takeScrollControl();
   }
@@ -301,21 +310,29 @@ function detachWheel() {
 }
 
 function updateDisplay() {
-  isMobile.value = window.innerWidth <= 768;
-  isTablet.value = window.innerWidth > 768 && window.innerWidth <= 1024;
+  if (isDesktop) {
+    releaseScrollControl();
+    detachWheel();
+  } else if (isDesktop && expandedProject.value === null) {
+    takeScrollControl();
+    attachWheel();
+  }
 }
 
 onMounted(() => {
   updateDisplay();
   window.addEventListener("resize", updateDisplay);
   window.addEventListener("wheel", (e) => {
-    if (!animLoaded.value) e.preventDefault();
+    if (!animLoaded.value && showHeroSection.value) e.preventDefault();
   });
-  takeScrollControl();
 
-  const el = scrollWrapper.value;
-  if (!el) return;
-  el.addEventListener("wheel", onWheel, { passive: false });
+  if (isDesktop.value) {
+    takeScrollControl();
+    const el = scrollWrapper.value;
+    if (el) {
+      el.addEventListener("wheel", onWheel, { passive: false });
+    }
+  }
 
   stepInertia();
 });
@@ -323,12 +340,20 @@ onMounted(() => {
 onUnmounted(() => {
   window.removeEventListener("resize", updateDisplay);
   window.removeEventListener("wheel", (e) => {
-    if (!animLoaded.value) e.preventDefault();
+    if (!animLoaded.value && showHeroSection.value) e.preventDefault();
   });
 
-  const el = scrollWrapper.value;
-  if (el) {
-    el.removeEventListener("wheel", onWheel);
+  releaseScrollControl();
+  detachWheel();
+});
+
+watch(showHeroSection, (newVal, oldVal) => {
+  if (newVal && !oldVal && expandedProject.value === null) {
+    takeScrollControl();
+    attachWheel();
+  } else if (!newVal && oldVal) {
+    releaseScrollControl();
+    detachWheel();
   }
 });
 
@@ -383,7 +408,7 @@ let lastWheelDir = 0;
 
 function onWheel(e) {
   lastWheelDir = Math.sign(e.deltaY);
-  if (capturing.value) {
+  if (capturing.value && showHeroSection.value) {
     if (
       (progress.value <= 0.001 && lastWheelDir < 0) ||
       (progress.value >= 0.93 && lastWheelDir > 0)
@@ -399,6 +424,8 @@ function onWheel(e) {
     progressTarget.value = clamp01(progressTarget.value + raw);
     return;
   }
+
+  if (!showHeroSection.value) return;
 
   const el = scrollWrapper.value;
   if (!el) return;
@@ -434,6 +461,7 @@ const stepInertia = () => {
 };
 
 function takeScrollControl() {
+  if (!showHeroSection.value) return;
   capturing.value = true;
   if (scrollWrapper.value) {
     scrollWrapper.value.scrollTop = 0;
@@ -442,6 +470,7 @@ function takeScrollControl() {
 }
 
 function releaseScrollControl() {
+  if (!showHeroSection.value) return;
   capturing.value = false;
   document.body.style.overflow = "";
 }
@@ -1100,15 +1129,41 @@ const currentSection = computed(() => {
 }
 
 @media (min-width: 769px) and (max-width: 1024px) {
+
+
+
+  .scroll-indicator {
+    bottom: 1.5rem;
+  }
+
+  .scroll-text {
+    font-size: 0.85rem;
+  }
+
+  .scroll-arrow {
+    width: 38px;
+    height: 38px;
+  }
+
+  .hero-section-wrapper {
+    padding: 2rem;
+    padding-top: 5rem;
+  }
+
+  .scroll-to-top {
+    top: 1.5rem;
+    right: 1.5rem;
+    width: 44px;
+    height: 44px;
+  }
+
   .page-title {
     font-size: 2.5rem;
     top: 1.5rem;
     left: 1.5rem;
   }
 
-  .scroll-wrapper {
-    display: none;
-  }
+
 
   .content-layout {
     padding: 5rem 1.5rem 1.5rem;
