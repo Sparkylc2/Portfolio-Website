@@ -206,7 +206,10 @@ onBeforeUnmount(() => {
 }
 
 .base-input-field {
-  all: unset;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-family: inherit;
   font-size: 14px;
   padding: 0.3rem 0;
   color: #fff;
@@ -214,6 +217,11 @@ onBeforeUnmount(() => {
   -moz-appearance: textfield;
   appearance: textfield;
   -webkit-appearance: textfield;
+  position: relative;
+  z-index: 1;
+  transform: translate3d(0, 0, 0);
+
+  text-align: center;
 }
 
 .base-input-field::-webkit-outer-spin-button,

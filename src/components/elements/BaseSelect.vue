@@ -283,6 +283,14 @@ function onAfterLeave() { }
   margin-bottom: 4px;
 }
 
+.base-select-dropdown,
+.base-select-options {
+  position: absolute;
+  z-index: 9999 !important;
+  /* Very high z-index to ensure it's above everything */
+  pointer-events: auto !important;
+}
+
 .base-select-wrapper {
   position: relative;
   display: inline-block;

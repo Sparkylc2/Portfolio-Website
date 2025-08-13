@@ -192,7 +192,6 @@ watch(() => toolProps.value.motor, (props) => {
 
 function overMenu(ev) {
   const target = ev.target
-
   const isControlElement = target.classList.contains('control-element')
     || target.classList.contains('base-input-text')
     || target.classList.contains('base-select-option')
@@ -237,6 +236,7 @@ function onPointerDown(ev) {
 let isDragging = false;
 
 function onTouchStart(ev) {
+  console.log('onTouchStart', ev)
   isDragging = false;
   onPointerDown(ev)
   trackTouch(ev)
@@ -456,33 +456,33 @@ const canvasOnResize = async () => {
 }
 
 function initListeners() {
-  if (simulatorContainer.value) {
+  if (pixiContainer.value) {
 
-    simulatorContainer.value.addEventListener('click', onPointerDown)
+    pixiContainer.value.addEventListener('click', onPointerDown)
 
-    simulatorContainer.value.addEventListener('mousemove', trackMouse)
+    pixiContainer.value.addEventListener('mousemove', trackMouse)
 
-    simulatorContainer.value.addEventListener('touchstart', onTouchStart, { passive: false })
+    pixiContainer.value.addEventListener('touchstart', onTouchStart, { passive: false })
 
-    simulatorContainer.value.addEventListener('touchmove', onTouchMove, { passive: false })
-    simulatorContainer.value.addEventListener('touchend', onTouchEnd, { passive: false })
+    pixiContainer.value.addEventListener('touchmove', onTouchMove, { passive: false })
+    pixiContainer.value.addEventListener('touchend', onTouchEnd, { passive: false })
 
-    simulatorContainer.value.addEventListener('contextmenu', (e) => e.preventDefault())
+    pixiContainer.value.addEventListener('contextmenu', (e) => e.preventDefault())
   }
   window.addEventListener('keydown', handleKeyDown)
 }
 
 function removeListeners() {
-  if (simulatorContainer.value) {
-    simulatorContainer.value.removeEventListener('click', onPointerDown)
-    simulatorContainer.value.removeEventListener('mousemove', trackMouse)
+  if (pixiContainer.value) {
+    pixiContainer.value.removeEventListener('click', onPointerDown)
+    pixiContainer.value.removeEventListener('mousemove', trackMouse)
 
-    simulatorContainer.value.removeEventListener('touchstart', onTouchStart)
-    simulatorContainer.value.removeEventListener('touchmove', onTouchMove)
-    simulatorContainer.value.removeEventListener('touchend', onTouchEnd)
-    simulatorContainer.value.removeEventListener('contextmenu', (e) => e.preventDefault())
+    pixiContainer.value.removeEventListener('touchstart', onTouchStart)
+    pixiContainer.value.removeEventListener('touchmove', onTouchMove)
+    pixiContainer.value.removeEventListener('touchend', onTouchEnd)
+    pixiContainer.value.removeEventListener('contextmenu', (e) => e.preventDefault())
 
-    simulatorContainer.value.removeEventListener('contextmenu', (e) => e.preventDefault())
+    pixiContainer.value.removeEventListener('contextmenu', (e) => e.preventDefault())
   }
   window.removeEventListener('keydown', handleKeyDown)
 }
@@ -706,10 +706,10 @@ svg {
   position: absolute;
   background: rgba(36, 36, 36, 0.0);
   border-radius: 8px;
-  pointer-events: none;
-  z-index: 0;
+  pointer-events: auto;
+  z-index: 1;
 
-  touch-action: none;
+  touch-action: auto;
   user-select: none;
   -webkit-user-select: none;
   -webkit-touch-callout: none;

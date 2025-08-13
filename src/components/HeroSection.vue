@@ -72,6 +72,7 @@ const stats = ref([
 
 .hero-section {
   display: flex;
+  padding-top: 4rem;
   position: relative;
   align-items: center;
   gap: 3rem;
@@ -87,10 +88,12 @@ const stats = ref([
   flex-direction: row;
   justify-content: space-between;
   gap: 4rem;
+
 }
 
 .hero-content {
   flex: 1;
+  flex-grow: 0;
   /* max-width: 600px; */
 }
 
@@ -98,7 +101,7 @@ const stats = ref([
   display: flex;
   flex-direction: column;
   gap: 2.5rem;
-  /* max-width: 600px; */
+  max-width: 600px;
   height: 100%;
   margin: 0 auto;
   z-index: 2;
@@ -165,6 +168,7 @@ const stats = ref([
   display: flex;
   flex-wrap: wrap;
   gap: 0.75rem;
+  justify-content: center;
 }
 
 .interest-tag {
@@ -258,6 +262,8 @@ const stats = ref([
     justify-content: space-between;
     gap: 4rem;
   }
+
+
 
   .hero-content {
     flex: 1;

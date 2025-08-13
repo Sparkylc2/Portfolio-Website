@@ -10,7 +10,7 @@
         <Papers v-if="currentTab === 'Papers'" :activeSection="paperSection" :selectedPaper="selectedPaper"
           @update:selectedPaper="handlePaperChange" @update:selectedPaperColor="handleProjectPaperColorChange"
           :isMobile="isMobile" :isTablet="isTablet" />
-        <div v-if="currentTab === 'About Me' && isMobile" class="hero-section-wrapper">
+        <div v-if="currentTab === 'About Me' && (isMobile || isTablet)" class="hero-section-wrapper">
           <HeroSection />
         </div>
       </div>
@@ -94,7 +94,7 @@ const ALL_TABS = computed(() => [
   { key: "_DIVIDER", divider: true, show: true },
   { key: "Projects", label: "Projects", show: true },
   { key: "Papers", label: "Papers", show: true },
-  { key: "About Me", label: "About Me", show: isMobile.value },
+  { key: "About Me", label: "About Me", show: isMobile.value || isTablet.value },
   { key: "GitHub", label: "GitHub", show: true }
 ]);
 
@@ -223,7 +223,7 @@ function handlePaperChange(idx) {
 }
 
 .hero-section-wrapper {
-  padding: 6rem 2rem 2rem;
+  padding: 2rem 2rem 2rem;
   min-height: 100vh;
   overflow-y: auto;
 }

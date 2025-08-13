@@ -49,10 +49,10 @@
                     <p>{{ currentProject?.description }}</p>
 
                     <component :is="currentProject?.interactiveComponent"
-                      v-if="currentProject?.interactiveComponent && !isMobile" class="interactive-demo"
+                      v-if="currentProject?.interactiveComponent && !isMobile && !isTablet" class="interactive-demo"
                       :element-data="elementData" :project-color="currentProject?.color" />
                     <div v-else-if="
-                      currentProject?.interactiveComponent && isMobile
+                      currentProject?.interactiveComponent && (isMobile || isTablet)
                     " class="demo-placeholder mobile-notice">
                       <p>Interactive demo available on desktop</p>
                     </div>
@@ -213,7 +213,7 @@ const showScrollIndicator = ref(true);
 // const isDesktop = computed(() => !props.isMobile&& !props.isTablet);
 
 const showHeroSection = computed(
-  () => expandedProject.value === null && !props.isMobile
+  () => expandedProject.value === null && !props.isMobile && !props.isTablet
 );
 
 const isDesktop = computed(() => !props.isMobile)
@@ -675,7 +675,7 @@ const currentSection = computed(() => {
 }
 
 .hero-section-wrapper {
-  height: auto;
+  height: 100%;
   width: 100%;
   max-width: 100%;
   position: relative;
@@ -997,6 +997,7 @@ const currentSection = computed(() => {
   flex-direction: column;
   align-items: flex-start;
   width: 100%;
+  pointer-events: none;
 }
 
 .tech-stack h3 {
@@ -1030,6 +1031,7 @@ const currentSection = computed(() => {
   transition: all 0.3s ease;
   background-color: rgba(255, 255, 255, 0.1);
   color: #fff;
+  z-index: 100;
 }
 
 .tech-tag:hover {
@@ -1055,6 +1057,7 @@ const currentSection = computed(() => {
   white-space: nowrap;
   background-color: transparent;
   border: 0.15rem solid;
+  z-index: 100;
 }
 
 .project-link:hover {
@@ -1231,6 +1234,20 @@ const currentSection = computed(() => {
   }
 }
 
+@media (max-width: 769px) {
+  .scroll-indicator {
+    display: none;
+  }
+
+  .scroll-to-top {
+    display: none;
+  }
+
+  .hero-section-wrapper {
+    padding: 1rem;
+  }
+}
+
 @media (min-width: 769px) and (max-width: 1024px) {
 
 
@@ -1250,7 +1267,6 @@ const currentSection = computed(() => {
 
   .hero-section-wrapper {
     padding: 2rem;
-    padding-top: 5rem;
   }
 
   .scroll-to-top {
@@ -1362,7 +1378,12 @@ const currentSection = computed(() => {
 
 @media (max-width: 768px) {
   .scroll-indicator {
+    display: none;
     bottom: 1rem;
+  }
+
+  .scroll-to-top {
+    display: none;
   }
 
   .scroll-text {
@@ -1370,21 +1391,14 @@ const currentSection = computed(() => {
   }
 
   .scroll-arrow {
+
     width: 36px;
     height: 36px;
   }
 
-  .hero-section-wrapper {
-    padding: 1rem;
-    padding-top: 4rem;
-  }
 
-  .scroll-to-top {
-    top: 1rem;
-    right: 1rem;
-    width: 40px;
-    height: 40px;
-  }
+
+
 }
 
 @supports (-webkit-overflow-scrolling: touch) {
