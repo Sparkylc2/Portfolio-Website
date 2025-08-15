@@ -34,7 +34,6 @@ const selectedProject = ref(null);
 const selectedPaper = ref(null);
 const activeColor = ref("#e63946");
 
-// Use the new device detection composable
 const { isMobile, isTablet, isDesktop, isTouchDevice } = useDeviceDetection();
 
 function getProjectColour(color) {
@@ -79,7 +78,7 @@ const ALL_TABS = computed(() => [
   { key: "_DIVIDER", divider: true, show: true },
   { key: "Projects", label: "Projects", show: true },
   { key: "Papers", label: "Papers", show: true },
-  { key: "About Me", label: "About Me", show: !isDesktop.value },
+  { key: "About Me", label: "About Me", show: !isMobile.value },
   { key: "GitHub", label: "GitHub", show: true }
 ]);
 
