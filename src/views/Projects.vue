@@ -64,7 +64,7 @@
                           <h3>Tech Stack</h3>
                           <div class="tech-tags">
                             <span v-for="tech in currentProject?.technologies" :key="tech" class="tech-tag">{{ tech
-                              }}</span>
+                            }}</span>
                           </div>
                         </div>
                       </div>
@@ -99,7 +99,7 @@
         <div v-else key="canvas" ref="scrollWrapper" class="scroll-wrapper">
           <section v-if="showHeroSection" class="animation-section" ref="animationSectionRef">
             <div class="animation-wrapper">
-              <HeroAnimation ref="heroAnimRef" :scrollProgress="progress" :section="currentSection"
+              <HeroAnimation ref="heroAnimRef" :scrollProgress="progress" :section="currentSection" :isTablet="isTablet"
                 @loaded="() => (animLoaded = true)" />
             </div>
           </section>
@@ -362,12 +362,12 @@ function takeScrollControl() {
   if (scrollWrapper.value) {
     scrollWrapper.value.scrollTop = 0;
   }
-  document.body.style.overflow = "hidden";
+  disablePageScroll();
 }
 
 function releaseScrollControl() {
   capturing.value = false;
-  document.body.style.overflow = "";
+  enablePageScroll();
 }
 
 const scrollToHero = () => {
@@ -386,19 +386,16 @@ onMounted(() => {
   if (showHeroSection.value) {
     takeScrollControl();
     attachWheel();
+    attachTouch();
   }
 
-  window.addEventListener("wheel", (e) => {
-    if (!animLoaded.value && showHeroSection.value) e.preventDefault();
-  }, { passive: false });
+  window.addEventListener("wheel", wheelGuard, { passive: false });
 
   stepInertia();
 });
 
 onUnmounted(() => {
-  window.removeEventListener("wheel", (e) => {
-    if (!animLoaded.value && showHeroSection.value) e.preventDefault();
-  });
+  window.removeEventListener("wheel", wheelGuard);
 
   releaseScrollControl();
   detachWheel();
@@ -408,9 +405,11 @@ watch(showHeroSection, (newVal, oldVal) => {
   if (newVal && !oldVal && expandedProject.value === null) {
     takeScrollControl();
     attachWheel();
+    attachTouch()
   } else if (!newVal && oldVal) {
     releaseScrollControl();
     detachWheel();
+    detachTouch();
   }
 });
 
@@ -505,6 +504,138 @@ const currentSection = computed(() => {
     ) || sections[0]
   );
 });
+
+
+
+
+
+
+
+
+
+
+
+
+const touchStartY = ref(0);
+const lastTouchY = ref(0);
+const touchActive = ref(false);
+let currentTouchEl = null;
+
+function attachTouch() {
+  if (!showHeroSection.value) return;
+
+  if (scrollWrapper.value && scrollWrapper.value !== currentTouchEl) {
+    if (currentTouchEl) {
+      currentTouchEl.removeEventListener("touchstart", onTouchStart);
+      currentTouchEl.removeEventListener("touchmove", onTouchMove);
+      currentTouchEl.removeEventListener("touchend", onTouchEnd);
+      currentTouchEl.removeEventListener("touchcancel", onTouchEnd);
+    }
+    scrollWrapper.value.addEventListener("touchstart", onTouchStart, { passive: false });
+    scrollWrapper.value.addEventListener("touchmove", onTouchMove, { passive: false });
+    scrollWrapper.value.addEventListener("touchend", onTouchEnd, { passive: false });
+    scrollWrapper.value.addEventListener("touchcancel", onTouchEnd, { passive: false });
+    currentTouchEl = scrollWrapper.value;
+  }
+}
+
+function detachTouch() {
+  if (currentTouchEl) {
+    currentTouchEl.removeEventListener("touchstart", onTouchStart);
+    currentTouchEl.removeEventListener("touchmove", onTouchMove);
+    currentTouchEl.removeEventListener("touchend", onTouchEnd);
+    currentTouchEl.removeEventListener("touchcancel", onTouchEnd);
+    currentTouchEl = null;
+  }
+  touchActive.value = false;
+}
+
+
+function wheelGuard(e) {
+  if (!animLoaded.value && showHeroSection.value) {
+    e.preventDefault();
+  }
+}
+function onTouchStart(e) {
+  if (!showHeroSection.value || e.touches.length !== 1) return;
+
+  const t = e.touches[0];
+  touchStartY.value = t.clientY;
+  lastTouchY.value = t.clientY;
+  touchActive.value = true;
+
+  if (capturing.value) {
+    e.preventDefault();
+  }
+}
+
+function onTouchMove(e) {
+  if (!showHeroSection.value || !touchActive.value || e.touches.length !== 1) return;
+
+  const t = e.touches[0];
+  const dy = lastTouchY.value - t.clientY;
+  lastTouchY.value = t.clientY;
+
+  if (capturing.value) {
+    if (
+      (progress.value <= 0.001 && dy < 0) ||
+      (progress.value >= 0.93 && dy > 0)
+    ) {
+      releaseScrollControl();
+      return;
+    }
+
+    e.preventDefault();
+
+    const raw = dy * sensitivity * currentSection.value.speedMultiplier;
+    const clamp01 = (v) => Math.min(Math.max(v, 0), 1);
+    progressTarget.value = clamp01(progressTarget.value + raw);
+    return;
+  }
+
+  const el = scrollWrapper.value;
+  if (!el) return;
+
+  const thresholdPx = 50;
+  const animTop = animationSectionRef.value?.offsetTop ?? 0;
+
+  if (dy < 0 && el.scrollTop <= animTop + thresholdPx) {
+    const cameFromBottom = progress.value > 0.5 || progressTarget.value > 0.5;
+    const startPos = cameFromBottom ? 1 : 0;
+    progress.value = startPos;
+    progressTarget.value = startPos;
+
+    e.preventDefault();
+    takeScrollControl();
+  }
+}
+
+function onTouchEnd(_e) {
+  touchActive.value = false;
+}
+
+
+function disablePageScroll() {
+  document.body.style.overflow = "hidden";
+  document.documentElement.style.overflow = "hidden";
+
+  if (animationSectionRef.value) {
+    (animationSectionRef.value).style.touchAction = "none";
+    (animationSectionRef.value).style.pointerEvents = "auto";
+  }
+}
+
+function enablePageScroll() {
+  document.body.style.overflow = "";
+  document.documentElement.style.overflow = "";
+
+  if (animationSectionRef.value) {
+    (animationSectionRef.value).style.touchAction = "auto";
+    (animationSectionRef.value).style.pointerEvents = "";
+  }
+}
+
+
 </script>
 
 <style scoped>
@@ -516,8 +647,8 @@ const currentSection = computed(() => {
   position: relative;
   width: 100%;
   height: calc(100vh - 4rem);
-  touch-action: none;
 }
+
 
 .animation-wrapper {
   width: 100%;

@@ -411,7 +411,6 @@ const canvasOnResize = async () => {
 
 function initListeners() {
   if (app.value && app.value.canvas) {
-    // Add listeners directly to the canvas
     app.value.canvas.addEventListener('click', onCanvasClick)
     app.value.canvas.addEventListener('mousemove', trackMouse)
     app.value.canvas.addEventListener('touchstart', onTouchStart, { passive: false })

@@ -155,7 +155,7 @@ let ro
 function setFieldWidth() {
   if (!labelTextEl.value || !fieldWrap.value) return
   const w = Math.ceil(labelTextEl.value.getBoundingClientRect().width)
-  const min = 96 // 6rem in px assuming base 16px
+  const min = 96
   fieldWrap.value.style.width = w ? `${Math.max(w, min)}px` : `${min}px`
 }
 

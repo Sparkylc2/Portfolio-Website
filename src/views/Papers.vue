@@ -672,6 +672,7 @@ useHead(headData);
     padding: 4rem 1rem 1rem;
     gap: 0;
     height: 100vh;
+    justify-content: flex-start;
   }
 
   .mobile-back-button-wrapper {
