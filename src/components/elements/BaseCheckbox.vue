@@ -1,5 +1,5 @@
 <template>
-  <label class="base-checkbox-label">
+  <label class="base-checkbox-label user-select-none">
     <span v-if="label" class="base-checkbox-text">{{ label }}</span>
     <div class="base-checkbox-container">
       <div class="base-checkbox" :class="{ 'base-checkbox--selected': modelValue }" :style="selectedStyle"

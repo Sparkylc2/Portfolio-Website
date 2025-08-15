@@ -48,12 +48,10 @@
                     <h2>{{ currentProject?.title }}</h2>
                     <p>{{ currentProject?.description }}</p>
 
-                    <component :is="currentProject?.interactiveComponent"
-                      v-if="currentProject?.interactiveComponent && !isMobile && !isTablet" class="interactive-demo"
-                      :element-data="elementData" :project-color="currentProject?.color" />
-                    <div v-else-if="
-                      currentProject?.interactiveComponent && (isMobile || isTablet)
-                    " class="demo-placeholder mobile-notice">
+                    <component :is="currentProject?.interactiveComponent" v-if="currentProject?.interactiveComponent"
+                      class="interactive-demo" :element-data="elementData" :project-color="currentProject?.color" />
+                    <div v-else-if="currentProject?.interactiveComponent && (!isDesktop || !isTablet || !isMobile)"
+                      class="demo-placeholder mobile-notice">
                       <p>Interactive demo available on desktop</p>
                     </div>
                     <div v-else class="demo-placeholder">
@@ -91,7 +89,6 @@
                     </div>
                   </div>
                   <div v-else-if="activeSection === 'Details'" key="details" class="section-content">
-                    <!-- <div class="project-details" v-html="currentProject?.detailedDescription"></div> -->
                     <component :is="currentProject?.detailedDescription" v-if="currentProject?.detailedDescription" />
                   </div>
                 </Transition>
@@ -148,7 +145,6 @@ import {
   getSecondaryOrTertiaryColor,
 } from "../composables/useGetColours";
 import { useElementTracker } from "../composables/usePhysicsEngine.js";
-
 import { useHead } from '@unhead/vue'
 
 const projects = [
@@ -194,8 +190,9 @@ const props = defineProps({
   selectedProject: Number,
   activeSubtab: String,
   isMobile: Boolean,
-  isTablet: Boolean
-
+  isTablet: Boolean,
+  isDesktop: Boolean,
+  isTouchDevice: Boolean
 });
 
 const emit = defineEmits([
@@ -207,27 +204,18 @@ const expandedProject = ref(null);
 const scrollWrapper = ref(null);
 const heroSectionRef = ref(null);
 const showScrollIndicator = ref(true);
-// const showHeroSection = computed(
-//   () => expandedProject.value === null && !props.isMobile && !props.isTablet,
-// );
-// const isDesktop = computed(() => !props.isMobile&& !props.isTablet);
 
 const showHeroSection = computed(
-  () => expandedProject.value === null && !props.isMobile && !props.isTablet
+  () => expandedProject.value === null && (props.isDesktop || props.isTablet)
 );
 
-const isDesktop = computed(() => !props.isMobile)
-
-const capturing = ref(true);
+const capturing = ref(false);
 const animLoaded = ref(false);
 const progress = ref(0);
 const progressTarget = ref(0);
 const sensitivity = 0.0007;
 const animationSectionRef = ref(null);
 const heroAnimRef = ref(null);
-let activeTouchId = null;
-let lastTouchY = 0;
-
 
 const headData = computed(() => {
   let data;
@@ -273,15 +261,12 @@ const headData = computed(() => {
   };
 });
 
-
 useHead(headData);
 
 const onViewGone = () => {
-  if (expandedProject.value !== null) {
+  if (expandedProject.value !== null && showHeroSection.value) {
     detachWheel();
-    if (showHeroSection.value) {
-      releaseScrollControl();
-    }
+    releaseScrollControl();
   }
 };
 
@@ -291,37 +276,33 @@ const onViewReady = () => {
     takeScrollControl();
   }
 };
+
 let currentScrollEl = null;
+let lastWheelDir = 0;
 
-
-
-function onTouchStart(e) {
-
+function attachWheel() {
   if (!showHeroSection.value) return;
 
-  const t = e.changedTouches[0];
-  activeTouchId = t.identifier;
-  lastTouchY = t.clientY;
-
-  if (capturing.value) {
-    e.preventDefault();
-    if (scrollWrapper.value) scrollWrapper.value.scrollTop = 0;
+  if (scrollWrapper.value && scrollWrapper.value !== currentScrollEl) {
+    if (currentScrollEl) {
+      currentScrollEl.removeEventListener("wheel", onWheel);
+    }
+    scrollWrapper.value.addEventListener("wheel", onWheel, { passive: false });
+    currentScrollEl = scrollWrapper.value;
   }
 }
 
-function onTouchMove(e) {
+function detachWheel() {
+  if (currentScrollEl) {
+    currentScrollEl.removeEventListener("wheel", onWheel);
+    currentScrollEl = null;
+  }
+}
 
-  if (!showHeroSection.value || activeTouchId === null) return;
-  const t = Array.from(e.changedTouches).find(
-    (x) => x.identifier === activeTouchId
-  );
-  if (!t) return;
+function onWheel(e) {
+  if (!showHeroSection.value) return;
 
-  const dy = lastTouchY - t.clientY;
-  lastTouchY = t.clientY;
-
-  lastWheelDir = Math.sign(dy || 0);
-
+  lastWheelDir = Math.sign(e.deltaY);
   if (capturing.value) {
     if (
       (progress.value <= 0.001 && lastWheelDir < 0) ||
@@ -333,8 +314,7 @@ function onTouchMove(e) {
 
     e.preventDefault();
 
-    const raw =
-      dy * sensitivity * currentSection.value.speedMultiplier;
+    const raw = e.deltaY * sensitivity * currentSection.value.speedMultiplier;
     const clamp01 = (v) => Math.min(Math.max(v, 0), 1);
     progressTarget.value = clamp01(progressTarget.value + raw);
     return;
@@ -343,110 +323,85 @@ function onTouchMove(e) {
   const el = scrollWrapper.value;
   if (!el) return;
 
-  const thresholdPx = 120;
+  const thresholdPx = 50;
   if (lastWheelDir < 0) {
     const animTop = animationSectionRef.value?.offsetTop ?? 0;
     if (el.scrollTop <= animTop + thresholdPx) {
-      const cameFromBottom =
-        progress.value > 0.5 || progressTarget.value > 0.5;
+      const cameFromBottom = progress.value > 0.5 || progressTarget.value > 0.5;
       const startPos = cameFromBottom ? 1 : 0;
       progress.value = startPos;
       progressTarget.value = startPos;
       takeScrollControl();
-      e.preventDefault();
     }
   }
 }
 
-function onTouchEnd(e) {
+const INERTIA = 0.88;
+const MAX_SPEED = 0.008;
+const EXP_DECAY = 8;
+
+const stepInertia = () => {
+  requestAnimationFrame(stepInertia);
+
+  const diff = progressTarget.value - progress.value;
+  const cap = MAX_SPEED * (1 - Math.exp(-Math.abs(diff) * EXP_DECAY));
+
+  let delta = diff * INERTIA;
+  if (Math.abs(delta) > cap) {
+    delta = Math.sign(delta) * cap;
+  }
+
+  if (Math.abs(delta) < 1e-7) return;
+
+  progress.value = Math.min(Math.max(progress.value + delta, 0), 1);
+};
+
+function takeScrollControl() {
   if (!showHeroSection.value) return;
-
-  const ended = Array.from(e.changedTouches).some(
-    (x) => x.identifier === activeTouchId
-  );
-  if (ended) {
-    activeTouchId = null;
+  capturing.value = true;
+  if (scrollWrapper.value) {
+    scrollWrapper.value.scrollTop = 0;
   }
+  document.body.style.overflow = "hidden";
 }
 
+function releaseScrollControl() {
+  capturing.value = false;
+  document.body.style.overflow = "";
+}
 
-function attachTouch() {
-  if (scrollWrapper.value && scrollWrapper.value !== currentScrollEl) {
-    detachTouch();
+const scrollToHero = () => {
+  if (heroSectionRef.value) {
+    heroSectionRef.value.scrollIntoView({ behavior: "smooth" });
   }
-  const el = scrollWrapper.value;
-  if (!el) return;
-  el.addEventListener("touchstart", onTouchStart, { passive: false });
-  el.addEventListener("touchmove", onTouchMove, { passive: false });
-  el.addEventListener("touchend", onTouchEnd, { passive: false });
-}
+};
 
-function detachTouch() {
-  const el = scrollWrapper.value || currentScrollEl;
-  if (!el) return;
-  el.removeEventListener("touchstart", onTouchStart);
-  el.removeEventListener("touchmove", onTouchMove);
-  el.removeEventListener("touchend", onTouchEnd);
-}
-function attachWheel() {
-  if (scrollWrapper.value && scrollWrapper.value !== currentScrollEl) {
-    if (currentScrollEl) {
-      currentScrollEl.removeEventListener("wheel", onWheel);
-    }
-    scrollWrapper.value.addEventListener("wheel", onWheel, { passive: false });
-    currentScrollEl = scrollWrapper.value;
-
-    attachTouch();
+const scrollToTop = () => {
+  if (scrollWrapper.value) {
+    scrollWrapper.value.scrollTo({ top: 0, behavior: "smooth" });
   }
-}
+};
 
-function detachWheel() {
-  if (currentScrollEl) {
-    currentScrollEl.removeEventListener("wheel", onWheel);
-    currentScrollEl = null;
-  }
-
-  detachTouch();
-}
-
-function updateDisplay() {
-  if (isDesktop.value) {
-    releaseScrollControl();
-    detachWheel();
-  } else if (isDesktop && expandedProject.value === null) {
+onMounted(() => {
+  if (showHeroSection.value) {
     takeScrollControl();
     attachWheel();
   }
-}
 
-onMounted(() => {
-  updateDisplay();
-  window.addEventListener("resize", updateDisplay);
   window.addEventListener("wheel", (e) => {
     if (!animLoaded.value && showHeroSection.value) e.preventDefault();
-  });
-
-  if (isDesktop.value) {
-    takeScrollControl();
-    const el = scrollWrapper.value;
-    if (el) {
-      el.addEventListener("wheel", onWheel, { passive: false });
-      attachTouch()
-    }
-  }
+  }, { passive: false });
 
   stepInertia();
 });
 
 onUnmounted(() => {
-  window.removeEventListener("resize", updateDisplay);
   window.removeEventListener("wheel", (e) => {
     if (!animLoaded.value && showHeroSection.value) e.preventDefault();
   });
 
   releaseScrollControl();
   detachWheel();
-
 });
 
 watch(showHeroSection, (newVal, oldVal) => {
@@ -500,94 +455,6 @@ const { elementData } = useElementTracker(overviewSection, {
   includeContainer: true,
   relative: true,
 });
-
-const INERTIA = 0.88;
-const MAX_SPEED = 0.008;
-const EXP_DECAY = 8;
-
-let lastWheelDir = 0;
-
-
-function onWheel(e) {
-  lastWheelDir = Math.sign(e.deltaY);
-  if (capturing.value && showHeroSection.value) {
-    if (
-      (progress.value <= 0.001 && lastWheelDir < 0) ||
-      (progress.value >= 0.93 && lastWheelDir > 0)
-    ) {
-      releaseScrollControl();
-      return;
-    }
-
-    e.preventDefault();
-
-    const raw = e.deltaY * sensitivity * currentSection.value.speedMultiplier;
-    const clamp01 = (v) => Math.min(Math.max(v, 0), 1);
-    progressTarget.value = clamp01(progressTarget.value + raw);
-    return;
-  }
-
-  if (!showHeroSection.value) return;
-
-  const el = scrollWrapper.value;
-  if (!el) return;
-
-  const thresholdPx = 120;
-  if (lastWheelDir < 0) {
-    const animTop = animationSectionRef.value?.offsetTop ?? 0;
-    if (el.scrollTop <= animTop + thresholdPx) {
-      const cameFromBottom = progress.value > 0.5 || progressTarget.value > 0.5;
-      const startPos = cameFromBottom ? 1 : 0;
-      progress.value = startPos;
-      progressTarget.value = startPos;
-      takeScrollControl();
-    }
-  }
-}
-
-const stepInertia = () => {
-  requestAnimationFrame(stepInertia);
-
-  const diff = progressTarget.value - progress.value;
-
-  const cap = MAX_SPEED * (1 - Math.exp(-Math.abs(diff) * EXP_DECAY));
-
-  let delta = diff * INERTIA;
-  if (Math.abs(delta) > cap) {
-    delta = Math.sign(delta) * cap;
-  }
-
-  if (Math.abs(delta) < 1e-7) return;
-
-  progress.value = Math.min(Math.max(progress.value + delta, 0), 1);
-};
-
-function takeScrollControl() {
-  if (!showHeroSection.value) return;
-  capturing.value = true;
-  if (scrollWrapper.value) {
-    scrollWrapper.value.scrollTop = 0;
-  }
-  document.body.style.overflow = "hidden";
-}
-
-function releaseScrollControl() {
-  if (!showHeroSection.value) return;
-  capturing.value = false;
-  document.body.style.overflow = "";
-}
-
-const scrollToHero = () => {
-  if (heroSectionRef.value) {
-    heroSectionRef.value.scrollIntoView({ behavior: "smooth" });
-  }
-};
-
-const scrollToTop = () => {
-  if (scrollWrapper.value) {
-    scrollWrapper.value.scrollTo({ top: 0, behavior: "smooth" });
-  }
-};
 
 watch(
   [
@@ -648,7 +515,7 @@ const currentSection = computed(() => {
 .animation-section {
   position: relative;
   width: 100%;
-  height: 100%;
+  height: calc(100vh - 4rem);
   touch-action: none;
 }
 
@@ -675,13 +542,13 @@ const currentSection = computed(() => {
 }
 
 .hero-section-wrapper {
-  height: 100%;
+  min-height: calc(100vh - 4rem);
   width: 100%;
   max-width: 100%;
   position: relative;
   display: flex;
   padding: 3rem;
-  /* background: linear-gradient(to bottom, rgb(36, 36, 36), rgb(28, 28, 28)); */
+  padding-top: 2rem;
 }
 
 .scroll-indicator {
@@ -787,6 +654,7 @@ const currentSection = computed(() => {
   color: rgb(140, 172, 204);
 }
 
+/* Hide scrollbars */
 .projects-container,
 .projects-grid-wrapper,
 .project-details-section,
@@ -840,7 +708,6 @@ const currentSection = computed(() => {
   display: flex;
   gap: 2rem;
   padding: 6rem 2rem 0;
-
   height: 100vh;
   transition: justify-content 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -853,7 +720,6 @@ const currentSection = computed(() => {
   position: relative;
   width: 400px;
   min-width: 400px;
-  /* height: calc(100vh - 8rem); */
   height: 100%;
   overflow-y: auto;
   overflow-x: hidden;
@@ -992,11 +858,16 @@ const currentSection = computed(() => {
   border-color: rgba(140, 172, 204, 0.3);
 }
 
+
+
+
+
 .tech-stack {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  width: 100%;
+  min-width: 0;
+  width: auto;
   pointer-events: none;
 }
 
@@ -1006,14 +877,16 @@ const currentSection = computed(() => {
 }
 
 .project-meta {
-  margin-top: auto;
-  display: grid;
-  gap: 1.5rem;
-  grid-template-columns: 1fr auto;
-  align-items: flex-end;
+  display: flex;
+  position: relative;
+  justify-content: space-between;
+  align-items: center;
   padding-top: 1rem;
   width: 100%;
+  margin-top: auto;
 }
+
+
 
 .tech-tags {
   display: flex;
@@ -1038,11 +911,12 @@ const currentSection = computed(() => {
   background-color: rgba(255, 255, 255, 0.2);
 }
 
+
 .project-links {
+
   display: flex;
   gap: 0.8rem;
-  align-self: center;
-  align-items: last baseline;
+  align-items: baseline;
   padding-bottom: 0.4rem;
   height: 100%;
 }
@@ -1058,6 +932,7 @@ const currentSection = computed(() => {
   background-color: transparent;
   border: 0.15rem solid;
   z-index: 100;
+  align-self: end;
 }
 
 .project-link:hover {
@@ -1090,6 +965,7 @@ const currentSection = computed(() => {
   opacity: 0;
 }
 
+/* Mobile styles */
 @media (max-width: 768px) {
   .scroll-wrapper {
     display: none;
@@ -1198,6 +1074,7 @@ const currentSection = computed(() => {
     padding-top: 5rem;
     height: 100vh;
     overflow-y: auto;
+    background: transparent;
   }
 
   .section {
@@ -1208,9 +1085,11 @@ const currentSection = computed(() => {
 
   .section-content {
     padding: 1.5rem;
+    background: transparent;
   }
 
   .project-meta {
+    margin-top: auto;
     grid-template-columns: 1fr;
     gap: 1rem;
   }
@@ -1234,82 +1113,10 @@ const currentSection = computed(() => {
   }
 }
 
-@media (max-width: 769px) {
-  .scroll-indicator {
-    display: none;
-  }
-
-  .scroll-to-top {
-    display: none;
-  }
-
+/* Tablet and larger screens */
+@media (min-width: 769px) {
   .hero-section-wrapper {
-    padding: 1rem;
-  }
-}
-
-@media (min-width: 769px) and (max-width: 1024px) {
-
-
-
-  .scroll-indicator {
-    bottom: 1.5rem;
-  }
-
-  .scroll-text {
-    font-size: 0.85rem;
-  }
-
-  .scroll-arrow {
-    width: 38px;
-    height: 38px;
-  }
-
-  .hero-section-wrapper {
-    padding: 2rem;
-  }
-
-  .scroll-to-top {
-    top: 1.5rem;
-    right: 1.5rem;
-    width: 44px;
-    height: 44px;
-  }
-
-  .page-title {
-    font-size: 2.5rem;
-    top: 1.5rem;
-    left: 1.5rem;
-  }
-
-
-
-  .content-layout {
-    padding: 5rem 1.5rem 1.5rem;
-    gap: 1.5rem;
-  }
-
-  .projects-grid-wrapper {
-    width: 350px;
-    min-width: 350px;
-  }
-
-  .projects-grid {
-    width: 350px;
-    min-width: 350px;
-  }
-
-  .projects-grid.has-active {
-    width: 300px;
-    min-width: 300px;
-  }
-
-  .project-card {
-    width: calc(100% - 3rem);
-  }
-
-  .project-details-section {
-    min-width: 350px;
+    padding: 3rem;
   }
 }
 
@@ -1374,31 +1181,6 @@ const currentSection = computed(() => {
   .project-details-section {
     min-width: 600px;
   }
-}
-
-@media (max-width: 768px) {
-  .scroll-indicator {
-    display: none;
-    bottom: 1rem;
-  }
-
-  .scroll-to-top {
-    display: none;
-  }
-
-  .scroll-text {
-    font-size: 0.8rem;
-  }
-
-  .scroll-arrow {
-
-    width: 36px;
-    height: 36px;
-  }
-
-
-
-
 }
 
 @supports (-webkit-overflow-scrolling: touch) {

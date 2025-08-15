@@ -30,7 +30,7 @@ const props = defineProps({
 
 const pdfViewerUrl = computed(() => {
   const baseUrl = !(props.isMobile || props.isTablet) ? '/pdfjs/web/viewer.html?file=/docs/' : '/pdfjs/web/viewerNoBar.html?file=/docs/'
-  return `${baseUrl}${props.pdfFileName}#zoom=page-fit`;
+  return `${baseUrl}${props.pdfFileName}#zoom=${props.isMobile ? '30' : 'page-fit'}`;
 });
 
 

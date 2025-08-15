@@ -50,7 +50,7 @@
                 The <em>Chord</em> and <em>Twist</em> fields accept math expressions parsed by ExprTK.
                 You can use the following functions, however constants are not yet supported (other than <code>r</code>)
               </p>
-              <ul class="control-ul">
+              <ul class="control-ul control-ul-pad">
                 <li><code>r</code>: current section radius (m)</li>
                 <li><code>R</code> or <code>radius</code>: rotor radius (m)</li>
                 <li><code>R_h</code>: hub radius (m)</li>
@@ -851,8 +851,11 @@ function formatWithDynamicUnit(value, baseUnit) {
 
 .control-ul {
   align-self: flex-start !important;
-  padding-left: 5rem;
   margin: 0;
+}
+
+.control-ul-pad {
+  padding-left: 5rem;
 }
 
 
@@ -1033,7 +1036,7 @@ button:hover {
   padding: 1.5rem;
   border-radius: 8px;
   text-align: center;
-  min-width: 150px;
+  min-width: 0px;
   transition: transform 0.3s ease;
 }
 
@@ -1145,5 +1148,6 @@ button:hover {
   .controls-row {
     flex-direction: column;
   }
+
 }
 </style>

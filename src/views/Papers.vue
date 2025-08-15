@@ -111,7 +111,7 @@ const papers = [
     authors: "Lukas Campbell",
     venue: "Imperial College London, Department of Aeronautics",
     description:
-      "A comprehensive study on the analysis of pipe flow using theoretical, computational, and experimental methods.",
+      "A study on the analysis of pipe flow using theoretical, computational, and experimental methods.",
     keywords: [
       "Physics Simulation",
       "Verlet Integration",
@@ -132,7 +132,7 @@ const papers = [
     authors: "Lukas Campbell",
     venue: "Imperial College London, Department of Aeronautics",
     description:
-      "A comprehensive study on the analysis of indeterminate beams using theoretical, computational, and experimental methods.",
+      "A study on the analysis of indeterminate beams using theoretical, computational, and experimental methods.",
     keywords: ["Wind Energy", "Machine Learning", "Optimization", "BEM Theory"],
     pdf: "SimpleBeamsLabReport.pdf",
     arxiv: "https://arxiv.org/abs/2024.23456",
@@ -745,7 +745,7 @@ useHead(headData);
     position: fixed;
     top: 1rem;
     left: 1rem;
-    background: rgb(36, 36, 36);
+    background: transparent;
     font-size: 1rem;
     padding: 0 0.9rem;
     min-height: 44px;
@@ -791,6 +791,10 @@ useHead(headData);
     animation: slideUp 0.25s ease;
   }
 
+  .paper-details-content {
+    background: transparent;
+  }
+
   @keyframes slideUp {
     from {
       transform: translateY(100%);
@@ -807,9 +811,7 @@ useHead(headData);
     outline: none;
   }
 
-  .section-content {
-    padding: 1.5rem;
-  }
+
 
   .paper-meta {
     grid-template-columns: 1fr;

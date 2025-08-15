@@ -3,21 +3,14 @@
     <form class="controls" @submit.prevent>
       <BaseSelect v-model="activeTool" :options="toolDropdownItems" label="Tool" color-key="red" :baseUnderline="true"
         class="control-element" />
-      <!-- <label> -->
-      <!--   Tool: -->
-      <!--   <select v-model="activeTool"> -->
-      <!--     <option v-for="item in toolDropdownItems" :key="item.value" :value="item.value"> -->
-      <!--       {{ item.label }} -->
-      <!--     </option> -->
-      <!--   </select> -->
-      <!-- </label> -->
 
       <template v-if="activeTool === 'Box'" class="control-element">
         <BaseInput v-model.number="toolProps.box.width" type="number" min="1" max="500" label="Width" color-key="red"
           :dynamicUnderline="true" class="control-element" :showTooltips="false" />
         <BaseInput v-model.number="toolProps.box.height" type="number" min="1" max="500" label="Height" color-key="red"
           :dynamicUnderline="true" class="control-element" :showTooltips="false" />
-        <BaseCheckbox v-model="toolProps.box.gravity" label="Gravity" class="control-element" color-key="red" />
+        <BaseCheckbox v-model="toolProps.box.gravity" label="Gravity" class="control-element user-select-none"
+          color-key="red" />
       </template>
 
       <template v-else-if="activeTool === 'Circle'" class="control-element">
@@ -55,12 +48,7 @@
           </button>
         </div>
       </label>
-
-
     </form>
-
-
-
 
     <div ref="pixiContainer" class="pixi-container" />
   </div>
@@ -73,6 +61,7 @@ import PhysicsEngineModule from '../wasm/physics_engine.js'
 import BaseCheckbox from './elements/BaseCheckbox.vue'
 import BaseSelect from './elements/BaseSelect.vue'
 import BaseInput from './elements/BaseInput.vue'
+
 const toolLabels = {
   None: 'Select',
   Circle: 'Add Circle',
@@ -157,11 +146,9 @@ watch(() => props.elementData?.container, (newContainer, oldContainer) => {
   setupResizeObserver()
 }, { deep: true, immediate: true })
 
-
 watch(() => activeTool.value, (tool) => {
   if (engine.value) {
     engine.value.setActiveTool(toolMap[tool])
-
   }
 }, { immediate: true })
 
@@ -189,24 +176,6 @@ watch(() => toolProps.value.motor, (props) => {
   }
 }, { deep: true, immediate: true })
 
-
-function overMenu(ev) {
-  const target = ev.target
-  const isControlElement = target.classList.contains('control-element')
-    || target.classList.contains('base-input-text')
-    || target.classList.contains('base-select-option')
-    || target.classList.contains('base-checkbox')
-    || target.classList.contains('base-checkbox-text')
-    || target.classList.contains('base-select-trigger')
-    || target.classList.contains('base-select-option')
-    || target.classList.contains('base-select-trigger__value')
-    || target.classList.contains('pause-button')
-    || target.classList.contains('controls')
-    || target.classList.contains('controls-info')
-    || target.classList.contains('touch-only-flex')
-  return isControlElement;
-}
-
 function getEventCoordinates(ev) {
   if (ev.touches && ev.touches.length > 0) {
     return { clientX: ev.touches[0].clientX, clientY: ev.touches[0].clientY }
@@ -216,14 +185,8 @@ function getEventCoordinates(ev) {
   return { clientX: ev.clientX, clientY: ev.clientY }
 }
 
-
-function onPointerDown(ev) {
-  if (overMenu(ev)) return
+function onCanvasClick(ev) {
   if (!app.value || !engine.value) return
-
-  if (ev.type === 'touchstart') {
-    ev.preventDefault()
-  }
 
   const coords = getEventCoordinates(ev)
   const { left, top } = app.value.canvas.getBoundingClientRect()
@@ -236,28 +199,23 @@ function onPointerDown(ev) {
 let isDragging = false;
 
 function onTouchStart(ev) {
-  console.log('onTouchStart', ev)
   isDragging = false;
-  onPointerDown(ev)
+  onCanvasClick(ev)
   trackTouch(ev)
 }
 
 function onTouchMove(ev) {
   isDragging = true;
-  if (!overMenu(ev)) ev.preventDefault()
+  ev.preventDefault()
   trackTouch(ev)
 }
 
 function onTouchEnd(ev) {
-  if (!overMenu(ev)) ev.preventDefault()
-
+  ev.preventDefault()
   if (isDragging) {
-    onTouchStart(ev);
+    onCanvasClick(ev);
   }
-
 }
-
-
 
 const togglePause = () => {
   if (engine.value) {
@@ -420,9 +378,6 @@ const canvasOnResize = async () => {
     const container = props.elementData.container;
     const { width, height, x, y } = container;
 
-
-
-
     pixiContainer.value.style.position = 'fixed'
     pixiContainer.value.style.left = `${x}px`
     pixiContainer.value.style.top = `${y}px`
@@ -440,7 +395,6 @@ const canvasOnResize = async () => {
         const controlsRect = controls.getBoundingClientRect();
         const pixiRect = pixiContainer.value.getBoundingClientRect();
 
-
         let offset = controlsRect.y + pixiRect.height * 0.05
         if (offset < 0) offset = 0;
         if (offset > height) offset = height;
@@ -456,34 +410,29 @@ const canvasOnResize = async () => {
 }
 
 function initListeners() {
-  if (pixiContainer.value) {
-
-    pixiContainer.value.addEventListener('click', onPointerDown)
-
-    pixiContainer.value.addEventListener('mousemove', trackMouse)
-
-    pixiContainer.value.addEventListener('touchstart', onTouchStart, { passive: false })
-
-    pixiContainer.value.addEventListener('touchmove', onTouchMove, { passive: false })
-    pixiContainer.value.addEventListener('touchend', onTouchEnd, { passive: false })
-
-    pixiContainer.value.addEventListener('contextmenu', (e) => e.preventDefault())
+  if (app.value && app.value.canvas) {
+    // Add listeners directly to the canvas
+    app.value.canvas.addEventListener('click', onCanvasClick)
+    app.value.canvas.addEventListener('mousemove', trackMouse)
+    app.value.canvas.addEventListener('touchstart', onTouchStart, { passive: false })
+    app.value.canvas.addEventListener('touchmove', onTouchMove, { passive: false })
+    app.value.canvas.addEventListener('touchend', onTouchEnd, { passive: false })
+    app.value.canvas.addEventListener('contextmenu', (e) => e.preventDefault())
   }
+
   window.addEventListener('keydown', handleKeyDown)
 }
 
 function removeListeners() {
-  if (pixiContainer.value) {
-    pixiContainer.value.removeEventListener('click', onPointerDown)
-    pixiContainer.value.removeEventListener('mousemove', trackMouse)
-
-    pixiContainer.value.removeEventListener('touchstart', onTouchStart)
-    pixiContainer.value.removeEventListener('touchmove', onTouchMove)
-    pixiContainer.value.removeEventListener('touchend', onTouchEnd)
-    pixiContainer.value.removeEventListener('contextmenu', (e) => e.preventDefault())
-
-    pixiContainer.value.removeEventListener('contextmenu', (e) => e.preventDefault())
+  if (app.value && app.value.canvas) {
+    app.value.canvas.removeEventListener('click', onCanvasClick)
+    app.value.canvas.removeEventListener('mousemove', trackMouse)
+    app.value.canvas.removeEventListener('touchstart', onTouchStart)
+    app.value.canvas.removeEventListener('touchmove', onTouchMove)
+    app.value.canvas.removeEventListener('touchend', onTouchEnd)
+    app.value.canvas.removeEventListener('contextmenu', (e) => e.preventDefault())
   }
+
   window.removeEventListener('keydown', handleKeyDown)
 }
 
@@ -553,8 +502,6 @@ function initPhysicsParams() {
   engine.value.setActiveTool(toolMap[activeTool.value])
 }
 
-
-
 onMounted(async () => {
   engine.value = await PhysicsEngineModule()
 
@@ -564,14 +511,12 @@ onMounted(async () => {
     initTicker()
   }, 300)
 
-
   initPhysicsParams()
 
   if (props.elementData?.container) {
     setupResizeObserver()
     canvasOnResize()
   }
-
 })
 
 onUnmounted(() => {
@@ -638,12 +583,11 @@ svg {
   width: 100%;
   max-width: 1400px;
   margin: 0 auto;
-  height: 100%;
+  height: fit-content;
   display: flex;
   flex-direction: column;
   position: relative;
-
-  touch-action: pan-x pan-y;
+  touch-action: none;
   overscroll-behavior: contain;
 }
 
@@ -653,20 +597,20 @@ svg {
 
 .controls {
   display: flex;
-  justify-content: flex-start;
+  justify-content: center;
   flex-wrap: nowrap;
   position: relative;
   align-items: center;
   gap: 1.5rem;
   margin-bottom: 1.5rem;
   padding-inline: 0;
-  background-color: rgb(36, 36, 36);
+  background-color: transparent;
   border-radius: 8px;
   overflow-x: auto;
   flex-shrink: 0;
   overflow-y: visible;
-
-
+  z-index: 100;
+  pointer-events: auto;
   touch-action: pan-x;
   -webkit-overflow-scrolling: touch;
 }
@@ -677,7 +621,6 @@ svg {
   flex: 0 0 1.5rem;
 }
 
-
 .checkbox-wrapper {
   display: flex;
   flex-direction: column;
@@ -685,9 +628,6 @@ svg {
   gap: 0.5rem;
   margin-top: 0.25rem;
 }
-
-
-
 
 .controls-info {
   display: flex;
@@ -700,23 +640,18 @@ svg {
   font-size: 13px;
 }
 
-
-
 .pixi-container {
   position: absolute;
   background: rgba(36, 36, 36, 0.0);
   border-radius: 8px;
   pointer-events: auto;
-  z-index: 1;
-
-  touch-action: auto;
+  z-index: 10;
+  touch-action: none;
   user-select: none;
   -webkit-user-select: none;
   -webkit-touch-callout: none;
   -webkit-tap-highlight-color: transparent;
 }
-
-
 
 .pause-button {
   padding: 0.3rem;
@@ -786,8 +721,6 @@ svg {
     width: 5rem;
     font-size: 13px;
   }
-
-
 }
 
 .checkbox-container {
@@ -833,7 +766,6 @@ svg {
     display: inline;
   }
 
-
   .touch-only-flex {
     display: flex;
     align-items: center;
@@ -863,7 +795,5 @@ svg {
   .controls label {
     font-size: 16px;
   }
-
-
 }
-</style>
+</style>e

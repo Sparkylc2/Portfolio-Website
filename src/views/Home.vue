@@ -3,14 +3,14 @@
     <Navbar :tabs="navbarTabs" :activeTab="activeNavbarTab" :indicatorColor="currentProjectColor"
       @update:activeTab="handleTabChange" />
     <section class="main-section">
-      <div class="content" :class="{ 'allow-scroll': currentTab === 'About Me' && (isMobile || isTablet) }">
+      <div class="content" :class="{ 'allow-scroll': currentTab === 'About Me' && !isDesktop }">
         <Projects v-if="currentTab === 'Projects'" :activeSection="projectSection" :selectedProject="selectedProject"
           @update:selectedProject="handleProjectChange" @update:selectedProjectColor="handleProjectPaperColorChange"
-          :isMobile="isMobile" :isTablet="isTablet" />
+          :isMobile="isMobile" :isTablet="isTablet" :isDesktop="isDesktop" :isTouchDevice="isTouchDevice" />
         <Papers v-if="currentTab === 'Papers'" :activeSection="paperSection" :selectedPaper="selectedPaper"
           @update:selectedPaper="handlePaperChange" @update:selectedPaperColor="handleProjectPaperColorChange"
-          :isMobile="isMobile" :isTablet="isTablet" />
-        <div v-if="currentTab === 'About Me' && (isMobile || isTablet)" class="hero-section-wrapper">
+          :isMobile="isMobile" :isTablet="isTablet" :isDesktop="isDesktop" :isTouchDevice="isTouchDevice" />
+        <div v-if="currentTab === 'About Me' && !isDesktop" class="hero-section-wrapper">
           <HeroSection />
         </div>
       </div>
@@ -19,12 +19,13 @@
 </template>
 
 <script setup>
-import { computed, onMounted, onUnmounted, ref, watch } from "vue";
+import { computed, ref, watch } from "vue";
 import Navbar from "../components/Navbar.vue";
 import Papers from "../views/Papers.vue";
 import Projects from "../views/Projects.vue";
 import HeroSection from "../components/HeroSection.vue";
 import { useHead } from "@unhead/vue";
+import { useDeviceDetection } from "../composables/useDeviceDetection.js";
 
 const currentTab = ref("Projects");
 const projectSection = ref("Overview");
@@ -32,24 +33,9 @@ const paperSection = ref("Paper");
 const selectedProject = ref(null);
 const selectedPaper = ref(null);
 const activeColor = ref("#e63946");
-const isMobile = ref(false);
-const isTablet = ref(false);
 
-function updateDisplay() {
-  isMobile.value = window.innerWidth <= 768;
-  isTablet.value = window.innerWidth > 768 && window.innerWidth <= 1024;
-
-
-}
-
-onMounted(() => {
-  updateDisplay();
-  window.addEventListener("resize", updateDisplay);
-});
-
-onUnmounted(() => {
-  window.removeEventListener("resize", updateDisplay);
-});
+// Use the new device detection composable
+const { isMobile, isTablet, isDesktop, isTouchDevice } = useDeviceDetection();
 
 function getProjectColour(color) {
   const map = {
@@ -90,11 +76,10 @@ const ALL_TABS = computed(() => [
   { key: "Overview", label: "Overview", parent: "Projects", show: true },
   { key: "Details", label: "Details", parent: "Projects", show: true },
   { key: "Paper", label: "Paper", parent: "Papers", show: true },
-  // { key: "Abstract", label: "Abstract", parent: "Papers", show: true },
   { key: "_DIVIDER", divider: true, show: true },
   { key: "Projects", label: "Projects", show: true },
   { key: "Papers", label: "Papers", show: true },
-  { key: "About Me", label: "About Me", show: isMobile.value || isTablet.value },
+  { key: "About Me", label: "About Me", show: !isDesktop.value },
   { key: "GitHub", label: "GitHub", show: true }
 ]);
 

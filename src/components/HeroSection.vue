@@ -1,29 +1,30 @@
 <template>
   <div class="hero-content">
-    <div class="intro-section">
-      <h1 class="hero-title">
-        <!-- <span class="greeting">Hello, I'm</span> -->
-        <span class="name">Lukas Campbell</span>
-      </h1>
-      <p class="tagline">Aeronautical Engineering Student</p>
-      <p class="subtitle">Imperial College London</p>
-    </div>
+    <div class="hero-inner">
+      <div class="intro-section">
+        <h1 class="hero-title">
+          <span class="name">Lukas Campbell</span>
+        </h1>
+        <p class="tagline">Aeronautical Engineering Student</p>
+        <p class="subtitle">Imperial College London</p>
+      </div>
 
-    <div class="about-section">
-      <p class="bio">
-        Passionate about computational fluid dynamics, aircraft design, and
-        building physics simulations. Currently in my {{ currentYear }} year,
-        exploring the intersection of aerospace engineering and software
-        development.
-      </p>
-    </div>
+      <div class="about-section">
+        <p class="bio">
+          Passionate about computational fluid dynamics, aircraft design, and
+          building physics simulations. Currently in my {{ currentYear }} year,
+          exploring the intersection of aerospace engineering and software
+          development.
+        </p>
+      </div>
 
-    <div class="interests-section">
-      <h3>Research Interests</h3>
-      <div class="interest-tags">
-        <span class="interest-tag" v-for="interest in interests" :key="interest">
-          {{ interest }}
-        </span>
+      <div class="interests-section">
+        <h3>Research Interests</h3>
+        <div class="interest-tags">
+          <span class="interest-tag" v-for="interest in interests" :key="interest">
+            {{ interest }}
+          </span>
+        </div>
       </div>
     </div>
 
@@ -37,9 +38,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from "vue";
-import F22_Animation from "../animations/HeroAnimation.vue";
-// import AirfoilFlowAnimation from './AirfoilFlowAnimation.vue'
+import { ref } from "vue";
 
 const currentYear = ref("2nd");
 
@@ -52,59 +51,28 @@ const interests = ref([
   "Propulsion",
   "Structural Analysis",
 ]);
-
-const stats = ref([
-  { label: "Projects", value: "3+" },
-  { label: "Papers", value: "2" },
-  { label: "Languages", value: "5+" },
-]);
 </script>
 
 <style scoped>
-.all-wrapper {
+.hero-content {
   display: flex;
-  position: relative;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   width: 100%;
   height: 100%;
-}
-
-.hero-section {
-  display: flex;
-  padding-top: 4rem;
-  position: relative;
-  align-items: center;
-  gap: 3rem;
+  min-height: 100%;
   padding: 2rem;
-  /* min-height: 100%; */
-  position: relative;
-  width: 100%;
-  height: 100%;
-  /* max-width: 1400px; */
+  box-sizing: border-box;
 }
 
-.hero-section {
-  flex-direction: row;
-  justify-content: space-between;
-  gap: 4rem;
-
-}
-
-.hero-content {
-  flex: 1;
-  flex-grow: 0;
-  /* max-width: 600px; */
-}
-
-.hero-content {
+.hero-inner {
   display: flex;
   flex-direction: column;
   gap: 2.5rem;
   max-width: 600px;
-  height: 100%;
+  width: 100%;
   margin: 0 auto;
-  z-index: 2;
 }
 
 .intro-section {
@@ -118,12 +86,6 @@ const stats = ref([
   margin-bottom: 1rem;
 }
 
-.greeting {
-  font-size: clamp(1.5rem, 3vw, 2rem);
-  color: #999;
-  font-weight: 400;
-}
-
 .name {
   font-size: clamp(2.5rem, 5vw, 4rem);
   font-weight: 700;
@@ -131,6 +93,7 @@ const stats = ref([
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+  line-height: 1.2;
 }
 
 .tagline {
@@ -156,12 +119,14 @@ const stats = ref([
   font-size: clamp(0.95rem, 2vw, 1.1rem);
   line-height: 1.6;
   color: #ccc;
+  margin: 0;
 }
 
 .interests-section h3 {
   font-size: clamp(1.2rem, 2.5vw, 1.5rem);
   margin-bottom: 1rem;
   color: #fff;
+  text-align: center;
 }
 
 .interest-tags {
@@ -186,94 +151,56 @@ const stats = ref([
   transform: translateY(-2px);
 }
 
-.stats-section {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 2rem;
-  text-align: center;
-  padding: 2rem;
-  background: rgba(255, 255, 255, 0.02);
-  border-radius: 0.5rem;
-}
-
-.stat-item {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.stat-value {
-  font-size: clamp(2rem, 4vw, 3rem);
-  font-weight: 700;
-  color: #fff;
-}
-
-.stat-label {
-  font-size: 0.9rem;
-  color: #999;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.animation-container {
-  position: relative;
-  width: 100%;
-  max-width: 800px;
-  height: 500px;
-  margin: 0 auto;
-  opacity: 0.8;
-  z-index: 1;
-  border-radius: 1rem;
-  overflow: hidden;
-  background: rgba(36, 36, 36, 0.5);
-}
-
-.animation-placeholder {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(140, 172, 204, 0.05);
-  border: 2px dashed rgba(140, 172, 204, 0.2);
-  color: rgba(140, 172, 204, 0.5);
-}
-
+/* Mobile styles */
 @media (max-width: 768px) {
-  .hero-section {
+  .hero-content {
     padding: 1rem;
+    min-height: calc(100vh - 4rem);
   }
 
-  .stats-section {
-    grid-template-columns: repeat(3, 1fr);
-    gap: 1rem;
-    padding: 1rem;
+  .hero-inner {
+    gap: 2rem;
   }
 
-  .animation-container {
-    height: 300px;
+  .about-section {
+    padding: 1.5rem;
+  }
+
+  .interest-tags {
+    gap: 0.5rem;
+  }
+
+  .interest-tag {
+    font-size: 0.85rem;
+    padding: 0.4rem 0.8rem;
   }
 }
 
-@media (min-width: 1200px) {
-  .hero-section {
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-    gap: 4rem;
-  }
-
-
-
+/* Tablet styles */
+@media (min-width: 769px) and (max-width: 1024px) {
   .hero-content {
-    flex: 1;
-    max-width: 600px;
+    padding: 2rem;
   }
 
-  .animation-container {
-    flex: 1;
-    height: 600px;
-    max-width: 600px;
+  .hero-inner {
+    max-width: 700px;
+  }
+}
+
+/* Large desktop styles */
+@media (min-width: 1920px) {
+  .hero-inner {
+    max-width: 800px;
+    gap: 3rem;
+  }
+
+  .about-section {
+    padding: 2.5rem;
+  }
+
+  .bio {
+    font-size: 1.2rem;
+    line-height: 1.7;
   }
 }
 </style>
