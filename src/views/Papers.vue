@@ -478,7 +478,7 @@ useHead(headData);
 }
 
 .section-content {
-  overflow-y: auto;
+  overflow-y: hidden;
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
   height: 100%;
@@ -486,6 +486,7 @@ useHead(headData);
   flex-direction: column;
   min-height: 100%;
   flex-grow: 1;
+
 }
 
 .section-content h2 {
@@ -520,6 +521,8 @@ useHead(headData);
   width: 100%;
   height: 100vh;
   overflow: visible;
+  flex: 1;
+  overflow-y: auto;
   display: block;
   position: relative;
 }
