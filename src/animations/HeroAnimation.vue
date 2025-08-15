@@ -199,7 +199,7 @@ function initF22Timeline() {
   const animationOffset = 16;
   const worldSpace = getWorldSpaceDimensions();
   const modelTargetSize = 2;
-  const offScreenDistance = props.isTablet ? worldSpace.width * 2 : worldSpace.width * 1.2;
+  const offScreenDistance = props.isTablet ? worldSpace.width * 2 : worldSpace.width * 1.33;
   const elevationDistance = modelTargetSize * 0.4;
 
 
