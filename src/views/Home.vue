@@ -27,6 +27,7 @@ import HeroSection from "../components/HeroSection.vue";
 import { useHead } from "@unhead/vue";
 import { useDeviceDetection } from "../composables/useDeviceDetection.js";
 
+
 const currentTab = ref("Projects");
 const projectSection = ref("Overview");
 const paperSection = ref("Paper");
